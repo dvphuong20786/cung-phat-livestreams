@@ -77,7 +77,10 @@ Scene 3D dùng hình học procedural, không phụ thuộc model tải ngoài.
 - `http://localhost:5173/admin` — dashboard quản trị hiện tại.
 - `http://localhost:5173/temple` — chùa 3D toàn màn hình, có OrbitControls, camera và cấu hình đồ họa.
 - `http://localhost:5173/overlay` — cảnh sạch dành cho OBS Browser Source, không bật điều khiển chuột.
+- `http://localhost:5173/overlay-mobile` — overlay dọc 9:16 riêng cho điện thoại và livestream mobile.
 - `http://localhost:5173/test` — simulator và log bên trái, cảnh 3D trực tiếp bên phải.
+
+Admin có menu nhiều trang: `/admin` (Tổng quan), `/admin/events`, `/admin/connection`, `/admin/simulator`, `/admin/temple` và `/admin/settings`. Trên màn hình nhỏ, menu được hiển thị thành thanh cuộn ngang phía dưới header.
 
 ### Kiểm thử hoạt ảnh
 
@@ -87,8 +90,10 @@ Scene 3D dùng hình học procedural, không phụ thuộc model tải ngoài.
 4. Thử Like, lời bình “Nam mô A Di Đà Phật”, Follow và Share để kiểm tra các hành vi còn lại.
 5. Dùng **Giả lập 50 người** hoặc **Stress Test 500 sự kiện** để kiểm tra hàng đợi. Scene chỉ giữ tối đa 12 nhân vật và 2 nghi lễ tại điện Phật cùng lúc.
 
+Thanh điều khiển 3D có bộ chọn **Ngoại cảnh / Nội điện**. Nội điện dùng camera và ánh sáng riêng nhưng vẫn giữ nguyên nhân vật, dâng hoa, thắp hương, lạy Phật và hiệu ứng quà tặng.
+
 ### Dùng với OBS
 
-Thêm một **Browser Source** trỏ tới `http://localhost:5173/overlay`. Với livestream dọc, đặt kích thước Browser Source là `1080 × 1920`. Có thể chọn preset đồ họa thấp trên `/temple` hoặc `/test` trước khi phát nếu GPU hạn chế.
+Thêm một **Browser Source** trỏ tới `http://localhost:5173/overlay` cho khung ngang. Với livestream dọc, dùng `http://localhost:5173/overlay-mobile` và đặt kích thước Browser Source là `1080 × 1920`; route này có hậu cảnh 9:16 và bố cục người/ghế thu gọn riêng. Nội điện có tối đa 80 tọa cụ đại diện cho các tài khoản đang hiện diện/tương tác trong LIVE; người lên lễ sẽ rời chỗ và quay lại khu ngồi sau khi hoàn tất nghi lễ. Có thể chọn preset đồ họa thấp trên thanh công cụ overlay nếu GPU hạn chế, sau đó bấm **Ẩn** để làm sạch cảnh phát.
 
 Các hoạt ảnh đang chạy nằm trong bộ nhớ của trình duyệt. Refresh overlay sẽ khởi động lại hoạt ảnh phía client; sự kiện mới sau khi Socket.IO kết nối lại vẫn tiếp tục hoạt động. Không có âm thanh tự phát nên không bị chặn bởi chính sách autoplay của trình duyệt.

@@ -1,5 +1,233 @@
 # Lịch sử thay đổi
 
+## [v0.11.2] - 2026-10-31
+- **Yêu cầu**: Co chiều cao ảnh nền mobile để nhìn được toàn bộ chánh điện.
+- **Chi tiết kỹ thuật**:
+ - Đổi cách fit hậu cảnh `/overlay-mobile` từ `background-size: cover` sang `100% 100%`.
+ - Ảnh luôn khớp toàn bộ chiều rộng và chiều cao viewport, không còn crop phần đầu tượng Phật hoặc phần sàn dưới.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Ở viewport không đúng tỷ lệ 9:16 ảnh có thể co nhẹ theo chiều cao; Browser Source `1080 × 1920` giữ tỷ lệ gần nguyên bản.
+
+## [v0.11.1] - 2026-10-31
+- **Yêu cầu**: Sửa hậu cảnh overlay mobile bị kéo dãn và chưa phủ đúng chiều rộng màn hình.
+- **Chi tiết kỹ thuật**:
+ - Chuyển riêng `/overlay-mobile` từ `scene.background` của Three.js sang CSS background `cover`, giữ nguyên tỷ lệ 9:16 và chỉ crop phần thừa theo kích thước màn hình.
+ - Bật canvas trong suốt cho mobile để người, ghế và hiệu ứng 3D hiển thị trên ảnh nền CSS; desktop `/overlay` giữ nguyên cơ chế cũ.
+ - Căn ảnh nền ở chính giữa, không lặp và phủ kín toàn bộ `100vw × 100vh`.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Trên cửa sổ ngang, ảnh dọc sẽ crop trên/dưới hoặc hai cạnh để giữ tỷ lệ; khung OBS chuẩn `1080 × 1920` sẽ hiển thị đầy đủ nhất.
+
+## [v0.11.0] - 2026-10-31
+- **Yêu cầu**: Giữ nguyên màn hình overlay hiện tại và thêm một màn hình view mới dành riêng cho mobile.
+- **Chi tiết kỹ thuật**:
+ - Giữ nguyên `/overlay`; thêm route `/overlay-mobile` với hậu cảnh Nội điện dọc 9:16 tại `apps/web/public/assets/temple-interior-mobile-backdrop.png`.
+ - Thu hẹp tọa độ ngang của người ngồi và đường quay về ghế còn 43% trên mobile, không làm méo mô hình nhân vật và không ảnh hưởng bố cục desktop.
+ - Thanh điều khiển mobile tự xuống dòng trong chiều rộng màn hình; vẫn có nút Ẩn/Hiện như overlay ngang.
+ - Thêm thẻ mở Overlay mobile tại `/admin/temple` và hướng dẫn Browser Source `1080 × 1920` trong README.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Hậu cảnh 9:16 được tạo bằng công cụ imagegen tích hợp. Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.10.2] - 2026-10-31
+- **Yêu cầu**: Sửa lỗi người đi ra từ giữa tượng Phật.
+- **Chi tiết kỹ thuật**:
+ - Đồng bộ lại tọa độ nhân vật sau khi hậu cảnh chuyển từ mặt phẳng 3D sang `scene.background`: điểm hành lễ được đưa từ `z=-3.65` ra `z=0.15` ở cuối thảm.
+ - Chuyển điểm dâng hoa về `z=0.25`, điểm tiếp cận về `z=1.4` và lối rẽ trái/phải về `z=0.65`.
+ - Sắp lại lộ trình Nội điện theo thứ tự tiến liên tục `z=8.5 → 3.4 → 1.4 → 0.15`, không còn đi quá điểm lễ rồi quay ngược từ tượng Phật.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.10.1] - 2026-10-31
+- **Yêu cầu**: Khôi phục đốm sáng và thêm hiệu ứng ánh sáng đẹp nhưng không làm nặng overlay.
+- **Chi tiết kỹ thuật**:
+ - Thay lớp 30 hạt cũ bằng hai lớp bụi sáng vàng/trắng dùng `Points` và additive blending, trôi ngược chiều và nhấp nháy mềm.
+ - Thêm một nguồn sáng vàng dao động nhẹ gần bàn Phật ở mức MEDIUM/HIGH; LOW bỏ nguồn sáng này để giảm tải.
+ - Số hạt tự điều chỉnh theo chất lượng: LOW 18, MEDIUM 36, HIGH 64; vị trí được sinh cố định để không nhảy ngẫu nhiên khi render lại.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Không dùng bloom hay post-processing. Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.10.0] - 2026-10-31
+- **Yêu cầu**: Thêm thanh công cụ chỉnh cảnh ngay trên overlay và cho phép ẩn sau khi chỉnh xong.
+- **Chi tiết kỹ thuật**:
+ - `/overlay` hiển thị thanh điều khiển ở cạnh dưới gồm Tạm dừng/Tiếp tục, Xóa cảnh, Ngoại cảnh/Nội điện, ba góc camera và chất lượng đồ họa.
+ - Thêm nút `Ẩn` cạnh thanh công cụ; khi ẩn chỉ giữ nút con mắt mờ ở góc dưới bên phải để mở lại khi cần.
+ - Nút mở lại có tooltip, nhãn trợ năng và tăng độ rõ khi rê chuột, hạn chế che nội dung overlay lúc phát OBS.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.9.5] - 2026-10-31
+- **Yêu cầu**: Sửa ảnh Nội điện bị co, nghiêng và không phủ kín màn hình.
+- **Chi tiết kỹ thuật**:
+ - Bỏ cách dựng hậu cảnh bằng mặt phẳng 3D kích thước `54 × 30.375`, nguyên nhân làm lộ cạnh ảnh và biến dạng hình thang khi camera lệch.
+ - Gắn texture Nội điện trực tiếp vào `scene.background` của Three.js để ảnh luôn phủ toàn bộ renderer và không chịu phối cảnh camera.
+ - Khôi phục background trước đó khi rời Nội điện để không ảnh hưởng giao diện Ngoại cảnh.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.9.4] - 2026-10-31
+- **Yêu cầu**: Giảm hẳn chiều cao của người đang đi vào khu bàn Phật.
+- **Chi tiết kỹ thuật**:
+ - Thêm tỷ lệ nhân vật theo chiều sâu Nội điện: từ 80% ở gần camera giảm liên tục xuống 34% tại điểm hành lễ.
+ - Toàn bộ thân người, lễ vật và nhãn tên cùng thu nhỏ theo tọa độ `z`, mô phỏng đúng phối cảnh của ảnh toàn cảnh.
+ - Khi nhân vật quay về khu ghế, tỷ lệ tăng dần trở lại; lúc sinh nhân vật luôn khởi tạo ở tỷ lệ 80% để tránh nháy sai kích thước.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.9.3] - 2026-10-31
+- **Yêu cầu**: Hạ thấp hẳn khán giả ngồi và người đang cúng Phật.
+- **Chi tiết kỹ thuật**:
+ - Thu mô hình khán giả ngồi từ 72% xuống 48%, hạ thân về `y=0.1` và nhãn tên về `y=0.98` để thể hiện tư thế ngồi/quỳ thấp.
+ - Thêm chuyển động dáng quỳ cho người hành lễ: khi cầu nguyện, cúi lạy hoặc dâng hoa, thân hạ từ `y=1.05` xuống `y=0.48` và co chiều cao còn 62%.
+ - Đưa nhãn tên vào cùng nhóm thân người để nhãn tự hạ theo tư thế quỳ; nhân vật trở lại chiều cao bình thường khi rời bàn Phật.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.9.2] - 2026-10-31
+- **Yêu cầu**: Xếp người ngồi theo đường chéo phối cảnh và ngăn người hành lễ đi sâu sát tượng Phật.
+- **Chi tiết kỹ thuật**:
+ - Thu các cột ghế ở hàng xa về 72% và tăng dần độ xòe 4,5% mỗi hàng về phía camera, tạo hai cụm ghế chạy chéo theo phối cảnh sàn trong ảnh.
+ - Kéo điểm tiếp cận về `z=-2.4`, điểm hành lễ về `z≈-3.6` và điểm rẽ sang lối bên về `z=-3.15`, tránh nhân vật bị chiếu lên khu bàn thờ.
+ - Giữ nguyên cơ chế trở về đúng tọa cụ sau khi hoàn tất nghi lễ với tọa độ ghế mới.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.9.1] - 2026-10-31
+- **Yêu cầu**: Không cho người hành lễ đi quá sâu vào bàn Phật và hạ thấp người đang ngồi.
+- **Chi tiết kỹ thuật**:
+ - Kéo điểm tiếp cận từ `z=-8.7` về `z=-5.8` và điểm hành lễ từ `z≈-10.2` về `z≈-7.1`, tương ứng khu đầu thảm trước bàn thờ được đánh dấu.
+ - Dịch điểm rẽ trái/phải khi rời khu hành lễ về `z=-6.65` để đường quay về ghế bắt đầu từ vị trí mới.
+ - Thu người ngồi xuống 72% và hạ nhãn tên từ `y=1.9` xuống `y=1.42`, tạo dáng quỳ/ngồi thấp trên tọa cụ.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.9.0] - 2026-10-31
+- **Yêu cầu**: Dùng một ảnh toàn cảnh duy nhất cho toàn bộ Nội điện.
+- **Chi tiết kỹ thuật**:
+ - Thêm `apps/web/public/assets/temple-interior-full-backdrop.png`, bao gồm tượng Phật, bàn lễ, hoa/hương/ngũ quả, cột, đèn, sàn, thảm giữa và khu tọa cụ trong cùng một phối cảnh 16:9.
+ - Thay tường, cột, sàn, thảm và bệ 3D rời bằng một mặt ảnh toàn cảnh; chỉ giữ mặt phẳng trong suốt nhận bóng, ánh sáng, người LIVE và hiệu ứng tương tác.
+ - Bỏ 80 tọa cụ trống dạng khối để không chồng lên các đệm ngồi có sẵn trong ảnh; người đang hiện diện vẫn có tọa cụ riêng khi được render.
+ - Hạ điểm hành lễ về mặt sàn do bệ thờ nay đã nằm trong ảnh toàn cảnh, tránh nhân vật bị nổi trên không.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Asset được tạo bằng công cụ imagegen tích hợp. Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.8.3] - 2026-10-31
+- **Yêu cầu**: Không crop ảnh Phật; phóng lớn toàn bộ ảnh để tượng Phật nhìn gần hơn mà vẫn giữ nguyên không gian.
+- **Chi tiết kỹ thuật**:
+ - Khôi phục UV đầy đủ của texture (`repeat=1`, `offset=0`) để hiển thị nguyên bản toàn bộ hậu cảnh.
+ - Tăng mặt ảnh từ `25 × 14.05` lên `28 × 15.75`, đúng tỷ lệ gốc và vừa chiều rộng chánh điện; nâng tâm ảnh để cạnh dưới vẫn chạm mặt sàn.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.8.2] - 2026-10-31
+- **Yêu cầu**: Cho phép nhân vật đi sâu vào ảnh chánh điện để hành lễ sát tượng Phật hơn.
+- **Chi tiết kỹ thuật**:
+ - Thêm điểm tiếp cận mép bệ tại `z=-8.7`, sau đó nhân vật bước lên cao độ `y=0.95` và tiến đến `z≈-10.2`, ngay trước mặt hậu cảnh Phật.
+ - Bệ vàng che phần chân theo chiều sâu tự nhiên trong khi thân nhân vật vẫn hiển thị trước ảnh, tạo cảm giác bước vào khu bàn thờ.
+ - Dịch đường rẽ khi rời bàn Phật sâu hơn và giữ cao độ bệ ở đoạn đầu trước khi nhân vật xuống lối bên để về ghế.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.8.1] - 2026-10-31
+- **Yêu cầu**: Làm tượng Phật gần hơn, đưa bệ vàng sát ảnh và cho người hành lễ tiến gần bàn Phật.
+- **Chi tiết kỹ thuật**:
+ - Crop 74% vùng trung tâm của hậu cảnh để phóng lớn tượng Phật và bàn thờ mà không làm thay đổi kích thước khung Nội điện.
+ - Đẩy bệ vàng từ `z=-10.15` đến `z=-10.65`, gần mặt ảnh chánh điện hơn.
+ - Đưa điểm hành lễ đến `z≈-8.7`; đồng thời dịch điểm rẽ trái/phải khi quay về ghế để phù hợp vị trí mới.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.8.0] - 2026-10-31
+- **Yêu cầu**: Thêm hoạt ảnh mang hoa/quà lên cúng Phật, đi vòng về đúng chỗ ngồi và cải thiện hình dáng nhân vật.
+- **Chi tiết kỹ thuật**:
+ - Nhân vật `OFFER_FLOWERS` cầm bó hoa; gift thường được thể hiện bằng hộp lễ màu đỏ có dải nơ vàng và giữ thêm `giftName` từ sự kiện TikTok.
+ - Khi mang lễ vật, hai tay giữ ở tư thế nâng đồ thay vì đánh tay xuyên qua vật phẩm.
+ - Sau khi hành lễ, nhân vật rẽ trái/phải theo phía ghế, đi dọc lối biên, vòng xuống đúng hàng rồi trở về tọa cụ đã gán cho tài khoản.
+ - Nâng hình dáng nhân vật với tỷ lệ thân người cân đối hơn, khuôn đầu chi tiết hơn, tóc và phần mặt nhô thay cho kiểu viên nang đơn giản.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Nhân vật vẫn là mô hình procedural nhẹ để giữ hiệu năng khi có nhiều người, chưa sử dụng model người GLB có xương.
+
+## [v0.7.5] - 2026-10-31
+- **Yêu cầu**: Sửa sàn Nội điện còn tối và đưa bàn lễ/người hành lễ đến gần tượng Phật hơn.
+- **Chi tiết kỹ thuật**:
+ - Chuyển texture sàn sang vật liệu không bị ánh sáng scene nhân tối, giữ đúng độ sáng và màu vàng nâu của ảnh gốc.
+ - Đẩy bệ lễ từ trục `z=-8.8` đến `z=-10.15`, sát hậu cảnh chánh điện hơn.
+ - Tách đường đi trong Nội điện khỏi Ngoại cảnh; nhân vật đi hết lối giữa và hành lễ tại `z≈-8.2` trước bàn Phật thay vì dừng ở giữa sân.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.7.4] - 2026-10-31
+- **Yêu cầu**: Thay vùng sàn đen của Nội điện bằng ảnh nền phù hợp với chánh điện.
+- **Chi tiết kỹ thuật**:
+ - Thêm asset `apps/web/public/assets/temple-floor-texture.png` là texture sàn gỗ chùa tối, có vân và phản chiếu ánh vàng.
+ - Phủ texture mới lên toàn bộ mặt sàn 3D bên dưới khu ghế ngồi, đồng thời cân chỉnh độ nhám, phản sáng và sắc độ để nối tự nhiên với hậu cảnh.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Asset được tạo bằng công cụ imagegen tích hợp. Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.7.3] - 2026-10-31
+- **Yêu cầu**: Làm tự nhiên phần tiếp giáp giữa chánh điện chân thực và các vật thể 3D phía trước.
+- **Chi tiết kỹ thuật**:
+ - Bỏ bàn lễ, hoa quả, nến, đèn tròn và chuông 3D dạng khối khỏi Nội điện để không chồng lên đồ lễ rõ nét có sẵn trong hậu cảnh.
+ - Giữ hậu cảnh chánh điện làm lớp thờ tự chính; chuông 3D chỉ còn hiển thị ở Ngoại cảnh.
+ - Đổi sàn Nội điện sang màu gỗ tối, độ nhám thấp và phản sáng nhẹ để giảm đường cắt đột ngột với sàn trong hậu cảnh.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.7.2] - 2026-10-31
+- **Yêu cầu**: Bỏ thanh ngang và mảng trần đang che góc nhìn rộng của Nội điện.
+- **Chi tiết kỹ thuật**:
+ - Loại bỏ khối trần kín và năm xà ngang 3D khỏi `TempleInterior`; giữ nguyên tường, cột, đèn, khu ngồi và chánh điện.
+ - Dọn chú thích camera không còn phù hợp sau khi bỏ trần để cấu hình cảnh phản ánh đúng mô hình hiện tại.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.7.1] - 2026-10-31
+- **Yêu cầu**: Sửa lỗi khối trần Nội điện che gần hết màn hình ở góc camera Toàn cảnh.
+- **Chi tiết kỹ thuật**:
+ - Hạ camera `OVERVIEW` và `ENTRANCE` của Nội điện xuống dưới cao độ trần, đồng thời chỉnh điểm nhìn để vẫn bao quát khu Phật tử và bàn thờ.
+ - Thêm chú thích ngay tại cấu hình camera để tránh đưa camera xuyên lên trên trần trong các lần chỉnh cảnh sau.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.7.0] - 2026-10-31
+- **Yêu cầu**: Mở rộng chánh điện, thêm khu ngồi theo người đang có mặt trong LIVE và làm tượng Phật/đồ lễ rõ nét.
+- **Chi tiết kỹ thuật**:
+ - Mở rộng Nội điện lên 80 tọa cụ chia hai bên lối giữa; sự kiện JOIN, Like và Gift ghi nhận một vị trí ngồi duy nhất theo tài khoản TikTok.
+ - Khi Phật tử đang lên lễ, vị trí ngồi được để trống; sau khi lễ Phật/dâng hoa/dâng hương xong, nhân vật đi về lối khu ngồi rồi xuất hiện lại tại tọa cụ của mình.
+ - Overlay dùng camera toàn cảnh rộng để thấy chánh điện, lối đi và khu Phật tử; giới hạn camera Nội điện được mở rộng.
+ - Thêm ảnh chánh điện rõ nét tạo riêng làm backdrop cục bộ, gồm tượng Phật, hào quang, hoa sen, lư hương, ngũ quả và nến; vẫn giữ lớp lễ vật/khói hương 3D phản ứng theo sự kiện.
+ - Tăng chiều rộng sàn, tường, trần, xà và hàng cột của Nội điện để phù hợp khu ngồi đông người.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Khu ngồi giữ tối đa 80 Phật tử gần nhất để bảo vệ hiệu năng overlay.
+
+## [v0.6.1] - 2026-10-31
+- **Yêu cầu**: Sửa overlay chưa hiển thị Nội điện, bỏ các bảng thông tin và làm cảnh bên trong chùa giống không gian điện Phật tham khảo.
+- **Chi tiết kỹ thuật**:
+ - `/overlay` mặc định dùng theme `INTERIOR`, camera `SHRINE` và góc nhìn chính diện vào bàn thờ.
+ - Loại bỏ tiêu đề Chùa An Lạc, trạng thái mô phỏng/kết nối, hàng chờ và nhãn nhân vật khỏi lớp UI overlay; chỉ giữ scene 3D sạch.
+ - Nâng cấp Nội điện với tượng Phật và hào quang riêng, bệ nhiều tầng, bàn lễ, hoa sen, nến, trái cây, lư hương và khói hương chuyển động.
+ - Điều chỉnh camera Nội điện để các preset Toàn cảnh, Lối vào và Điện Phật hướng đúng vào khu vực thờ tự.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 19 test đều đạt. Cảnh vẫn là mô hình procedural Three.js, không sao chép trực tiếp ảnh tham khảo.
+
+## [v0.6.0] - 2026-10-31
+- **Yêu cầu**: Chuyển khu vực admin thành menu quản trị có nhiều trang.
+- **Chi tiết kỹ thuật**:
+ - Thêm layout admin responsive với sidebar desktop, menu cuộn ngang trên mobile và trạng thái active theo route.
+ - Tách các route `/admin`, `/admin/events`, `/admin/connection`, `/admin/simulator`, `/admin/temple`, `/admin/settings`.
+ - Trang Không gian chùa cung cấp lối vào Chùa tương tác, Phòng thử nghiệm và Overlay OBS; các route 3D cũ được giữ nguyên.
+ - Dashboard Tổng quan vẫn hiển thị thống kê, kết nối, tốc độ xử lý và sự kiện gần nhất; các chức năng cũ được phân bổ sang trang chuyên biệt.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 19 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng build không thất bại.
+
+## [v0.5.0] - 2026-10-31
+- **Yêu cầu**: Thêm chức năng thay đổi giao diện chùa và một giao diện bên trong chùa.
+- **Chi tiết kỹ thuật**:
+ - Thêm bộ chọn `Ngoại cảnh / Nội điện` vào thanh điều khiển tại `/temple` và `/test`.
+ - Thêm scene `TempleInterior` gồm sàn gỗ, thảm lễ, cột gỗ, xà trần, cửa phát sáng, đèn lồng, bệ điện Phật, sương và hệ ánh sáng ấm.
+ - Điều chỉnh màu nền, giới hạn OrbitControls và ba vị trí camera riêng cho Nội điện; nhãn `Cổng chùa` tự đổi thành `Lối vào`.
+ - Giữ nguyên tượng Phật, bàn lễ, lư hương, chuông, hiệu ứng và toàn bộ luồng nhân vật khi chuyển giao diện.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 19 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng build không thất bại.
+
 ## [v0.4.0] - 2026-10-31
 - **Yêu cầu**: Lưu lâu dài lịch sử sự kiện TikTok LIVE và simulator bằng SQLite.
 - **Chi tiết kỹ thuật**:
