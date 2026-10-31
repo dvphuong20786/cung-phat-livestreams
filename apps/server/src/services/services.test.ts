@@ -1,0 +1,2 @@
+import{describe,expect,it}from'vitest';import{EventService}from'./EventService';
+describe('events/stats',()=>{it('counts likes and simulation',()=>{const s=new EventService();s.simulate({type:'LIKE',username:'u',nickname:'U',likeCount:10});expect(s.stats.snapshot().simulated.likes).toBe(10)});it('counts finalized gift once',()=>{const s=new EventService();s.simulate({type:'GIFT',username:'u',nickname:'U',gift:{name:'Rose',quantity:3,repeatEnd:true}});expect(s.stats.snapshot().simulated.giftQuantity).toBe(3);expect(s.stats.snapshot().simulated.giftEvents).toBe(1)})});

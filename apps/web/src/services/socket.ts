@@ -1,0 +1,2 @@
+import{io}from'socket.io-client';export const socket=io(import.meta.env.VITE_SERVER_URL||'http://localhost:3001',{autoConnect:true,reconnection:true,reconnectionDelay:700,reconnectionDelayMax:5000});
+export const command=<T=unknown>(name:string,payload:unknown={})=>new Promise<T>((resolve,reject)=>socket.timeout(12000).emit(name,payload,(err:Error|null,res:any)=>{if(err)reject(new Error('Máy chủ không phản hồi'));else if(!res?.success)reject(new Error(res?.error||'Lệnh thất bại'));else resolve(res.data)}));
