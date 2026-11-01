@@ -1,5 +1,93 @@
 # Lịch sử thay đổi
 
+## [v0.15.1] - 2026-10-31
+- **Yêu cầu**: Thay ni cô bằng nữ Phật tử có tóc và làm hoa/gift thật lớn, dễ nhìn trên mobile.
+- **Chi tiết kỹ thuật**:
+ - Thêm `female-worshipper-walking-mobile.png` và `female-worshipper-kneeling-mobile.png`: nữ Phật tử tóc búi, áo lam, nhìn từ phía sau; thay cho hai cutout ni cô ở tỷ lệ nữ 11/12.
+ - Thêm `MobileOfferingBadge` tách khỏi mô hình người: hoa hiển thị bằng bó `💐`, gift bằng hộp `🎁` cỡ lớn, có tên gift và số lượng `×N`.
+ - Lễ vật có nền tương phản, viền vàng, bóng sáng và chuyển động nhún nhẹ; chỉ ẩn khi nhân vật rời khu lễ.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Hai cutout nữ Phật tử được tạo bằng công cụ imagegen tích hợp. Build frontend/backend/shared thành công; 22 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.15.0] - 2026-10-31
+- **Yêu cầu**: Khán giả chủ yếu là ni cô nữ, hiển thị avatar TikTok, đưa người tặng quà lên hàng lễ gần Phật, sửa lỗi người xuất hiện giữa tượng và tăng kích thước nhân vật.
+- **Chi tiết kỹ thuật**:
+ - Thêm hai cutout ni cô `nun-walking-mobile.png`/`nun-kneeling-mobile.png`; mobile chọn ni cô cho 11/12 tài khoản và chỉ giữ khoảng 1/12 nhân vật nam.
+ - Mang `avatarUrl` từ `LiveEvent.user` vào game action; nhãn người đi và người ngồi hiển thị avatar TikTok cạnh nickname khi có dữ liệu.
+ - Tăng kích thước billboard mobile khoảng 20% cho cả người đi và người quỳ/ngồi.
+ - Gift/hoa dùng hàng lễ thứ nhất tại `z≈4.7`, gần Phật hơn; tương tác khác dừng từ `z≈6`, vẫn chia làn và vị trí để tránh chồng nhau.
+ - Khởi tạo root nhân vật ngay tại `spawn z=14` trước frame đầu tiên, loại bỏ hiện tượng lóe/xuất hiện từ giữa tượng Phật.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Hai cutout ni cô được tạo bằng công cụ imagegen tích hợp. Build frontend/backend/shared thành công; 22 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.14.0] - 2026-10-31
+- **Yêu cầu**: Làm luồng người đi/khấn tự nhiên, không xếp thẳng hoặc chồng vị trí; ưu tiên người thật và xếp hạng chỗ ngồi theo mức tương tác.
+- **Chi tiết kỹ thuật**:
+ - Thêm `eventType` vào game action và điểm ưu tiên: người thật luôn trên simulator; trong từng nguồn lần lượt `GIFT/hoa → LIKE/thả tim → COMMENT → FOLLOW/SHARE → JOIN`.
+ - Hàng chờ được sắp theo điểm ưu tiên trước khi đưa nhân vật vào cảnh; chỗ ngồi cũng sắp theo ưu tiên rồi theo thời gian tương tác mới nhất.
+ - Nhân vật dùng bốn làn đi lệch trái/phải và tối đa ba hàng vị trí khấn, tránh nối đuôi một đường thẳng hoặc đứng chồng cùng tọa độ; mobile có lộ trình riêng từ cửa đến cuối thảm.
+ - Mobile hiển thị 24 người ưu tiên cao nhất. Người thật ngồi tối đa 15 phút, nhân vật giả ngồi 90 giây; danh sách tự làm mới mỗi 5 giây.
+ - Đường quay về ghế tiếp tục đi qua lối bên và bám theo vị trí ghế sau khi danh sách được xếp hạng.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 22 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.13.2] - 2026-10-31
+- **Yêu cầu**: Chỉ nhân vật giả mới có thoại giả; người TikTok thật luôn ưu tiên và hiển thị comment thật.
+- **Chi tiết kỹ thuật**:
+ - Thêm cờ `TempleGameAction.isSimulated` lấy trực tiếp từ `LiveEvent.source`, không còn suy đoán nhân vật giả chỉ bằng nickname.
+ - Chỉ action từ `SIMULATOR` mới được gán câu lễ Phật tự động; action từ `TIKTOK` không có comment sẽ không hiện thoại giả.
+ - Comment thật luôn dùng `TempleGameAction.message` và ưu tiên trước câu tự động; tên `Khán giả <số>` chỉ bị ẩn khi chính action đó là dữ liệu mô phỏng.
+ - Thêm test xác nhận comment TikTok giữ nguyên message và được đánh dấu `isSimulated: false`.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 22 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.13.1] - 2026-10-31
+- **Yêu cầu**: Không hiện tên đối với khán giả mẫu và tự tạo các câu lễ Phật ngẫu nhiên không trùng nhau.
+- **Chi tiết kỹ thuật**:
+ - Nhận diện `Khán giả`/`Khán giả <số>` không phân biệt dấu và chữ hoa; ẩn nhãn tên ở cả người đi, người quỳ mobile và người ngồi desktop.
+ - Thêm 18 câu lễ Phật/cầu bình an; danh sách được chọn với vị trí bắt đầu ngẫu nhiên mỗi lần tải trang.
+ - Các khán giả mẫu đang hoạt động cùng lúc nhận câu khác nhau theo thứ tự trong hàng active, không trùng trong giới hạn tối đa 12 nhân vật; comment thật luôn được ưu tiên hiển thị.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Khi thứ tự nhân vật active thay đổi, câu tự động có thể được phân lại nhưng vẫn không trùng giữa những người đang hiện diện cùng lúc.
+
+## [v0.13.0] - 2026-10-31
+- **Yêu cầu**: Khi người xem comment, tạo hoạt ảnh người và hiển thị câu comment trên đầu.
+- **Chi tiết kỹ thuật**:
+ - Thêm action `SAY_COMMENT`; mọi comment thông thường tạo nhân vật đi vào chùa, còn comment chứa “Nam mô/A Di Đà Phật” tiếp tục dùng action cầu nguyện.
+ - Lưu nội dung comment trong `TempleGameAction.message` và hiển thị bong bóng thoại trắng trên đầu nhân vật ở cả desktop/mobile.
+ - Bong bóng giới hạn 100 ký tự hiển thị, giữ nội dung đầy đủ trong tooltip để tránh che màn hình; trạng thái mới nhất cũng hiển thị tên và comment.
+ - Cập nhật test mapping để xác nhận comment thường tạo đúng `SAY_COMMENT` và giữ nguyên message.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.12.2] - 2026-10-31
+- **Yêu cầu**: Sửa người đi ra từ giữa tượng Phật, bỏ hoàn toàn người que trên mobile và chỉnh lại bố cục ghế.
+- **Chi tiết kỹ thuật**:
+ - Tạo đường đi riêng cho mobile `z=8.5 → 10 → 7.2 → 6`, đưa điểm hành lễ xuống cuối thảm; đường rời lễ bắt đầu tại `z=6.5`, không còn chiếu người lên tượng Phật.
+ - Thay toàn bộ người ngồi mobile bằng billboard cutout quỳ áo lam chân thực; mô hình viên nang chỉ còn ở desktop.
+ - Bố trí mobile thành 4 cột × 6 hàng ở hai bên thảm, tối đa 24 người gần nhất; giảm kích thước nhãn và thêm lật/biến thiên tỷ lệ nhẹ để đám đông bớt đồng dạng.
+ - Đồng bộ đường quay về ghế với 24 vị trí mới và lối biên mobile tại `x≈±5.1`.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.12.1] - 2026-10-31
+- **Yêu cầu**: Bỏ bốn hàng người ngồi đầu trên mobile để khu hành lễ rộng hơn.
+- **Chi tiết kỹ thuật**:
+ - `/overlay-mobile` bỏ 32 vị trí của bốn hàng sát bàn Phật, chỉ hiển thị tối đa 48 người gần nhất ở sáu hàng phía dưới.
+ - Thêm hàm tọa độ ghế mobile riêng, bắt đầu từ hàng thứ năm và giữ hệ số thu ngang 43%.
+ - Đồng bộ đường quay về ghế của nhân vật với danh sách 48 vị trí mobile mới; desktop vẫn giữ nguyên tối đa 80 người và 10 hàng.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Build frontend/backend/shared thành công; 21 test đều đạt. Vite còn cảnh báo chunk Three.js lớn nhưng không làm build thất bại.
+
+## [v0.12.0] - 2026-10-31
+- **Yêu cầu**: Giữ nguyên màn hình mobile hiện tại và thay hoạt ảnh người theo phong cách người thật trong ảnh tham khảo.
+- **Chi tiết kỹ thuật**:
+ - Giữ nguyên hậu cảnh `/overlay-mobile`; thêm hai cutout trong suốt `worshipper-walking-mobile.png` và `worshipper-kneeling-mobile.png` cho nhân vật đang hoạt động.
+ - Trên mobile, người đi dùng dáng áo lam nhìn từ sau với chuyển động nhún bước/nghiêng nhẹ; khi cầu nguyện, dâng hoa hoặc cúi lạy tự đổi sang dáng quỳ chắp tay.
+ - Dùng billboard 2D luôn hướng camera, giữ nhãn TikTok và toàn bộ đường đi/trở về ghế; desktop tiếp tục dùng mô hình 3D cũ.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+ - Hai cutout được tạo bằng công cụ imagegen tích hợp. Build frontend/backend/shared thành công; 21 test đều đạt. Billboard nhẹ hơn model GLB có xương nhưng chưa có hoạt ảnh chân tay nhiều khung hình.
+
 ## [v0.11.2] - 2026-10-31
 - **Yêu cầu**: Co chiều cao ảnh nền mobile để nhìn được toàn bộ chánh điện.
 - **Chi tiết kỹ thuật**:

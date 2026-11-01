@@ -21,6 +21,7 @@ import { SeatedVisitors } from './components/SeatedVisitors';
 import { TempleEffects } from './components/TempleEffects';
 export type CameraPreset = 'OVERVIEW' | 'ENTRANCE' | 'SHRINE';
 export type TempleTheme = 'COURTYARD' | 'INTERIOR';
+export type WorshipDistance = 'NEAR' | 'STANDARD';
 function TempleCamera({ preset, theme }: { preset: CameraPreset; theme: TempleTheme }) {
   useFrame(({ camera }, delta) => {
     const outdoor = { OVERVIEW: [13, 11, 18], ENTRANCE: [9, 6, 13], SHRINE: [5, 4, -0.5] },
@@ -61,11 +62,13 @@ function World({
   controls,
   theme,
   mobile,
+  worshipDistance,
 }: {
   preset: CameraPreset;
   controls: boolean;
   theme: TempleTheme;
   mobile: boolean;
+  worshipDistance: WorshipDistance;
 }) {
   const active = useTempleGameStore((s) => s.active),
     flowers = useTempleGameStore((s) => s.flowers),
@@ -100,6 +103,7 @@ function World({
           character={character}
           inside={inside}
           mobile={mobile}
+          worshipDistance={worshipDistance}
         />
       ))}
       {controls && (
@@ -119,12 +123,14 @@ export function TempleScene({
   theme = 'COURTYARD',
   controls = false,
   mobile = false,
+  worshipDistance = 'NEAR',
   className = 'h-full w-full',
 }: {
   preset?: CameraPreset;
   theme?: TempleTheme;
   controls?: boolean;
   mobile?: boolean;
+  worshipDistance?: WorshipDistance;
   className?: string;
 }) {
   const quality = useTempleGameStore((s) => s.quality);
@@ -145,7 +151,13 @@ export function TempleScene({
           <color attach="background" args={[theme === 'INTERIOR' ? '#27110f' : '#91b8d0']} />
         )}
         <Suspense fallback={null}>
-          <World preset={preset} controls={controls} theme={theme} mobile={mobile} />
+          <World
+            preset={preset}
+            controls={controls}
+            theme={theme}
+            mobile={mobile}
+            worshipDistance={worshipDistance}
+          />
         </Suspense>
       </Canvas>
     </div>

@@ -7,7 +7,7 @@ export type ConnectionState =
   'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'ERROR';
 export type TempleAction =
   'ENTER_TEMPLE' | 'PRAY' | 'OFFER_FLOWERS' | 'OFFER_INCENSE' | 'WELCOME' | 'NONE';
-export type TempleGameActionType = Exclude<TempleAction, 'NONE'> | 'BELL_EFFECT';
+export type TempleGameActionType = Exclude<TempleAction, 'NONE'> | 'BELL_EFFECT' | 'SAY_COMMENT';
 export interface TempleGameAction {
   actionId: string;
   userId: string;
@@ -16,6 +16,10 @@ export interface TempleGameAction {
   actionType: TempleGameActionType;
   quantity?: number;
   giftName?: string;
+  message?: string;
+  isSimulated?: boolean;
+  eventType?: LiveEventType;
+  avatarUrl?: string;
   createdAt: number;
 }
 
@@ -131,6 +135,7 @@ export function templeGameActionFor(event: LiveEvent): TempleGameAction | null {
     /(nam\s*(mô|mo)|a\s*di\s*đà\s*phật)/i.test(event.comment?.normalize('NFC') ?? '')
   )
     actionType = 'PRAY';
+  else if (event.type === 'COMMENT') actionType = 'SAY_COMMENT';
   if (event.type === 'GIFT')
     actionType = /rose|hoa hồng/i.test(event.gift?.name ?? '') ? 'OFFER_FLOWERS' : 'OFFER_INCENSE';
   if (event.type === 'FOLLOW') actionType = 'WELCOME';
@@ -145,8 +150,37 @@ export function templeGameActionFor(event: LiveEvent): TempleGameAction | null {
     actionType,
     quantity: event.likeCount ?? event.gift?.quantity,
     giftName: event.gift?.name,
+    message: event.comment,
+    isSimulated: event.source === 'SIMULATOR',
+    eventType: event.type,
+    avatarUrl: event.user.avatarUrl,
     createdAt: event.timestamp,
   };
+}
+export function templeGameActionPriority(action: TempleGameAction): number {
+  const sourcePriority = action.isSimulated ? 0 : 1000;
+  const eventType =
+    action.eventType ??
+    (action.actionType === 'OFFER_FLOWERS' || action.actionType === 'OFFER_INCENSE'
+      ? 'GIFT'
+      : action.actionType === 'SAY_COMMENT' || action.actionType === 'PRAY'
+        ? 'COMMENT'
+        : action.actionType === 'ENTER_TEMPLE'
+          ? 'JOIN'
+          : undefined);
+  const interactionPriority =
+    eventType === 'GIFT'
+      ? 500
+      : eventType === 'LIKE'
+        ? 400
+        : eventType === 'COMMENT'
+          ? 300
+          : eventType === 'FOLLOW' || eventType === 'SHARE'
+            ? 200
+            : eventType === 'JOIN'
+              ? 100
+              : 0;
+  return sourcePriority + interactionPriority;
 }
 export function eventMatches(
   event: LiveEvent,

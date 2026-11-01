@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { TempleScene, type CameraPreset, type TempleTheme } from '../game/TempleScene';
+import {
+  TempleScene,
+  type CameraPreset,
+  type TempleTheme,
+  type WorshipDistance,
+} from '../game/TempleScene';
 import { TempleToolbar } from '../game/TempleToolbar';
 import { useTempleGameStore } from '../game/useTempleGameStore';
 import { useMonitorStore } from '../stores/useMonitorStore';
@@ -13,6 +18,7 @@ export function TemplePage({
 }) {
   const [preset, setPreset] = useState<CameraPreset>('OVERVIEW'),
     [theme, setTheme] = useState<TempleTheme>(overlay ? 'INTERIOR' : 'COURTYARD'),
+    [worshipDistance, setWorshipDistance] = useState<WorshipDistance>('NEAR'),
     [isOverlayToolbarVisible, setIsOverlayToolbarVisible] = useState(true);
   const { active, queue, latest } = useTempleGameStore();
   const connection = useMonitorStore((s) => s.connection);
@@ -30,7 +36,13 @@ export function TemplePage({
           : undefined
       }
     >
-      <TempleScene preset={preset} theme={theme} controls={!overlay} mobile={mobile} />
+      <TempleScene
+        preset={preset}
+        theme={theme}
+        controls={!overlay}
+        mobile={mobile}
+        worshipDistance={worshipDistance}
+      />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30" />
       {overlay && isOverlayToolbarVisible && (
         <div
@@ -46,6 +58,8 @@ export function TemplePage({
             theme={theme}
             setTheme={setTheme}
             compact
+            worshipDistance={mobile ? worshipDistance : undefined}
+            setWorshipDistance={mobile ? setWorshipDistance : undefined}
           />
           <button
             type="button"
