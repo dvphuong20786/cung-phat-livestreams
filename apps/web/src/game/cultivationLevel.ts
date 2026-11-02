@@ -143,19 +143,19 @@ export function calculateLevelFromPoints(points: number): number {
  * - Gift từ 500 coin trở lên: +200
  */
 export function calculateActionMeritPoints(action: TempleGameAction): number {
-  if (action.eventType === 'JOIN') return 1;
-  if (action.eventType === 'FOLLOW') return 30;
-  if (action.eventType === 'SHARE') return 10;
+  if (action.eventType === 'JOIN') return 5;
+  if (action.eventType === 'FOLLOW') return 100;
+  if (action.eventType === 'SHARE') return 30;
   if (
     action.eventType === 'COMMENT' ||
     action.actionType === 'SAY_COMMENT' ||
     action.actionType === 'PRAY'
   ) {
-    return 2;
+    return 5;
   }
   if (action.eventType === 'LIKE') {
     const likes = Math.max(1, action.quantity ?? 1);
-    return Math.max(1, Math.floor(likes / 10));
+    return likes >= 10 ? Math.floor(likes / 10) * 3 : Math.max(1, Math.round((likes / 10) * 3));
   }
   if (
     action.eventType === 'GIFT' ||
@@ -166,14 +166,19 @@ export function calculateActionMeritPoints(action: TempleGameAction): number {
       action.actionType === 'OFFER_FLOWERS' || /hoa|rose/i.test(action.giftName ?? '');
     const count = Math.max(1, action.quantity ?? 1);
     if (isFlower) {
-      return count * 5;
+      // Tặng Hoa/Hoa hồng: +10 điểm nhân với số lượng quà
+      return count * 10;
     }
-    const coins = count;
-    if (coins >= 500) return 200;
-    if (coins >= 100) return 80;
-    if (coins >= 50) return 30;
-    if (coins >= 10) return 15;
-    return count * 5;
+    // Bậc coin quà: 1-9 coin (+15), 10-49 coin (+40), 50-99 coin (+100), 100-499 coin (+250), 500+ coin (+600)
+    const singleCoin = (action as any).coins || (action as any).diamondCount || 1;
+    let pointPerGift = 15;
+    if (singleCoin >= 500) pointPerGift = 600;
+    else if (singleCoin >= 100) pointPerGift = 250;
+    else if (singleCoin >= 50) pointPerGift = 100;
+    else if (singleCoin >= 10) pointPerGift = 40;
+    else pointPerGift = 15;
+
+    return count * pointPerGift;
   }
   return 1;
 }

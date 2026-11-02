@@ -68,7 +68,7 @@ describe('CharacterStore', () => {
     expect(character.userId).toBe('user-1');
     expect(character.avatarUrl).toBe('https://p16-sign.tiktokcdn.com/avatar.jpeg');
     expect(characterStore.getAllCharacters()).toHaveLength(1);
-    expect(characterStore.getCharacter('user-1')?.meritPoints).toBe(3);
+    expect(characterStore.getCharacter('user-1')?.meritPoints).toBe(10);
     characterStore.close();
   });
 
@@ -92,8 +92,20 @@ describe('CharacterStore', () => {
     characterStore.awardPointsForEvent(createEvent('COMMENT', 'rapid_user'));
     const { character } = characterStore.awardPointsForEvent(createEvent('COMMENT', 'rapid_user'));
 
-    // Cả 2 comment đều được tính điểm (+2 x 2 = 4 điểm), không bị chặn 30s
-    expect(character.meritPoints).toBe(4);
+    // Cả 2 comment đều được tính điểm (+5 x 2 = 10 điểm), không bị chặn 30s
+    expect(character.meritPoints).toBe(10);
+    characterStore.close();
+  });
+
+  it('awards 20 points for continuous 5-minute watch time', () => {
+    const characterStore = new CharacterStore(':memory:');
+    characterStore.awardPointsForEvent(createEvent('JOIN', 'watch_user'));
+    const initialPoints = characterStore.getCharacter('user-1')?.meritPoints ?? 0;
+    expect(initialPoints).toBe(5);
+
+    const result = characterStore.awardWatchTime('user-1');
+    expect(result?.pointsAwarded).toBe(20);
+    expect(result?.character.meritPoints).toBe(25);
     characterStore.close();
   });
 });

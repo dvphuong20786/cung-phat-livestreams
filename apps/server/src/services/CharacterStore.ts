@@ -261,40 +261,40 @@ export class CharacterStore {
 
     switch (event.type) {
       case 'LIKE': {
-        // 10 lượt like = +1 điểm (không giới hạn thời gian và hạn mức khi tương tác nhanh)
+        // 10 lượt like = +3 điểm (không giới hạn)
         const likes = Math.max(1, event.likeCount ?? 1);
-        pointsAwarded = Math.max(1, Math.floor(likes / 10));
+        pointsAwarded = likes >= 10 ? Math.floor(likes / 10) * 3 : Math.max(1, Math.round((likes / 10) * 3));
         character.likePointsToday += pointsAwarded;
         break;
       }
 
       case 'COMMENT': {
-        // Comment hợp lệ: +2 điểm (không giới hạn thời gian khi người dùng tương tác nhanh nhiều cùng lúc)
-        pointsAwarded = 2;
+        // Comment hợp lệ: +5 điểm (mỗi comment được tính điểm)
+        pointsAwarded = 5;
         character.lastCommentAt = now;
         break;
       }
 
       case 'SHARE': {
-        // Share livestream: +10 điểm
-        pointsAwarded = 10;
+        // Share livestream: +30 điểm (mỗi lần share đều được tính)
+        pointsAwarded = 30;
         character.shareCountToday += 1;
         break;
       }
 
       case 'FOLLOW': {
-        // Follow kênh: +30 điểm (chỉ nhận một lần)
+        // Follow kênh: +100 điểm (chỉ cộng khi phát sinh follow mới)
         if (character.followAwarded === 0) {
-          pointsAwarded = 30;
+          pointsAwarded = 100;
           character.followAwarded = 1;
         }
         break;
       }
 
       case 'JOIN': {
-        // Người xem mới tham gia live: +1 điểm (một lần/buổi)
+        // Tham gia livestream: +5 điểm (mỗi lần vào buổi livestream)
         if (character.joinAwardedToday === 0) {
-          pointsAwarded = 1;
+          pointsAwarded = 5;
           character.joinAwardedToday = 1;
         }
         break;
@@ -306,16 +306,19 @@ export class CharacterStore {
         const isFlower = /hoa|rose/i.test(giftName);
 
         if (isFlower) {
-          // Tặng Hoa/Hoa hồng: +5 điểm (tính theo từng quà)
-          pointsAwarded = quantity * 5;
+          // Tặng Hoa/Hoa hồng: +10 điểm nhân với số lượng quà
+          pointsAwarded = quantity * 10;
         } else {
-          // Bậc coin quà:
-          const coins = quantity;
-          if (coins >= 500) pointsAwarded = 200;
-          else if (coins >= 100) pointsAwarded = 80;
-          else if (coins >= 50) pointsAwarded = 30;
-          else if (coins >= 10) pointsAwarded = 15;
-          else pointsAwarded = 5;
+          // Bậc coin quà: 1-9 coin (+15), 10-49 coin (+40), 50-99 coin (+100), 100-499 coin (+250), 500+ coin (+600)
+          const singleCoin = (event.gift as any)?.coins || (event.gift as any)?.diamondCount || 1;
+          let pointPerGift = 15;
+          if (singleCoin >= 500) pointPerGift = 600;
+          else if (singleCoin >= 100) pointPerGift = 250;
+          else if (singleCoin >= 50) pointPerGift = 100;
+          else if (singleCoin >= 10) pointPerGift = 40;
+          else pointPerGift = 15;
+
+          pointsAwarded = quantity * pointPerGift;
         }
         break;
       }
@@ -336,6 +339,24 @@ export class CharacterStore {
 
     this.updateCharacter(character);
 
+    return { character, pointsAwarded };
+  }
+
+  /**
+   * Xem liên tục 5 phút: +20 điểm (cứ đủ 5 phút cộng tiếp 20 điểm)
+   */
+  public awardWatchTime(userId: string): { character: UserCharacter; pointsAwarded: number } | null {
+    const character = this.getCharacter(userId);
+    if (!character) return null;
+
+    const pointsAwarded = 20;
+    character.meritPoints += pointsAwarded;
+    character.watchTimeAwardedToday += pointsAwarded;
+    character.level = calculateLevelFromPoints(character.meritPoints);
+    character.rankName = getRankName(character.level, character.gender === 'female');
+    character.lastActiveAt = Date.now();
+
+    this.updateCharacter(character);
     return { character, pointsAwarded };
   }
 

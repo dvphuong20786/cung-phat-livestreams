@@ -1,5 +1,26 @@
 # Lịch sử thay đổi
 
+## [v0.22.14] - 2026-11-02
+- **Yêu cầu**: Cập nhật toàn bộ bảng quy đổi điểm công đức theo cấu hình mới từ người dùng.
+- **Chi tiết kỹ thuật**:
+  - `CharacterStore.ts` & `cultivationLevel.ts`:
+    - 10 lượt Like: **+3 điểm** (không giới hạn số lượt).
+    - Comment hợp lệ: **+5 điểm** (mỗi comment đều được tính điểm).
+    - Share livestream: **+30 điểm** (mỗi lượt chia sẻ đều được tính).
+    - Follow kênh: **+100 điểm** (tính khi có follow mới).
+    - Tham gia livestream (JOIN): **+5 điểm** (mỗi lần tham gia phiên live).
+    - Xem liên tục 5 phút: **+20 điểm** (bổ sung hàm `awardWatchTime` cứ đủ 5 phút cộng tiếp 20 điểm).
+    - Tặng Hoa/Hoa hồng: **+10 điểm** x số lượng quà.
+    - Gift từ 1–9 coin: **+15 điểm** x số lượng gift.
+    - Gift từ 10–49 coin: **+40 điểm** x số lượng gift.
+    - Gift từ 50–99 coin: **+100 điểm** x số lượng gift.
+    - Gift từ 100–499 coin: **+250 điểm** x số lượng gift.
+    - Gift từ 500 coin trở lên: **+600 điểm** x số lượng gift.
+  - `CharacterStore.test.ts`: Bổ sung test kiểm tra tính điểm watch time (+20 điểm mỗi 5 phút) và kiểm tra tính điểm comment theo thang điểm mới (+5 điểm).
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 35/35 unit test đạt; TypeScript và Vite build thành công 100%.
+
+
 ## [v0.22.13] - 2026-11-02
 - **Yêu cầu**: Hoàn thành toàn bộ các task còn lại (Task 3, Task 4, Task 5, Task 6):
   - Task 3: Bổ sung danh sách Avatar Donate bên trái màn hình (5 người cúng dường mới nhất).
