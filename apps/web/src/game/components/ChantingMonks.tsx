@@ -194,19 +194,6 @@ function MonkFigure({ config }: { config: MonkConfig }) {
     </group>
   );
 }
-              ? 'border-amber-300 bg-gradient-to-r from-[#3e1b0c] via-[#5c2a12] to-[#3e1b0c] text-xs font-black text-amber-200 ring-2 ring-amber-400/40'
-              : 'border-amber-400/60 bg-[#28150c]/90 text-[11px] font-bold text-amber-100'
-          }`}
-        >
-          <span className="rounded bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 px-1.5 py-0.5 text-[8px] font-black text-slate-950 shadow">
-            Lv.100 Trụ trì
-          </span>
-          <span>{config.title}</span>
-        </div>
-      </Html>
-    </group>
-  );
-}
 
 export function ChantingMonks() {
   return (

@@ -1,5 +1,13 @@
 # Lịch sử thay đổi
 
+## [v0.21.1] - 2026-11-02
+- **Yêu cầu**: Sửa lỗi cú pháp syntax thừa dòng ở file ChantingMonks.tsx khiến Vite báo lỗi Pre-transform error.
+- **Chi tiết kỹ thuật**:
+  - File ChantingMonks.tsx: Loại bỏ khối ternary và thẻ HTML trùng lặp ở cuối file (dòng 197–209).
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã chạy kiểm tra Vite build (npx vite build) thành công 100%. 24/24 unit tests passed.
+
+
 ## [v0.21.0] - 2026-11-02
 - **Yêu cầu**: Tích hợp 12 bộ hoạt ảnh nhân vật theo level (nam1-6, nu1-6), thiết lập bảng quy đổi điểm công đức kèm giới hạn đề xuất, lập trình 20 mốc level (Lv.1-100, mở hào quang từ Lv.90) và lưu trữ nhân vật bền vững vào database SQLite.
 - **Chi tiết kỹ thuật**:
