@@ -604,4 +604,17 @@ export const useInteractionEffectsStore = create<InteractionEffectsState>((set, 
       combos: {},
     });
   },
+
+  triggerWatchTimeOrbit: (userName?: string) => {
+    const eff: ConcurrentEffect = {
+      id: `orbit-watch-${Date.now()}-${Math.random()}`,
+      type: 'PETALS_ORBIT',
+      startedAt: Date.now(),
+      durationMs: INTERACTION_EFFECTS_CONFIG.watchTime.petalsDurationMs,
+      userName,
+    };
+    set((s) => ({
+      concurrentEffects: [...s.concurrentEffects.slice(-39), eff],
+    }));
+  },
 }));

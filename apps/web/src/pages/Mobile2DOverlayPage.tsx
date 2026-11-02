@@ -1447,8 +1447,6 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
 
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
       <InteractionEffectsOverlay />
-      {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      <InteractionEffectsOverlay />
     </div>
   );
 }

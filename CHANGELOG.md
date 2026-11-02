@@ -1,5 +1,19 @@
 # Lịch sử thay đổi
 
+## [v0.27.0] - 2026-11-02
+- **Yêu cầu**: Triển khai hệ thống điểm công đức, level nhân vật và toàn bộ hiệu ứng tương tác TikTok theo thời gian thực (Like, Comment, Share, Follow, Watch time, Hoa, Gift theo mốc coin, Lên level, Chuyển cấp bậc nhân vật).
+- **Chi tiết kỹ thuật**:
+  - `interactionEffectsConfig.ts`: tách riêng toàn bộ cấu hình điểm số, thời lượng, mốc coin quà tặng (1-9, 10-49, 50-99, 100-499, >=500 coin) và độ ưu tiên hàng đợi `EFFECT_PRIORITY`.
+  - `interaction-effects.css`: bộ cắt sprite sheet chuẩn xác từng ô cho `hoa1.png` (4x4 cánh hoa rơi) và `hoa2.png` (4x3 đóa sen phát quang hòa trộn `screen` loại bỏ nền đen tự nhiên), cùng các hiệu ứng bay lượn, nở hoa chân, mưa hoa toàn màn hình và hào quang hoàng kim.
+  - `useInteractionEffectsStore.ts`: quản lý Event Queue phân tầng, cho phép hiệu ứng nhỏ chạy song song (concurrent tối đa 40 hiệu ứng chống giật/lag) và hiệu ứng lớn sắp xếp tuần tự theo mức độ ưu tiên: `Chuyển cấp > Gift >=500 coin > Gift 100-499 coin > Lên level > Follow > Share > Like/Comment`. Hỗ trợ gộp combo hoa/gift liên tiếp trong 8s và chống lặp sự kiện bằng `seenEventIds`.
+  - `InteractionEffectsOverlay.tsx`: component hiển thị đa tầng hiệu ứng (PetalRain, PetalsOrbit, LotusBloom, GrandLotusCeremony, EffectNoticeBanner) và nút bật/tắt âm thanh hiệu ứng tương tác.
+  - Tích hợp lớp phủ `InteractionEffectsOverlay` vào cả `Mobile2DOverlayPage.tsx` và `TemplePage.tsx` (hỗ trợ cả 2D lẫn 3D WebGL).
+  - `TempleAudioService.ts`: bổ sung alias `playBell` (chuông chùa) và `playMoktak` (gõ mõ) phục vụ âm thanh hiệu ứng tương tác chúc mừng thăng cấp và quà lớn.
+  - `useSocket.ts`: kết nối bắt sự kiện `tiktok:event` và theo dõi cập nhật thời gian xem 15 phút từ server để kích hoạt hoa bay quanh nhân vật.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 43/43 unit test và build production Web thành công sạch sẽ.
+  - Cần khởi động Simulator hoặc kết nối TikTok LIVE thật để quan sát hoạt cảnh đại đóa sen và mưa hoa trực tiếp trên OBS Browser Source.
+
 ## [v0.26.3] - 2026-11-02
 - **Yêu cầu**: Sửa dứt điểm lỗi backend vẫn báo thiếu `TIKTOK_SIGN_API_KEY` dù biến đã có trong `.env`.
 - **Chi tiết kỹ thuật**:
