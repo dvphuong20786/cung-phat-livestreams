@@ -1,6 +1,11 @@
+import type { TempleGameAction } from '@live/shared';
+
 export interface CultivationRank {
+  rankIndex: number;
   minLevel: number;
   maxLevel: number;
+  minPoints: number;
+  maxPoints: number;
   nameMale: string;
   nameFemale: string;
   badgeColor: string;
@@ -9,71 +14,187 @@ export interface CultivationRank {
 
 export const CULTIVATION_RANKS: CultivationRank[] = [
   {
+    rankIndex: 6,
     minLevel: 81,
     maxLevel: 100,
+    minPoints: 12000,
+    maxPoints: 25000,
     nameMale: 'Trụ trì',
     nameFemale: 'Trụ trì',
     badgeColor: 'from-amber-400 via-yellow-300 to-amber-500',
     haloColor: '#ffd700',
   },
   {
+    rankIndex: 5,
     minLevel: 61,
     maxLevel: 80,
+    minPoints: 6000,
+    maxPoints: 11999,
     nameMale: 'Tỳ kheo',
     nameFemale: 'Tỳ kheo ni',
     badgeColor: 'from-amber-500 to-orange-500',
     haloColor: '#f59e0b',
   },
   {
+    rankIndex: 4,
     minLevel: 41,
     maxLevel: 60,
+    minPoints: 2500,
+    maxPoints: 5999,
     nameMale: 'Sa di',
     nameFemale: 'Sa di ni',
     badgeColor: 'from-yellow-600 to-amber-700',
   },
   {
+    rankIndex: 3,
     minLevel: 26,
     maxLevel: 40,
+    minPoints: 1000,
+    maxPoints: 2499,
     nameMale: 'Cư sĩ',
     nameFemale: 'Cư sĩ',
     badgeColor: 'from-amber-700 to-stone-700',
   },
   {
+    rankIndex: 2,
     minLevel: 11,
     maxLevel: 25,
+    minPoints: 200,
+    maxPoints: 999,
     nameMale: 'Phật tử',
     nameFemale: 'Phật tử',
     badgeColor: 'from-indigo-500 to-purple-600',
   },
   {
+    rankIndex: 1,
     minLevel: 1,
     maxLevel: 10,
+    minPoints: 0,
+    maxPoints: 199,
     nameMale: 'Khách hành hương',
     nameFemale: 'Khách hành hương',
     badgeColor: 'from-slate-500 to-slate-700',
   },
 ];
 
-export function getCultivationInfo(interactions: number, isFemale = false) {
-  // Tương tác 10 lần lên level 1, 20 lần level 2... tối đa level 100
-  const level = Math.min(100, Math.floor(Math.max(0, interactions) / 10));
-  if (level <= 0) {
-    return {
-      level: 0,
-      title: isFemale ? 'Tín nữ' : 'Thiện nam',
-      badgeColor: 'from-slate-600 to-slate-800',
-      hasHalo: false,
-    };
+export interface LevelMilestone {
+  level: number;
+  points: number;
+  unlockTitle: string;
+}
+
+export const LEVEL_MILESTONES: LevelMilestone[] = [
+  { level: 1, points: 0, unlockTitle: 'Nhận nhân vật Khách hành hương' },
+  { level: 5, points: 60, unlockTitle: 'Mở động tác chắp tay' },
+  { level: 10, points: 180, unlockTitle: 'Mở hiệu ứng chuẩn bị thăng cấp' },
+  { level: 11, points: 200, unlockTitle: 'Thăng cấp thành Phật tử' },
+  { level: 15, points: 400, unlockTitle: 'Mở động tác quỳ lễ' },
+  { level: 20, points: 650, unlockTitle: 'Nhận tràng hạt' },
+  { level: 25, points: 950, unlockTitle: 'Mở hiệu ứng chuyển thành Cư sĩ' },
+  { level: 26, points: 1000, unlockTitle: 'Thăng cấp thành Cư sĩ' },
+  { level: 30, points: 1400, unlockTitle: 'Đổi trang phục nâu' },
+  { level: 35, points: 1900, unlockTitle: 'Mở động tác tụng kinh' },
+  { level: 40, points: 2400, unlockTitle: 'Mở nghi thức xuất gia' },
+  { level: 41, points: 2500, unlockTitle: 'Thăng cấp thành Sa di/Sa di ni' },
+  { level: 50, points: 4000, unlockTitle: 'Mở động tác thiền' },
+  { level: 60, points: 5900, unlockTitle: 'Mở hiệu ứng thọ giới' },
+  { level: 61, points: 6000, unlockTitle: 'Thăng cấp thành Tỳ kheo/Tỳ kheo ni' },
+  { level: 70, points: 8500, unlockTitle: 'Mở pháp phục nâng cao' },
+  { level: 80, points: 11800, unlockTitle: 'Mở thử thách Trụ trì' },
+  { level: 81, points: 12000, unlockTitle: 'Thăng cấp thành Trụ trì' },
+  { level: 90, points: 17000, unlockTitle: 'Mở hào quang' },
+  { level: 100, points: 25000, unlockTitle: 'Mở danh hiệu và trang phục tối thượng' },
+];
+
+/**
+ * Tính Level chuẩn xác từ tổng điểm công đức dựa theo các mốc nội suy
+ */
+export function calculateLevelFromPoints(points: number): number {
+  if (points <= 0) return 1;
+  if (points >= 25000) return 100;
+
+  for (let i = 0; i < LEVEL_MILESTONES.length - 1; i++) {
+    const current = LEVEL_MILESTONES[i];
+    const next = LEVEL_MILESTONES[i + 1];
+
+    if (points >= current.points && points <= next.points) {
+      const span = next.points - current.points;
+      if (span <= 0) return current.level;
+      const progress = (points - current.points) / span;
+      return Math.min(next.level, Math.floor(current.level + progress * (next.level - current.level)));
+    }
   }
+
+  return 100;
+}
+
+/**
+ * Tính điểm công đức của từng hành động dựa trên bảng quy định:
+ * - 10 lượt Like: +1 (tối đa 50 điểm/buổi)
+ * - Comment hợp lệ: +2 (30 giây mới tính tiếp)
+ * - Share livestream: +10 (tối đa 3 lần/buổi)
+ * - Follow kênh: +30 (chỉ nhận một lần)
+ * - Người xem mới tham gia live: +1 (một lần/buổi)
+ * - Tặng Hoa/Hoa hồng: +5 (tính theo từng quà)
+ * - Gift từ 1–9 coin: +5
+ * - Gift từ 10–49 coin: +15
+ * - Gift từ 50–99 coin: +30
+ * - Gift từ 100–499 coin: +80
+ * - Gift từ 500 coin trở lên: +200
+ */
+export function calculateActionMeritPoints(action: TempleGameAction): number {
+  if (action.eventType === 'JOIN') return 1;
+  if (action.eventType === 'FOLLOW') return 30;
+  if (action.eventType === 'SHARE') return 10;
+  if (
+    action.eventType === 'COMMENT' ||
+    action.actionType === 'SAY_COMMENT' ||
+    action.actionType === 'PRAY'
+  ) {
+    return 2;
+  }
+  if (action.eventType === 'LIKE') {
+    const likes = Math.max(1, action.quantity ?? 1);
+    return Math.max(1, Math.floor(likes / 10));
+  }
+  if (
+    action.eventType === 'GIFT' ||
+    action.actionType === 'OFFER_FLOWERS' ||
+    action.actionType === 'OFFER_INCENSE'
+  ) {
+    const isFlower =
+      action.actionType === 'OFFER_FLOWERS' || /hoa|rose/i.test(action.giftName ?? '');
+    const count = Math.max(1, action.quantity ?? 1);
+    if (isFlower) {
+      return count * 5;
+    }
+    const coins = count;
+    if (coins >= 500) return 200;
+    if (coins >= 100) return 80;
+    if (coins >= 50) return 30;
+    if (coins >= 10) return 15;
+    return count * 5;
+  }
+  return 1;
+}
+
+export function getCultivationInfo(meritPoints: number, isFemale = false) {
+  const level = calculateLevelFromPoints(meritPoints);
   const rank =
     CULTIVATION_RANKS.find((r) => level >= r.minLevel && level <= r.maxLevel) ??
     CULTIVATION_RANKS[CULTIVATION_RANKS.length - 1];
+
+  const prefix = isFemale ? 'nu' : 'nam';
+  const assetUrl = `/assets/${prefix}${rank.rankIndex}.png`;
+
   return {
     level,
     title: isFemale ? rank.nameFemale : rank.nameMale,
+    rankIndex: rank.rankIndex,
     badgeColor: rank.badgeColor,
     haloColor: rank.haloColor,
-    hasHalo: level >= 81,
+    // Mốc Lv.90 trở lên (17.000 điểm) mở hào quang
+    hasHalo: level >= 90,
+    assetUrl,
   };
 }
-

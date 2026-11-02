@@ -60,7 +60,7 @@ function WoodenFish({ isAbbot = false }: { isAbbot?: boolean }) {
   );
 }
 
-function AbbotAura() {
+function AbbotAura({ isPrimary = false }: { isPrimary?: boolean }) {
   const auraRef = useRef<Mesh>(null);
   const outerRingRef = useRef<Mesh>(null);
 
@@ -74,15 +74,17 @@ function AbbotAura() {
     }
   });
 
+  const scale = isPrimary ? 1.0 : 0.82;
+
   return (
-    <group position={[0, 1.25, -0.08]}>
+    <group position={[0, 1.25, -0.08]} scale={[scale, scale, 1]}>
       {/* Vòng tròn hào quang Phật pháp sáng rực */}
       <mesh ref={auraRef}>
         <ringGeometry args={[0.65, 0.88, 36]} />
         <meshBasicMaterial
           color="#ffd966"
           transparent
-          opacity={0.65}
+          opacity={isPrimary ? 0.65 : 0.45}
           depthWrite={false}
           blending={AdditiveBlending}
         />
@@ -92,21 +94,33 @@ function AbbotAura() {
         <meshBasicMaterial
           color="#ffb834"
           transparent
-          opacity={0.35}
+          opacity={isPrimary ? 0.35 : 0.2}
           depthWrite={false}
           blending={AdditiveBlending}
         />
       </mesh>
       {/* Nguồn sáng ấm từ hào quang */}
-      <pointLight color="#ffe07a" intensity={0.9} distance={3.5} />
+      {isPrimary && <pointLight color="#ffe07a" intensity={0.9} distance={3.5} />}
     </group>
   );
 }
 
 function MonkFigure({ config }: { config: MonkConfig }) {
-  const monkTexture = useTexture('/assets/monk-kneeling-yellow.png');
+  const baseTexture = useTexture('/assets/nam6.png');
+  const monkTextures = useMemo(() => {
+    // Sprite sheet nam6.png (4 cột x 3 hàng):
+    // Hàng 2 (dưới cùng ảnh, V: 0 -> 1/3): 4 khung quỳ tụng kinh & cúi lễ
+    return Array.from({ length: 4 }, (_, i) => {
+      const t = baseTexture.clone();
+      t.repeat.set(0.25, 1 / 3);
+      t.offset.set(i * 0.25, 0);
+      return t;
+    });
+  }, [baseTexture]);
+
   const cushionTexture = useTexture('/assets/lotus-cushion.svg');
   const figureRef = useRef<Group>(null);
+  const monkFrame = useRef(0);
 
   useFrame((state) => {
     if (figureRef.current) {
@@ -114,13 +128,17 @@ function MonkFigure({ config }: { config: MonkConfig }) {
       const chantingBob = Math.sin(state.clock.elapsedTime * 3.8) * 0.015;
       figureRef.current.position.y = 0.82 + chantingBob;
       figureRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 1.9) * 0.02;
+
+      // Đổi frame nhẹ nhàng giữa tư thế chắp tay tĩnh tại và cúi niệm kinh
+      const cycle = Math.sin(state.clock.elapsedTime * 1.9);
+      monkFrame.current = cycle > 0.6 ? 1 : 0;
     }
   });
 
   return (
     <group position={config.position}>
-      {/* Hào quang rực rỡ riêng cho Sư Trụ Trì */}
-      {config.isAbbot && <AbbotAura />}
+      {/* Vòng hào quang rực rỡ (Sư Trụ Trì ở giữa hào quang uy nghi, 2 thầy bên hào quang thanh tịnh) */}
+      <AbbotAura isPrimary={config.isAbbot} />
 
       {/* Đệm ngồi toà sen */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
@@ -134,13 +152,13 @@ function MonkFigure({ config }: { config: MonkConfig }) {
         />
       </mesh>
 
-      {/* Mô hình Thầy chùa ngồi tụng kinh */}
+      {/* Mô hình Thầy chùa áo vàng ngồi tụng kinh */}
       <group ref={figureRef}>
         <Billboard follow={false} rotation={[0, 0, 0]}>
           <mesh>
             <planeGeometry args={[1.55, 2.05]} />
             <meshBasicMaterial
-              map={monkTexture}
+              map={monkTextures[monkFrame.current]}
               transparent
               alphaTest={0.025}
               depthWrite={false}
@@ -163,6 +181,19 @@ function MonkFigure({ config }: { config: MonkConfig }) {
         <div
           className={`flex select-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 font-serif text-center shadow-xl backdrop-blur-md ${
             config.isAbbot
+              ? 'border-amber-300 bg-gradient-to-r from-[#3e1b0c] via-[#5c2a12] to-[#3e1b0c] text-xs font-black text-amber-200 ring-2 ring-amber-400/40'
+              : 'border-amber-400/60 bg-[#28150c]/90 text-[11px] font-bold text-amber-100'
+          }`}
+        >
+          <span className="rounded bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 px-1.5 py-0.5 text-[8px] font-black text-slate-950 shadow">
+            Lv.100 Trụ trì
+          </span>
+          <span>{config.title}</span>
+        </div>
+      </Html>
+    </group>
+  );
+}
               ? 'border-amber-300 bg-gradient-to-r from-[#3e1b0c] via-[#5c2a12] to-[#3e1b0c] text-xs font-black text-amber-200 ring-2 ring-amber-400/40'
               : 'border-amber-400/60 bg-[#28150c]/90 text-[11px] font-bold text-amber-100'
           }`}

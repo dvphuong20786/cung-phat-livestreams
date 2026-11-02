@@ -3,7 +3,8 @@ import { Billboard, useTexture } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import type { Texture } from 'three';
 import { useTempleGameStore } from '../useTempleGameStore';
-import { CharacterHeadOverlay } from './Character';
+import { CharacterHeadOverlay, DevoteeHalo } from './Character';
+import { getCultivationInfo } from '../cultivationLevel';
 
 export function isGenericAudienceName(nickname: string): boolean {
   const normalizedName = nickname
@@ -55,7 +56,6 @@ function SeatedFigure({
   mobile,
   avatarUrl,
   message,
-  bowTextures,
   cushionTexture,
 }: {
   index: number;
@@ -64,7 +64,6 @@ function SeatedFigure({
   mobile: boolean;
   avatarUrl?: string;
   message?: string;
-  bowTextures: Texture[];
   cushionTexture: Texture;
 }) {
   const [x, y, z] = mobile ? getMobileSeatPosition(index) : getSeatPosition(index);
@@ -73,6 +72,22 @@ function SeatedFigure({
   );
   const flip = userHash % 2 ? -1 : 1;
   const figureScale = (mobile ? 0.95 : 1.05) + (userHash % 5) * 0.025;
+
+  const interactions = useTempleGameStore((s) => s.userInteractions[userId] || 0);
+  const isFemale = (userId.charCodeAt(0) || 0) % 12 !== 0;
+  const cultivation = getCultivationInfo(interactions, isFemale);
+
+  const baseTexture = useTexture(cultivation.assetUrl);
+
+  const bowTextures = useMemo(() => {
+    // Hàng 2 (dưới cùng ảnh, V: 0 -> 1/3): 4 khung quỳ và cúi lễ (bow)
+    return Array.from({ length: 4 }, (_, i) => {
+      const t = baseTexture.clone();
+      t.repeat.set(0.25, 1 / 3);
+      t.offset.set(i * 0.25, 0);
+      return t;
+    });
+  }, [baseTexture]);
 
   const [bowFrame, setBowFrame] = useState(0);
 
@@ -92,6 +107,9 @@ function SeatedFigure({
 
   return (
     <group position={[x, y, z]}>
+      {/* Vòng hào quang phát sáng nếu đạt cấp bậc Trụ trì / Đại sư (Lv.81-100) */}
+      {cultivation.hasHalo && <DevoteeHalo color={cultivation.haloColor} />}
+
       {/* Đệm toà sen thêu vàng */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
         <planeGeometry args={[1.4, 1.1]} />
@@ -124,7 +142,7 @@ function SeatedFigure({
         avatarUrl={avatarUrl}
         message={message}
         userId={userId}
-        isFemale={true}
+        isFemale={isFemale}
         position={[0, 1.95, 0]}
       />
     </group>
@@ -143,16 +161,6 @@ export function SeatedVisitors({
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   const cushionTexture = useTexture('/assets/lotus-cushion.svg');
-  const bowBase = useTexture('/assets/female-bow.png');
-
-  const bowTextures = useMemo(() => {
-    return Array.from({ length: 4 }, (_, i) => {
-      const t = bowBase.clone();
-      t.repeat.set(0.25, 1);
-      t.offset.set(i * 0.25, 0);
-      return t;
-    });
-  }, [bowBase]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setCurrentTime(Date.now()), 5000);
@@ -163,10 +171,23 @@ export function SeatedVisitors({
     // 11. Ở link overlay/overlay-mobile không hiển thị khách giả lập
     if (hideSimulated && visitor.isSimulated) return false;
 
-    // 7. Khách ngồi quỳ quan sát trong vòng 2 phút (120_000 ms)
-    // 8. Khách tới donate, tương tác xong khi xuống ngồi thì 4 phút (240_000 ms) rồi mất
-    const isObserver = visitor.eventType === 'JOIN' || visitor.actionType === 'WELCOME';
-    const seatingDuration = isObserver ? 2 * 60_000 : 4 * 60_000;
+    const isDonation =
+      visitor.eventType === 'GIFT' ||
+      visitor.actionType === 'OFFER_FLOWERS' ||
+      visitor.actionType === 'OFFER_INCENSE';
+
+    // 1. Người JOIN không tương tác & 2. Tương tác LIKE/COMMENT: giữ đúng 2 phút rồi đi ra
+    let seatingDuration = 2 * 60_000;
+
+    // 3. Tương tác tặng donate hoa, gift: giữ 4 phút + level cao hoặc tặng nhiều thì lâu hơn chút
+    if (isDonation) {
+      const userInteractions = useTempleGameStore.getState().userInteractions[visitor.userId] || 0;
+      const level = Math.min(100, Math.floor(userInteractions / 10));
+      const giftCount = visitor.quantity ?? 1;
+      const extraSeconds = Math.min(180, level * 2 + Math.min(60, giftCount * 2));
+      seatingDuration = 4 * 60_000 + extraSeconds * 1000;
+    }
+
     const seatStartTime = visitor.seatedAt ?? visitor.createdAt;
     return currentTime - seatStartTime <= seatingDuration;
   });
@@ -185,7 +206,6 @@ export function SeatedVisitors({
             mobile={mobile}
             avatarUrl={visitor.avatarUrl}
             message={visitor.message}
-            bowTextures={bowTextures}
             cushionTexture={cushionTexture}
           />
         ),

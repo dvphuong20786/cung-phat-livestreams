@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { templeGameActionPriority, type TempleGameAction } from '@live/shared';
+import { calculateActionMeritPoints } from './cultivationLevel';
 export type CharacterState =
   | 'SPAWNING'
   | 'WALKING_TO_GATE'
@@ -27,6 +28,7 @@ interface GameStore {
   allowSimulated: boolean;
   userInteractions: Record<string, number>;
   enqueue: (action: TempleGameAction) => void;
+  syncCharacters: (characters: Array<{ userId: string; meritPoints: number }>) => void;
   setState: (id: string, state: CharacterState) => void;
   complete: (id: string) => void;
   addFlower: () => void;
@@ -75,10 +77,15 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       if (!state.allowSimulated && action.isSimulated) {
         return state;
       }
-      const count = Math.max(1, action.quantity ?? 1);
+      // Điểm công đức: lấy trực tiếp từ database nếu server gửi về, hoặc tính cộng dồn nếu chạy offline
+      const points =
+        action.meritPoints !== undefined
+          ? action.meritPoints
+          : (state.userInteractions[action.userId] || 0) + calculateActionMeritPoints(action);
+
       const userInteractions = {
         ...state.userInteractions,
-        [action.userId]: (state.userInteractions[action.userId] || 0) + count,
+        [action.userId]: points,
       };
 
       const previousSeat = state.seatedVisitors.findIndex(
@@ -104,19 +111,6 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       if (existing && action.actionType === 'ENTER_TEMPLE')
         return { seatedVisitors, latest: `${action.nickname} đã gửi thêm lượt thích` };
 
-      // Người vào xem LIVE không có tương tác (JOIN): ngồi quỳ xem ở hàng dưới trong 2 phút
-      if (action.eventType === 'JOIN') {
-        const joinActionWithSeat = { ...action, seatedAt: Date.now() };
-        const updatedSeated = state.seatedVisitors.some((v) => v.userId === action.userId)
-          ? state.seatedVisitors.map((v) => (v.userId === action.userId ? joinActionWithSeat : v))
-          : [...state.seatedVisitors, joinActionWithSeat];
-        return {
-          seatedVisitors: updatedSeated.slice(0, 80),
-          latest: `${action.nickname} vừa vào chánh điện`,
-          userInteractions,
-        };
-      }
-
       const queue = sortActionsByPriority([...state.queue, action]);
       return {
         ...promote([...state.active], queue),
@@ -127,10 +121,20 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
             ? `${action.nickname} đang chuẩn bị dâng hoa`
             : action.actionType === 'SAY_COMMENT'
               ? `${action.nickname}: ${action.message ?? ''}`
-            : action.actionType === 'WELCOME'
-              ? `Chào mừng ${action.nickname} đến với ngôi chùa`
+            : action.actionType === 'WELCOME' || action.eventType === 'JOIN'
+              ? `${action.nickname} vừa vào chánh điện`
               : `${action.nickname} đang vào chùa`,
       };
+    }),
+  syncCharacters: (characters) =>
+    set((state) => {
+      const updated = { ...state.userInteractions };
+      for (const char of characters) {
+        if (char.userId) {
+          updated[char.userId] = char.meritPoints ?? 0;
+        }
+      }
+      return { userInteractions: updated };
     }),
   setState: (id, characterState) =>
     set((state) => ({
@@ -142,11 +146,17 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
     set((state) => {
       const completedChar = state.active.find((c) => c.action.actionId === id);
       const now = Date.now();
-      const updatedSeated = completedChar
-        ? state.seatedVisitors.map((v) =>
+      let updatedSeated = state.seatedVisitors;
+      if (completedChar) {
+        const exists = state.seatedVisitors.some((v) => v.userId === completedChar.action.userId);
+        if (exists) {
+          updatedSeated = state.seatedVisitors.map((v) =>
             v.userId === completedChar.action.userId ? { ...v, seatedAt: now } : v,
-          )
-        : state.seatedVisitors;
+          );
+        } else {
+          updatedSeated = [{ ...completedChar.action, seatedAt: now }, ...state.seatedVisitors];
+        }
+      }
       return {
         ...promote(
           state.active.filter((c) => c.action.actionId !== id),

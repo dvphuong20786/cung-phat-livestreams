@@ -21,14 +21,8 @@ export function TemplePage({
     [theme, setTheme] = useState<TempleTheme>('INTERIOR'),
     [worshipDistance, setWorshipDistance] = useState<WorshipDistance>('NEAR'),
     [isOverlayToolbarVisible, setIsOverlayToolbarVisible] = useState(true);
-  const { active, queue, latest, allowSimulated, setAllowSimulated } = useTempleGameStore();
+  const { active, queue, latest, allowSimulated } = useTempleGameStore();
   const connection = useMonitorStore((s) => s.connection);
-
-  useEffect(() => {
-    if (overlay) {
-      setAllowSimulated(false);
-    }
-  }, [overlay, setAllowSimulated]);
 
   const hideSimulated = !allowSimulated;
 

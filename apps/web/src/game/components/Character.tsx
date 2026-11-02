@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { Billboard, Html, useTexture } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { Group, MathUtils, Vector3 } from 'three';
+import { AdditiveBlending, Group, MathUtils, Vector3 } from 'three';
 import type { TempleGameAction } from '@live/shared';
 import type { ActiveCharacter, CharacterState } from '../useTempleGameStore';
 import { useTempleGameStore } from '../useTempleGameStore';
@@ -123,6 +123,41 @@ export function CharacterHeadOverlay({
   );
 }
 
+export function DevoteeHalo({ color = '#ffd966' }: { color?: string }) {
+  const haloRef = useRef<Group>(null);
+
+  useFrame((state, delta) => {
+    if (haloRef.current) {
+      haloRef.current.rotation.z += delta * 0.2;
+    }
+  });
+
+  return (
+    <group position={[0, 1.95, -0.05]}>
+      <mesh ref={haloRef as any}>
+        <ringGeometry args={[0.45, 0.65, 32]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.7}
+          depthWrite={false}
+          blending={AdditiveBlending}
+        />
+      </mesh>
+      <mesh>
+        <ringGeometry args={[0.65, 0.72, 32]} />
+        <meshBasicMaterial
+          color="#ffb834"
+          transparent
+          opacity={0.35}
+          depthWrite={false}
+          blending={AdditiveBlending}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 function DevoteeSprite({
   action,
   state,
@@ -136,45 +171,40 @@ function DevoteeSprite({
   showName: boolean;
   message?: string;
 }) {
-  const walkBase = useTexture('/assets/female-walk.png');
-  const bowBase = useTexture('/assets/female-bow.png');
-  const standBase = useTexture('/assets/female-standing.png');
+  const interactions = useTempleGameStore((s) => s.userInteractions[action.userId] || 0);
+  const isFemale = (action.userId.charCodeAt(0) || 0) % 12 !== 0;
+  const cultivation = getCultivationInfo(interactions, isFemale);
+
+  const baseTexture = useTexture(cultivation.assetUrl);
 
   const textures = useMemo(() => {
-    // 4 frames quỳ lạy (female-bow.png, 4 cột x 1 hàng)
+    // Sprite sheet gồm lưới 4 cột x 3 hàng:
+    // Hàng 2 (dưới cùng ảnh, V: 0 -> 1/3): 4 khung quỳ và cúi lễ (bow)
     const bow = Array.from({ length: 4 }, (_, i) => {
-      const t = bowBase.clone();
-      t.repeat.set(0.25, 1);
+      const t = baseTexture.clone();
+      t.repeat.set(0.25, 1 / 3);
       t.offset.set(i * 0.25, 0);
       return t;
     });
 
-    // 4 frames đứng chắp tay & dâng lễ (female-standing.png, 4 cột x 1 hàng)
+    // Hàng 0 (trên cùng ảnh, V: 2/3 -> 1): 4 khung đứng và thực hiện nghi lễ (standing)
     const standing = Array.from({ length: 4 }, (_, i) => {
-      const t = standBase.clone();
-      t.repeat.set(0.25, 1);
-      t.offset.set(i * 0.25, 0);
+      const t = baseTexture.clone();
+      t.repeat.set(0.25, 1 / 3);
+      t.offset.set(i * 0.25, 2 / 3);
       return t;
     });
 
-    // 4 frames bước đi hướng về bàn thờ (female-walk.png, hàng trên)
-    const walkBack = Array.from({ length: 4 }, (_, i) => {
-      const t = walkBase.clone();
-      t.repeat.set(0.25, 0.5);
-      t.offset.set(i * 0.25, 0.5);
+    // Hàng 1 (ở giữa ảnh, V: 1/3 -> 2/3): 4 khung đi bộ (walk)
+    const walk = Array.from({ length: 4 }, (_, i) => {
+      const t = baseTexture.clone();
+      t.repeat.set(0.25, 1 / 3);
+      t.offset.set(i * 0.25, 1 / 3);
       return t;
     });
 
-    // 4 frames bước đi quay ra (female-walk.png, hàng dưới)
-    const walkFront = Array.from({ length: 4 }, (_, i) => {
-      const t = walkBase.clone();
-      t.repeat.set(0.25, 0.5);
-      t.offset.set(i * 0.25, 0);
-      return t;
-    });
-
-    return { bow, standing, walkBack, walkFront };
-  }, [walkBase, bowBase, standBase]);
+    return { bow, standing, walk };
+  }, [baseTexture]);
 
   const spriteRef = useRef<Group>(null);
 
@@ -192,19 +222,14 @@ function DevoteeSprite({
   const stepIndex = Math.floor(elapsed * 5.5) % 4;
 
   let currentTexture = textures.standing[0];
-  let planeWidth = 1.88;
-  let planeHeight = 2.65;
+  let planeWidth = 1.95;
+  let planeHeight = 2.45;
   let posY = 1.18;
 
-  if (isWalkingBack) {
-    currentTexture = textures.walkBack[stepIndex];
-    planeWidth = 1.92;
-    planeHeight = 2.65;
-    posY = 1.18;
-  } else if (isWalkingFront) {
-    currentTexture = textures.walkFront[stepIndex];
-    planeWidth = 1.92;
-    planeHeight = 2.65;
+  if (isWalking) {
+    currentTexture = textures.walk[stepIndex];
+    planeWidth = 1.95;
+    planeHeight = 2.45;
     posY = 1.18;
   } else if (isBowing) {
     // Quỳ lạy cúng Phật 10-20s (chu kỳ ~4.6s mỗi lạy, lạy 3 lạy trang nghiêm)
@@ -218,19 +243,19 @@ function DevoteeSprite({
     else if (bowCycleProgress < 0.92) frame = 2;
     else frame = 0;
     currentTexture = textures.bow[frame];
-    planeWidth = 1.98;
-    planeHeight = 2.55;
-    posY = frame === 3 ? 0.72 : frame >= 1 ? 0.82 : 0.92;
+    planeWidth = 1.95;
+    planeHeight = 2.45;
+    posY = frame === 3 ? 0.75 : frame >= 1 ? 0.85 : 0.95;
   } else if (isOffering) {
     const offerFrame = elapsed > 1.2 ? 3 : 2;
     currentTexture = textures.standing[offerFrame];
-    planeWidth = 1.88;
-    planeHeight = 2.65;
+    planeWidth = 1.95;
+    planeHeight = 2.45;
     posY = 1.18;
   } else if (isPraying) {
     currentTexture = textures.standing[1];
-    planeWidth = 1.88;
-    planeHeight = 2.65;
+    planeWidth = 1.95;
+    planeHeight = 2.45;
     posY = 1.18;
   }
 
@@ -242,6 +267,7 @@ function DevoteeSprite({
 
   return (
     <group ref={spriteRef}>
+      {cultivation.hasHalo && <DevoteeHalo color={cultivation.haloColor} />}
       <Billboard follow position={[0, 0, 0]}>
         <mesh>
           <planeGeometry args={[planeWidth, planeHeight]} />
@@ -260,7 +286,7 @@ function DevoteeSprite({
           avatarUrl={action.avatarUrl}
           message={message}
           userId={action.userId}
-          isFemale={(action.userId.charCodeAt(0) || 0) % 12 !== 0}
+          isFemale={isFemale}
           position={[0, isBowing ? 2.15 : 2.75, 0]}
         />
       )}
@@ -319,7 +345,21 @@ export function Character({
   const automaticPrayer = isFakeCharacter
     ? prayerPhrases[(Math.max(0, genericAudienceIndex) + prayerPhraseOffset) % prayerPhrases.length]
     : undefined;
-  const displayedMessage = action.message || automaticPrayer;
+  const isJoinOnly = action.eventType === 'JOIN';
+  const isLike = action.eventType === 'LIKE';
+  const isComment =
+    action.eventType === 'COMMENT' ||
+    action.actionType === 'SAY_COMMENT' ||
+    action.actionType === 'PRAY';
+  const ceremony = action.actionType === 'OFFER_FLOWERS' || action.actionType === 'OFFER_INCENSE';
+  const isDonation = action.eventType === 'GIFT' || ceremony;
+
+  const likeText =
+    action.quantity && action.quantity > 1
+      ? `❤️ Thả ${action.quantity} tim cúng Phật`
+      : '❤️ Thả tim cúng Phật';
+  const displayedMessage =
+    action.message || (isLike ? likeText : automaticPrayer);
   const characterHash = Math.abs(
     [...action.userId].reduce((total, character) => total + character.charCodeAt(0), 0),
   );
@@ -336,15 +376,37 @@ export function Character({
       colors[Math.abs([...action.userId].reduce((n, c) => n + c.charCodeAt(0), 0)) % colors.length],
     [action.userId],
   );
-  const ceremony = action.actionType === 'OFFER_FLOWERS' || action.actionType === 'OFFER_INCENSE';
-  const isGiftOffering = action.eventType === 'GIFT' || ceremony;
+
+  // Tính trước toạ độ đệm sen ghế ngồi của nhân vật
+  const visibleVisitors = mobile ? seatedVisitors.slice(0, 16) : seatedVisitors.slice(0, 24);
+  const seatIndex = visibleVisitors.findIndex((visitor) => visitor.userId === action.userId);
+  const userHash = Math.abs(
+    [...action.userId].reduce((total, c) => total + c.charCodeAt(0), 0),
+  );
+  const resolvedSeatIndex = seatIndex >= 0 ? seatIndex : userHash % (mobile ? 16 : 24);
+  const [seatX, seatY, seatZ] = mobile
+    ? getMobileSeatPosition(resolvedSeatIndex)
+    : getSeatPosition(resolvedSeatIndex);
+
   const path = useMemo(() => {
+    const gate = inside ? interiorGate : outdoorGate;
+    const aisle = inside ? interiorAisle : outdoorCourtyard;
+
+    // 1. Với người JOIN vào kênh không tương tác: đi thẳng vào chỗ ngồi quỳ luôn!
+    if (isJoinOnly) {
+      return [
+        new Vector3(approachLane * 0.35, 0, gate.z),
+        new Vector3(seatX * 0.7, 0, Math.max(3.2, seatZ - 0.6)),
+        new Vector3(seatX, 0, seatZ),
+      ];
+    }
+
     if (inside && mobile) {
       const isNearStatue = worshipDistance === 'NEAR';
       const altarTargetZ = isNearStatue
-        ? (isGiftOffering ? 3.45 : 4.2) + altarRow * 0.42
-        : (isGiftOffering ? 4.7 : 6) + altarRow * 0.52;
-      const altarStepZ = isNearStatue ? 5.8 : isGiftOffering ? 6.25 : 7.35;
+        ? (isDonation ? 3.45 : 4.2) + altarRow * 0.42
+        : (isDonation ? 4.7 : 6) + altarRow * 0.52;
+      const altarStepZ = isNearStatue ? 5.8 : isDonation ? 6.25 : 7.35;
       const mobileAltarTarget = new Vector3(approachLane * 0.3, 0, altarTargetZ);
       return [
         new Vector3(approachLane * 0.35, 0, 12),
@@ -353,8 +415,6 @@ export function Character({
         mobileAltarTarget,
       ];
     }
-    const gate = inside ? interiorGate : outdoorGate;
-    const aisle = inside ? interiorAisle : outdoorCourtyard;
     // Khu vực cắm hương riêng: trước lư hương chính ở cuối thảm đỏ
     const incenseStation = inside ? new Vector3(approachLane * 0.25, 0, 1.35) : outdoorShrine;
     if (inside) {
@@ -372,25 +432,23 @@ export function Character({
     approachLane,
     ceremony,
     inside,
-    isGiftOffering,
+    isDonation,
+    isJoinOnly,
     mobile,
+    seatX,
+    seatZ,
     worshipDistance,
   ]);
   const returnPath = useMemo(() => {
-    const visibleVisitors = mobile ? seatedVisitors.slice(0, 16) : seatedVisitors.slice(0, 24);
-    const seatIndex = visibleVisitors.findIndex((visitor) => visitor.userId === action.userId);
-    const [seatX, seatY, seatZ] = mobile
-      ? getMobileSeatPosition(seatIndex >= 0 ? seatIndex : 0)
-      : getSeatPosition(seatIndex >= 0 ? seatIndex : 0);
     if (!inside) return [exit];
     const side = seatX < 0 ? -1 : 1;
-    // Rời khu vực cắm hương, đi dạt sang mép thảm đỏ rồi vào chỗ ngồi 2 hàng bên dưới
+    // Rời khu vực cắm hương, đi dạt sang mép thảm đỏ rồi vào đúng chỗ ngồi ở 2 hàng bên dưới
     return [
       new Vector3(side * 1.5, 0, 2.6),
-      new Vector3(side * (Math.abs(seatX) + 0.1), 0, 3.8),
+      new Vector3(side * (Math.abs(seatX) + 0.1), 0, Math.max(2.8, seatZ - 0.6)),
       new Vector3(seatX, 0, seatZ),
     ];
-  }, [action.userId, inside, mobile, seatedVisitors]);
+  }, [inside, seatX, seatZ]);
   useFrame((state, delta) => {
     const group = root.current;
     if (!group || paused) return;
@@ -439,10 +497,12 @@ export function Character({
           : path[targetIndex.current];
       const direction = target.clone().sub(group.position);
       const distance = direction.length();
-      if (distance < 0.12) {
+      const arrivalThreshold = Math.max(0.25, delta * 3.5);
+      if (distance < arrivalThreshold) {
         if (currentState === 'EXITING') {
           returnPathIndex.current++;
           if (returnPathIndex.current >= returnPath.length) {
+            group.position.copy(target);
             setState(action.actionId, 'COMPLETED');
             complete(action.actionId);
           }
@@ -455,12 +515,17 @@ export function Character({
             targetIndex.current === 1 ? 'WALKING_TO_ALTAR' : 'WALKING_TO_ALTAR',
           );
         } else {
+          // 1. Với người JOIN vào kênh không tương tác: đi vào chỗ ngồi quỳ luôn!
+          if (isJoinOnly) {
+            group.position.copy(target);
+            setState(action.actionId, 'COMPLETED');
+            complete(action.actionId);
+            return;
+          }
           elapsed.current = 0;
           if (action.actionType === 'OFFER_FLOWERS') setState(action.actionId, 'OFFERING_FLOWERS');
-          else if (action.actionType === 'PRAY' || action.actionType === 'ENTER_TEMPLE')
-            setState(action.actionId, 'PRAYING');
-          else if (action.actionType === 'OFFER_INCENSE') setState(action.actionId, 'BOWING');
-          else setState(action.actionId, 'WAITING');
+          else if (isDonation) setState(action.actionId, 'BOWING');
+          else setState(action.actionId, 'PRAYING');
         }
         return;
       } else {
@@ -493,24 +558,18 @@ export function Character({
         currentState === 'BOWING'
           ? Math.sin(Math.min(1, elapsed.current / 1.2) * Math.PI) * 0.35
           : Math.sin(state.clock.elapsedTime * 2) * 0.03;
-      if (currentState === 'OFFERING_FLOWERS' && !offered.current && elapsed.current > 1.1) {
+      if (currentState === 'OFFERING_FLOWERS' && !offered.current && elapsed.current > 1.5) {
         offered.current = true;
         addFlower();
       }
-      // Quỳ lạy cúng Phật tầm 10-20s (14 giây: lạy 3 lạy sâu ngũ thể đầu địa trang nghiêm)
-      const worshipDuration =
-        currentState === 'BOWING'
-          ? 14.0
-          : currentState === 'PRAYING'
-            ? ceremony
-              ? 3.0
-              : 12.0
-            : 3.5;
+      // 2. Tương tác comment, tim: hành lễ tầm 5s
+      // 3. Tương tác tặng donate hoa, gift: hành lễ tầm 10s
+      const worshipDuration = isDonation ? 10.0 : 5.0;
       if (elapsed.current > worshipDuration) {
         elapsed.current = 0;
-        if (currentState === 'OFFERING_FLOWERS') setState(action.actionId, 'PRAYING');
-        else if (currentState === 'PRAYING' && ceremony) setState(action.actionId, 'BOWING');
-        else {
+        if (currentState === 'OFFERING_FLOWERS') {
+          setState(action.actionId, 'BOWING');
+        } else {
           returnPathIndex.current = 0;
           setState(action.actionId, 'EXITING');
         }

@@ -1,5 +1,38 @@
 # Lịch sử thay đổi
 
+## [v0.21.0] - 2026-11-02
+- **Yêu cầu**: Tích hợp 12 bộ hoạt ảnh nhân vật theo level (nam1-6, nu1-6), thiết lập bảng quy đổi điểm công đức kèm giới hạn đề xuất, lập trình 20 mốc level (Lv.1-100, mở hào quang từ Lv.90) và lưu trữ nhân vật bền vững vào database SQLite.
+- **Chi tiết kỹ thuật**:
+  - **12 bộ hoạt ảnh theo level (Character.tsx, SeatedVisitors.tsx, ChantingMonks.tsx)**: Tích hợp đầy đủ 12 bộ sprite sheet lưới 4 cột x 3 hàng (nam1..6.png, nu1..6.png). Cắt 3 hàng: hàng 0 (đứng & nghi lễ), hàng 1 (đi bộ), hàng 2 (quỳ cúi lễ). Tự động xác định asset theo giới tính và level. 3 Thầy chùa mặc trang phục Trụ trì cao nhất (Lv.100, nam6.png).
+  - **Bảng điểm công đức & Mốc Level (cultivationLevel.ts)**: Áp dụng bảng điểm theo đúng quy định (Like, Comment 30s cooldown, Share, Follow, Join, Hoa/Rose và Gift các bậc coin). Phân tầng 6 cấp bậc tu tập với 20 mốc nội suy điểm chính xác từ Lv.1 đến Lv.100, mở hào quang xoay sáng từ Lv.90 (>= 17.000 điểm).
+  - **Lưu trữ SQLite Database (CharacterStore.ts, apps/server/src/index.ts, socketServer.ts, packages/shared/src/index.ts)**: Tạo bảng user_characters trong SQLite (data/tiktok-live.db), tự động tính và cộng dồn điểm, kiểm tra các giới hạn đề xuất (like max 50/buổi, comment 30s, share max 3, follow 1 lần, join 1 lần). Bổ sung API GET /api/characters và socket event character:updated, đồng bộ trực tiếp điểm và level vào giao diện web realtime.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 24/24 unit tests passed. TypeScript typecheck 0 lỗi trên cả server, shared và web. Đã cập nhật tasks.md.
+
+
+## [v0.20.0] - 2026-11-02
+- **Yêu cầu**: Tinh chỉnh 3 luồng hành lễ và thời gian ngồi: Khách JOIN đi thẳng vào chỗ ngồi quỳ giữ 2 phút rồi đi ra; Comment/tim hiện lên đầu hành lễ 5s về ngồi 2 phút; Donate hoa/quà hành lễ 10s về ngồi 4 phút (kèm thưởng thêm giờ cho level cao và tặng nhiều).
+- **Chi tiết kỹ thuật**:
+  - **Khách JOIN (`useTempleGameStore.ts`, `Character.tsx`, `SeatedVisitors.tsx`)**: Đưa sự kiện JOIN vào queue đi bộ từ cổng chùa, thiết lập lộ trình `path` rẽ thẳng vào vị trí đệm sen `[seatX, 0, seatZ]` mà không đi lên bàn thờ; khi đến nơi lập tức ngồi quỳ niệm Phật và tự động rời đi sau đúng 2 phút (120 giây).
+  - **Tương tác like/comment (`Character.tsx`, `SeatedVisitors.tsx`)**: Khi có lượt thích (`LIKE`), tự động hiển thị biểu tượng `❤️ Thả tim cúng Phật` lên đầu; nhân vật bước lên bàn thờ chắp tay cầu nguyện 5.0s rồi quay về chỗ ngồi quỳ giữ đúng 2 phút (120 giây).
+  - **Tương tác donate (`Character.tsx`, `SeatedVisitors.tsx`)**: Nhân vật dâng hoa/lễ vật quỳ lạy sâu 10.0s rồi quay về hàng đệm toà sen; thời gian ngồi cơ bản là 4 phút (240 giây), cộng thêm thời gian phụ thuộc vào cấp độ tu tập và số lượng quà tặng (`bonus = level * 2s + giftCount * 2s`, tối đa cộng thêm 3 phút).
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 23/23 unit tests đều passed. Toàn bộ danh sách tác vụ được cập nhật trong `tasks.md`.
+
+
+## [v0.19.1] - 2026-11-02
+- **Yêu cầu**: Đặt mặc định chế độ giả lập luôn BẬT trên tất cả các trang; sửa lỗi chuyển trạng thái và lộ trình về chỗ ngồi của nhân vật sau khi cúng lễ (gift, rose, like).
+- **Chi tiết kỹ thuật**:
+  - **Mặc định giả lập BẬT (`TemplePage.tsx`, `useTempleGameStore.ts`)**: Loại bỏ lệnh tự động tắt giả lập ở overlay, đảm bảo cờ `allowSimulated: true` là mặc định xuyên suốt trên toàn bộ ứng dụng (`/temple`, `/test`, `/overlay`, `/overlay-mobile`). Người dùng có thể bật/tắt thủ công qua nút trên thanh điều khiển khi cần.
+  - **Sửa luồng về chỗ ngồi sau khi cúng lễ (`Character.tsx`, `useTempleGameStore.ts`)**:
+    - Nâng ngưỡng nhận diện waypoint đến đích từ `0.12m` lên `Math.max(0.25, delta * 3.5)` và ép vị trí `position.copy(target)` khi đến đích cuối, giải quyết triệt để lỗi overshoot khiến nhân vật bị kẹt không chuyển sang `COMPLETED`.
+    - Tính toán `resolvedSeatIndex` chuẩn xác để mỗi nhân vật luôn có vị trí ghế cụ thể trong 2 hàng quỳ, tránh trường hợp lệch index hoặc dồn về ghế 0.
+    - Trong `complete()`: Tự động ghi nhận `seatedAt` và bổ sung người dùng vào danh sách `seatedVisitors` ngay khi bước về đến đệm sen.
+    - Điều chỉnh thời gian quỳ lạy `BOWING` về 10.0 giây (2 lạy sâu ngũ thể đầu địa trang nghiêm, đúng khung 10-20s theo yêu cầu) để luồng di chuyển diễn ra nhịp nhàng, dứt khoát và tự nhiên.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 23/23 unit tests đều passed. TypeScript check không có lỗi.
+
+
 ## [v0.19.0] - 2026-11-02
 - **Yêu cầu**: Sửa triệt để Task 9 (mặc định Nội điện) và triển khai hoàn thiện Task 11 (nút bật/tắt người giả lập), Task 12 (thêm link overlay và overlay-mobile vào menu left), Task 13 (hệ thống Level tu tập và thăng cấp đạo hạnh, 3 thầy max level).
 - **Chi tiết kỹ thuật**:

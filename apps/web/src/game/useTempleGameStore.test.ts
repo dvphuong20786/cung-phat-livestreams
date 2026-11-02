@@ -30,10 +30,17 @@ describe('temple game queue', () => {
     useTempleGameStore.getState().enqueue(action(99, 'OFFER_FLOWERS'));
     expect(useTempleGameStore.getState().queue[0].actionType).toBe('OFFER_FLOWERS');
   });
-  it('seats viewer-only join events without queueing them into active walk', () => {
+  it('enqueues viewer-only join events so they walk directly to seat', () => {
     useTempleGameStore.getState().enqueue({ ...action(1), eventType: 'JOIN' });
     expect(useTempleGameStore.getState().seatedVisitors).toHaveLength(1);
-    expect(useTempleGameStore.getState().active).toHaveLength(0);
-    expect(useTempleGameStore.getState().queue).toHaveLength(0);
+    expect(useTempleGameStore.getState().active).toHaveLength(1);
+  });
+  it('syncs merit points from database correctly', () => {
+    useTempleGameStore.getState().syncCharacters([
+      { userId: 'u-1', meritPoints: 1250 },
+      { userId: 'u-2', meritPoints: 17500 },
+    ]);
+    expect(useTempleGameStore.getState().userInteractions['u-1']).toBe(1250);
+    expect(useTempleGameStore.getState().userInteractions['u-2']).toBe(17500);
   });
 });
