@@ -40,7 +40,10 @@ export function useSocket() {
     const stats = (v: Statistics) => s().setStats(v);
     const status = (v: ConnectionStatus) => s().setConnection(v);
     const error = (v: { message: string }) => s().setError(v.message);
-    const reset = (v: { source?: string }) => s().resetEvents(v.source);
+    const reset = (v: { source?: string }) => {
+      s().resetEvents(v.source);
+      g().resetSession();
+    };
     const gameAction = (v: TempleGameAction) => g().enqueue(v);
     const gameClear = () => g().clear();
     const gamePaused = (v: boolean) => g().setPaused(v);
@@ -72,6 +75,7 @@ export function useSocket() {
     socket.on('connection:status', status);
     socket.on('system:error', error);
     socket.on('events:reset', reset);
+    socket.on('characters:reset', () => g().resetSession());
     socket.on('game:action', gameAction);
     socket.on('game:clear', gameClear);
     socket.on('game:paused', gamePaused);
@@ -89,6 +93,7 @@ export function useSocket() {
       socket.off('connection:status', status);
       socket.off('system:error', error);
       socket.off('events:reset', reset);
+      socket.off('characters:reset', () => g().resetSession());
       socket.off('game:action', gameAction);
       socket.off('game:clear', gameClear);
       socket.off('game:paused', gamePaused);

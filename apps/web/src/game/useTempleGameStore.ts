@@ -25,6 +25,8 @@ export interface StoredCharacter {
   avatarUrl?: string;
   isSimulated?: boolean;
   meritPoints: number;
+  meritPointsInSession?: number;
+  sessionMeritPoints?: number;
   level: number;
   rankName?: string;
   watchTimeAwardedToday?: number;
@@ -52,6 +54,7 @@ interface GameStore {
   fifoQueue: boolean;
   mobilePriorityAdmission: boolean;
   userInteractions: Record<string, number>;
+  sessionMeritPoints: Record<string, number>;
   userLikeCountsInSession: Record<string, number>;
   characterList: StoredCharacter[];
   recentDonors: RecentDonor[];
@@ -63,6 +66,7 @@ interface GameStore {
   complete: (id: string) => void;
   addFlower: () => void;
   clear: () => void;
+  resetSession: () => void;
   setPaused: (paused: boolean) => void;
   setQuality: (quality: Quality) => void;
   setAllowSimulated: (allowed: boolean) => void;
@@ -187,6 +191,7 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
   fifoQueue: false,
   mobilePriorityAdmission: false,
   userInteractions: {},
+  sessionMeritPoints: {},
   userLikeCountsInSession: {},
   characterList: [],
   recentDonors: [],

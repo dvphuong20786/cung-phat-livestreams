@@ -10,6 +10,7 @@ export interface UserCharacter {
   isSimulated: boolean;
   gender: 'male' | 'female';
   meritPoints: number;
+  meritPointsInSession: number;
   level: number;
   rankName: string;
   likeCountInSession: number;
@@ -124,6 +125,11 @@ export class CharacterStore {
     }>;
     if (!columns.some((column) => column.name === 'is_simulated')) {
       this.database.exec('ALTER TABLE user_characters ADD COLUMN is_simulated INTEGER DEFAULT 0');
+    }
+    if (!columns.some((column) => column.name === 'merit_points_in_session')) {
+      this.database.exec(
+        'ALTER TABLE user_characters ADD COLUMN merit_points_in_session INTEGER DEFAULT 0',
+      );
     }
     if (!columns.some((column) => column.name === 'like_count_in_session')) {
       this.database.exec(
@@ -383,14 +389,14 @@ export class CharacterStore {
     const stmt = this.database.prepare(`
       INSERT OR REPLACE INTO user_characters (
         user_id, username, nickname, avatar_url, is_simulated, gender,
-        merit_points, level, rank_name, like_points_today,
+        merit_points, merit_points_in_session, level, rank_name, like_points_today,
         like_count_in_session,
         last_comment_at, share_count_today, follow_awarded,
         join_awarded_today, watch_time_awarded_today,
         last_active_at, created_at
       ) VALUES (
         @userId, @username, @nickname, @avatarUrl, @isSimulated, @gender,
-        @meritPoints, @level, @rankName, 0,
+        @meritPoints, @meritPointsInSession, @level, @rankName, 0,
         @likeCountInSession,
         @lastCommentAt, @shareCountToday, @followAwarded,
         @joinAwardedToday, @watchTimeAwardedToday,
