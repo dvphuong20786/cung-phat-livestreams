@@ -1,5 +1,27 @@
 # Lịch sử thay đổi
 
+## [v0.19.0] - 2026-11-02
+- **Yêu cầu**: Sửa triệt để Task 9 (mặc định Nội điện) và triển khai hoàn thiện Task 11 (nút bật/tắt người giả lập), Task 12 (thêm link overlay và overlay-mobile vào menu left), Task 13 (hệ thống Level tu tập và thăng cấp đạo hạnh, 3 thầy max level).
+- **Chi tiết kỹ thuật**:
+  - **Task 9 (`TestPage.tsx`, `TempleScene.tsx`, `TemplePage.tsx`)**: Đổi dứt điểm giá trị khởi tạo theme mặc định sang `'INTERIOR'` tại `TestPage.tsx` (Phòng thử nghiệm 3D) và default prop của `TempleScene.tsx`. Đảm bảo người dùng vào bất kỳ trang nào đều hiển thị ngay Nội điện chánh điện Phật.
+  - **Task 11 (`TempleToolbar.tsx`, `useTempleGameStore.ts`, `TemplePage.tsx`)**: Bổ sung nút chuyển đổi `[Giả lập: Bật / Tắt]` trên thanh điều khiển; thêm cờ `allowSimulated` và logic chặn enqueue nhân vật giả lập khi ở chế độ Tắt.
+  - **Task 12 (`AdminPage.tsx`)**: Thêm 2 đường dẫn điều hướng trực tiếp `Overlay OBS (Ngang)` (`/overlay`) và `Overlay Mobile (Dọc)` (`/overlay-mobile`) vào menu Sidebar bên trái.
+  - **Task 13 (`cultivationLevel.ts`, `Character.tsx`, `SeatedVisitors.tsx`, `ChantingMonks.tsx`)**: Xây dựng hệ thống cấp bậc tu tập Phật giáo theo lộ trình: Khách hành hương (Lv.1-10) → Phật tử (Lv.11-25) → Cư sĩ (Lv.26-40) → Sa di (Lv.41-60) → Tỳ kheo (Lv.61-80) → Trụ trì (Lv.81-100). Cứ 10 lần tương tác tăng 1 cấp. Hiển thị huy hiệu Level trên đầu và trong khung thoại bình luận. Mặc định 3 thầy chùa mang cấp độ tối cao **Lv.100 Trụ trì**.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 23/23 unit tests đều passed. TypeScript compile 0 lỗi. Toàn bộ 13 tác vụ được lưu trong `tasks.md` chờ nghiệm thu từ người dùng.
+
+
+## [v0.18.0] - 2026-11-02
+- **Yêu cầu**: Cập nhật 5 tác vụ tiếp theo (Task 7 - 11): khách quan sát ngồi 2 phút; khách donate/tương tác xong xuống ngồi 4 phút rồi mất; mặc định chọn "Nội điện"; 3 thầy chùa mặc áo vàng đồng phục lễ; ẩn khách giả lập tại `/overlay` và `/overlay-mobile`.
+- **Chi tiết kỹ thuật**:
+  - **Task 7 & 8 (`useTempleGameStore.ts`, `SeatedVisitors.tsx`, `packages/shared/src/index.ts`)**: Bổ sung trường `seatedAt` theo dõi thời điểm bắt đầu ngồi. Khách chỉ ngồi quan sát (`JOIN`/`WELCOME`) có thời gian ngồi tối đa 2 phút (120 giây). Khách có tương tác dâng lễ cúng Phật (GIFT, COMMENT, LIKE) khi hoàn tất lễ và đi về hàng ghế sẽ được tính mốc `seatedAt` ngồi 4 phút (240 giây) rồi tự động ẩn đi.
+  - **Task 9 (`TemplePage.tsx`)**: Đổi cấu hình theme khởi tạo mặc định sang `'INTERIOR'` (Nội điện) thay vì `'COURTYARD'` (Ngoại cảnh).
+  - **Task 10 (`ChantingMonks.tsx`, `monk-kneeling-yellow.png`)**: Tạo asset hình ảnh mới `monk-kneeling-yellow.png` (nhà sư đầu cạo mặc áo cà sa vàng đồng phục lễ trang nghiêm nhìn từ phía sau) và cập nhật texture hiển thị cho 3 thầy chùa tụng kinh.
+  - **Task 11 (`TemplePage.tsx`, `TempleScene.tsx`, `SeatedVisitors.tsx`, `MeritLeaderboard.tsx`)**: Bổ sung cờ `hideSimulated={overlay}` cho các trang `/overlay` và `/overlay-mobile`, tự động lọc bỏ toàn bộ nhân vật giả lập (`isSimulated === true`) ở cả hàng đi lễ, hàng quỳ và bảng xếp hạng Công Đức ✦.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 23/23 unit tests đều đạt kết quả pass. TypeScript typecheck không có lỗi. Toàn bộ 11 tác vụ được lưu trong `tasks.md` chờ nghiệm thu từ người dùng.
+
+
 ## [v0.17.0] - 2026-11-02
 - **Yêu cầu**: Triển khai trọn bộ 6 cải tiến chánh điện 3D (luồng lễ 10-20s, kích thước nhân vật, avatar TikTok & bong bóng bình luận, phân bổ khán giả JOIN ngồi 2 hàng, bảng xếp hạng Công Đức ✦ và 3 thầy chùa tụng kinh gõ mõ).
 - **Chi tiết kỹ thuật**:

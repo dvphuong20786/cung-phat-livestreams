@@ -64,16 +64,21 @@ function World({
   theme,
   mobile,
   worshipDistance,
+  hideSimulated = false,
 }: {
   preset: CameraPreset;
   controls: boolean;
   theme: TempleTheme;
   mobile: boolean;
   worshipDistance: WorshipDistance;
+  hideSimulated?: boolean;
 }) {
   const active = useTempleGameStore((s) => s.active),
     flowers = useTempleGameStore((s) => s.flowers),
     inside = theme === 'INTERIOR';
+  const displayedActive = hideSimulated
+    ? active.filter((character) => !character.action.isSimulated)
+    : active;
   return (
     <>
       <TempleCamera preset={preset} theme={theme} />
@@ -81,7 +86,7 @@ function World({
         <>
           <TempleInterior mobile={mobile} />
           <ChantingMonks />
-          <SeatedVisitors mobile={mobile} />
+          <SeatedVisitors mobile={mobile} hideSimulated={hideSimulated} />
         </>
       ) : (
         <>
@@ -99,7 +104,7 @@ function World({
       )}
       {!inside && <TempleBell />}
       <TempleEffects inside={inside} />
-      {active.map((character) => (
+      {displayedActive.map((character) => (
         <Character
           key={character.action.actionId}
           character={character}
@@ -122,10 +127,11 @@ function World({
 }
 export function TempleScene({
   preset = 'OVERVIEW',
-  theme = 'COURTYARD',
+  theme = 'INTERIOR',
   controls = false,
   mobile = false,
   worshipDistance = 'NEAR',
+  hideSimulated = false,
   className = 'h-full w-full',
 }: {
   preset?: CameraPreset;
@@ -133,6 +139,7 @@ export function TempleScene({
   controls?: boolean;
   mobile?: boolean;
   worshipDistance?: WorshipDistance;
+  hideSimulated?: boolean;
   className?: string;
 }) {
   const quality = useTempleGameStore((s) => s.quality);
@@ -159,6 +166,7 @@ export function TempleScene({
             theme={theme}
             mobile={mobile}
             worshipDistance={worshipDistance}
+            hideSimulated={hideSimulated}
           />
         </Suspense>
       </Canvas>

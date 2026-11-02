@@ -6,11 +6,8 @@ import type { TempleGameAction } from '@live/shared';
 import type { ActiveCharacter, CharacterState } from '../useTempleGameStore';
 import { useTempleGameStore } from '../useTempleGameStore';
 import type { WorshipDistance } from '../TempleScene';
-import {
-  getMobileSeatPosition,
-  getSeatPosition,
-  isGenericAudienceName,
-} from './SeatedVisitors';
+import { getCultivationInfo } from '../cultivationLevel';
+import { getMobileSeatPosition, getSeatPosition, isGenericAudienceName } from './SeatedVisitors';
 const spawn = new Vector3(0, 0, 14),
   outdoorGate = new Vector3(0, 0, 7.5),
   outdoorCourtyard = new Vector3(0, 0, 1.5),
@@ -49,12 +46,18 @@ export function CharacterHeadOverlay({
   position = [0, 2.65, 0],
   avatarUrl,
   message,
+  userId,
+  isFemale = false,
 }: {
   name: string;
   position?: [number, number, number];
   avatarUrl?: string;
   message?: string;
+  userId?: string;
+  isFemale?: boolean;
 }) {
+  const interactions = useTempleGameStore((s) => (userId ? s.userInteractions[userId] || 0 : 0));
+  const cultivation = getCultivationInfo(interactions, isFemale);
   const hasComment = Boolean(message && message.trim().length > 0);
   const visibleMessage = message && message.length > 90 ? `${message.slice(0, 90)}…` : message;
 
@@ -62,7 +65,7 @@ export function CharacterHeadOverlay({
     <Html center position={position} distanceFactor={13} zIndexRange={[12, 0]}>
       <div className="flex flex-col items-center pointer-events-none select-none">
         {hasComment ? (
-          /* KHI CÓ COMMENT: ẨN TÊN, HIỆN BONG BÓNG COMMENT KÈM AVATAR */
+          /* KHI CÓ COMMENT: ẨN TÊN, HIỆN BONG BÓNG COMMENT KÈM AVATAR VÀ HUY HIỆU LEVEL */
           <div className="relative mb-1 flex items-center gap-1.5 max-w-56 rounded-2xl border border-amber-300/80 bg-gradient-to-b from-amber-50 to-amber-100/95 px-3 py-1.5 text-center text-[11px] font-bold leading-snug text-amber-950 shadow-2xl backdrop-blur-sm animate-in fade-in zoom-in duration-200">
             {avatarUrl ? (
               <img
@@ -78,11 +81,18 @@ export function CharacterHeadOverlay({
                 🙏
               </div>
             )}
+            {cultivation.level > 0 && (
+              <span
+                className={`shrink-0 rounded bg-gradient-to-r ${cultivation.badgeColor} px-1 py-0.5 text-[8px] font-black text-slate-950 shadow-sm`}
+              >
+                Lv.{cultivation.level}
+              </span>
+            )}
             <span className="truncate">{visibleMessage}</span>
             <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-amber-100" />
           </div>
         ) : (
-          /* KHI KHÔNG CÓ COMMENT: HIỆN AVATAR VÀ TÊN */
+          /* KHI KHÔNG CÓ COMMENT: HIỆN AVATAR, HUY HIỆU LEVEL VÀ TÊN */
           <div className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-amber-300/40 bg-slate-950/85 px-2.5 py-1 text-[11px] font-semibold text-amber-100 shadow-xl backdrop-blur-md">
             {avatarUrl ? (
               <img
@@ -97,6 +107,13 @@ export function CharacterHeadOverlay({
               <div className="flex h-5 w-5 items-center justify-center rounded-full border border-amber-400 bg-amber-900/80 text-[10px] font-bold text-amber-200 shadow-sm">
                 {name.slice(0, 1).toUpperCase()}
               </div>
+            )}
+            {cultivation.level > 0 && (
+              <span
+                className={`rounded bg-gradient-to-r ${cultivation.badgeColor} px-1.5 py-0.5 text-[8px] font-black text-slate-950 shadow-sm`}
+              >
+                Lv.{cultivation.level} {cultivation.title}
+              </span>
             )}
             <span>{name}</span>
           </div>
@@ -197,7 +214,7 @@ function DevoteeSprite({
     if (bowCycleProgress < 0.18) frame = 0;
     else if (bowCycleProgress < 0.38) frame = 1;
     else if (bowCycleProgress < 0.58) frame = 2;
-    else if (bowCycleProgress < 0.80) frame = 3;
+    else if (bowCycleProgress < 0.8) frame = 3;
     else if (bowCycleProgress < 0.92) frame = 2;
     else frame = 0;
     currentTexture = textures.bow[frame];
@@ -242,6 +259,8 @@ function DevoteeSprite({
           name={action.nickname}
           avatarUrl={action.avatarUrl}
           message={message}
+          userId={action.userId}
+          isFemale={(action.userId.charCodeAt(0) || 0) % 12 !== 0}
           position={[0, isBowing ? 2.15 : 2.75, 0]}
         />
       )}
@@ -249,13 +268,7 @@ function DevoteeSprite({
   );
 }
 
-function OfferingBadge({
-  action,
-  state,
-}: {
-  action: TempleGameAction;
-  state: CharacterState;
-}) {
+function OfferingBadge({ action, state }: { action: TempleGameAction; state: CharacterState }) {
   const isFlower = action.actionType === 'OFFER_FLOWERS';
   const isGift = action.eventType === 'GIFT' || action.actionType === 'OFFER_INCENSE';
   const isLeaving = state === 'EXITING' || state === 'COMPLETED';
@@ -343,9 +356,7 @@ export function Character({
     const gate = inside ? interiorGate : outdoorGate;
     const aisle = inside ? interiorAisle : outdoorCourtyard;
     // Khu vực cắm hương riêng: trước lư hương chính ở cuối thảm đỏ
-    const incenseStation = inside
-      ? new Vector3(approachLane * 0.25, 0, 1.35)
-      : outdoorShrine;
+    const incenseStation = inside ? new Vector3(approachLane * 0.25, 0, 1.35) : outdoorShrine;
     if (inside) {
       return [
         new Vector3(approachLane * 0.35, 0, gate.z),
@@ -391,12 +402,8 @@ export function Character({
       1,
     );
     // Nhân vật chỉ bé đi tầm 90% khi đi vào tới chánh điện (giữ kích thước to rõ, trang nghiêm)
-    const depthScale = inside ? 0.90 + depthProgress * 0.10 : 0.95;
-    const smoothScale = MathUtils.lerp(
-      group.scale.x,
-      depthScale,
-      Math.min(1, delta * 4.5),
-    );
+    const depthScale = inside ? 0.9 + depthProgress * 0.1 : 0.95;
+    const smoothScale = MathUtils.lerp(group.scale.x, depthScale, Math.min(1, delta * 4.5));
     group.scale.setScalar(smoothScale);
     const isWorshipping =
       currentState === 'PRAYING' ||
@@ -495,7 +502,9 @@ export function Character({
         currentState === 'BOWING'
           ? 14.0
           : currentState === 'PRAYING'
-            ? (ceremony ? 3.0 : 12.0)
+            ? ceremony
+              ? 3.0
+              : 12.0
             : 3.5;
       if (elapsed.current > worshipDuration) {
         elapsed.current = 0;

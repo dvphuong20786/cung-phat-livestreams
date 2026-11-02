@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import {
   TempleScene,
@@ -7,6 +7,7 @@ import {
   type WorshipDistance,
 } from '../game/TempleScene';
 import { TempleToolbar } from '../game/TempleToolbar';
+import { MeritLeaderboard } from '../game/components/MeritLeaderboard';
 import { useTempleGameStore } from '../game/useTempleGameStore';
 import { useMonitorStore } from '../stores/useMonitorStore';
 export function TemplePage({
@@ -17,11 +18,20 @@ export function TemplePage({
   mobile?: boolean;
 }) {
   const [preset, setPreset] = useState<CameraPreset>('OVERVIEW'),
-    [theme, setTheme] = useState<TempleTheme>(overlay ? 'INTERIOR' : 'COURTYARD'),
+    [theme, setTheme] = useState<TempleTheme>('INTERIOR'),
     [worshipDistance, setWorshipDistance] = useState<WorshipDistance>('NEAR'),
     [isOverlayToolbarVisible, setIsOverlayToolbarVisible] = useState(true);
-  const { active, queue, latest } = useTempleGameStore();
+  const { active, queue, latest, allowSimulated, setAllowSimulated } = useTempleGameStore();
   const connection = useMonitorStore((s) => s.connection);
+
+  useEffect(() => {
+    if (overlay) {
+      setAllowSimulated(false);
+    }
+  }, [overlay, setAllowSimulated]);
+
+  const hideSimulated = !allowSimulated;
+
   return (
     <div
       className="relative h-screen w-screen overflow-hidden bg-slate-950"
@@ -42,8 +52,13 @@ export function TemplePage({
         controls={!overlay}
         mobile={mobile}
         worshipDistance={worshipDistance}
+        hideSimulated={hideSimulated}
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30" />
+      {/* Bảng Top Donate / Công Đức ✦ */}
+      <div className={`absolute z-30 ${mobile ? 'right-2 top-14' : 'right-4 top-20'}`}>
+        <MeritLeaderboard mobile={mobile} hideSimulated={hideSimulated} />
+      </div>
       {overlay && isOverlayToolbarVisible && (
         <div
           className={

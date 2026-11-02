@@ -20,6 +20,7 @@ export interface TempleGameAction {
   isSimulated?: boolean;
   eventType?: LiveEventType;
   avatarUrl?: string;
+  seatedAt?: number;
   createdAt: number;
 }
 

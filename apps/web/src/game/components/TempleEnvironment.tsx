@@ -1,14 +1,240 @@
-import{useMemo}from'react';import{Box,RoundedBox,Cylinder,Cone,Sphere}from'@react-three/drei';
-const wood='#6f261d',roof='#8f2528',gold='#e8b94c',stone='#a7a39a';
-function CurvedRoof({position,scale=[1,1,1]}:{position:[number,number,number];scale?:[number,number,number]}){return <group position={position} scale={scale}><mesh castShadow rotation={[0,0,Math.PI/18]} position={[-1.9,0,0]}><boxGeometry args={[4,.22,3.2]}/><meshStandardMaterial color={roof} roughness={.72}/></mesh><mesh castShadow rotation={[0,0,-Math.PI/18]} position={[1.9,0,0]}><boxGeometry args={[4,.22,3.2]}/><meshStandardMaterial color={roof} roughness={.72}/></mesh><mesh position={[0,.36,0]} castShadow><cylinderGeometry args={[.12,.12,8,12]}/><meshStandardMaterial color={gold}/></mesh></group>}
-export function TempleGate(){return <group position={[0,0,7]}><Box args={[.7,4,.7]} position={[-3,2,0]} castShadow><meshStandardMaterial color={wood}/></Box><Box args={[.7,4,.7]} position={[3,2,0]} castShadow><meshStandardMaterial color={wood}/></Box><Box args={[6.8,.55,.7]} position={[0,4,0]} castShadow><meshStandardMaterial color={wood}/></Box><CurvedRoof position={[0,4.75,0]} scale={[.9,.9,.9]}/><mesh position={[0,3.65,.38]}><boxGeometry args={[2.7,.7,.12]}/><meshStandardMaterial color="#3b1712"/><mesh position={[0,0,.07]}><planeGeometry args={[2.4,.45]}/><meshStandardMaterial color={gold}/></mesh></mesh></group>}
-export function TempleBuilding(){return <group position={[0,0,-7]}><RoundedBox args={[11,5,6]} position={[0,2.5,0]} radius={.15} castShadow receiveShadow><meshStandardMaterial color="#d9b878" roughness={.8}/></RoundedBox>{[-4.4,-2.2,0,2.2,4.4].map(x=><Cylinder key={x} args={[.22,.28,4.5,12]} position={[x,2.25,3.1]} castShadow><meshStandardMaterial color={wood}/></Cylinder>)}<CurvedRoof position={[0,5.8,0]} scale={[1.55,1.2,1.4]}/><Box args={[10,.5,1]} position={[0,.4,3.5]}><meshStandardMaterial color={stone}/></Box><Box args={[9,.45,1.2]} position={[0,.85,3.2]}><meshStandardMaterial color="#bbb5a7"/></Box></group>}
-export function BuddhaShrine(){return <group position={[0,1.15,-5]}><Box args={[3,.5,2]} position={[0,0,0]} castShadow><meshStandardMaterial color="#4d251b"/></Box><Cylinder args={[.8,1,1.2,24]} position={[0,1,0]} castShadow><meshStandardMaterial color={gold} metalness={.25}/></Cylinder><Sphere args={[.58,24,16]} position={[0,2.05,0]} castShadow><meshStandardMaterial color="#e6bb58" metalness={.2}/></Sphere><Sphere args={[.24,16,12]} position={[0,2.68,0]}><meshStandardMaterial color="#d9a93c"/></Sphere><pointLight position={[0,3,1]} color="#ffd47a" intensity={2.5} distance={8}/></group>}
-export function OfferingTable({flowers}:{flowers:number}){return <group position={[-3,1,-2.8]}><Box args={[2.6,.25,1.4]} castShadow><meshStandardMaterial color="#6b2e20"/></Box>{[-1,1].flatMap(x=>[-.5,.5].map(z=><Box key={`${x}${z}`} args={[.18,1.8,.18]} position={[x,-.9,z]}><meshStandardMaterial color="#542117"/></Box>))}{Array.from({length:Math.min(flowers,12)},(_,i)=><group key={i} position={[-.9+(i%4)*.6,.32,-.35+Math.floor(i/4)*.35]}><Cylinder args={[.025,.025,.65,6]} position={[0,.25,0]}><meshStandardMaterial color="#2f7b3f"/></Cylinder><Sphere args={[.12,10,8]} position={[0,.62,0]}><meshStandardMaterial color={i%2?'#f7c2dc':'#ef496f'}/></Sphere></group>)}</group>}
-export function IncenseBurner(){return <group position={[2.8,.75,-2.8]}><Cylinder args={[.65,.5,1.2,20]} castShadow><meshStandardMaterial color="#8d5a35" metalness={.25}/></Cylinder>{[-.25,0,.25].map(x=><group key={x}><Cylinder args={[.018,.018,1.3,5]} position={[x,1,0]}><meshStandardMaterial color="#8e2e25"/></Cylinder><Sphere args={[.035,6,6]} position={[x,1.65,0]}><meshBasicMaterial color="#ffcc66"/></Sphere></group>)}</group>}
-export function Courtyard(){return <group><mesh rotation={[-Math.PI/2,0,0]} receiveShadow><planeGeometry args={[50,50]}/><meshStandardMaterial color="#75845e" roughness={1}/></mesh><mesh rotation={[-Math.PI/2,0,0]} position={[0,.015,1]} receiveShadow><planeGeometry args={[6,26]}/><meshStandardMaterial color="#aaa698" roughness={.95}/></mesh>{Array.from({length:10},(_,i)=><mesh key={i} rotation={[-Math.PI/2,0,0]} position={[0,.03,9-i*2.25]}><planeGeometry args={[5.4,.06]}/><meshStandardMaterial color="#d1cdc1"/></mesh>)}</group>}
-function Tree({position}:{position:[number,number,number]}){return <group position={position}><Cylinder args={[.24,.35,3,10]} position={[0,1.5,0]} castShadow><meshStandardMaterial color="#65412c"/></Cylinder><Cone args={[1.5,3,10]} position={[0,3.4,0]} castShadow><meshStandardMaterial color="#356b45"/></Cone><Cone args={[1.15,2.3,10]} position={[0,4.6,0]} castShadow><meshStandardMaterial color="#438254"/></Cone></group>}
-export function Trees(){return <>{[-8,8].flatMap(x=>[-5,2,9].map(z=><Tree key={`${x}${z}`} position={[x,0,z]}/>))}</>}
-export function Lanterns(){return <>{[-4.5,4.5].flatMap(x=>[-1,4].map(z=><group key={`${x}${z}`} position={[x,0,z]}><Cylinder args={[.08,.1,3,8]} position={[0,1.5,0]}><meshStandardMaterial color="#30261f"/></Cylinder><Sphere args={[.32,12,10]} scale={[1,.75,1]} position={[0,2.8,0]}><meshStandardMaterial color="#e84c38" emissive="#ff6a3d" emissiveIntensity={.45}/></Sphere></group>))}</>}
-export function SceneLighting(){return <><hemisphereLight args={['#b9d8ff','#6b5b45',1.6]}/><directionalLight position={[8,14,8]} intensity={2.4} color="#ffe1a8" castShadow shadow-mapSize={[1024,1024]} shadow-camera-left={-15} shadow-camera-right={15} shadow-camera-top={15} shadow-camera-bottom={-15}/><fog attach="fog" args={['#8eb1c7',28,55]}/></>}
-export function SkyGround(){const clouds=useMemo(()=>Array.from({length:7},(_,i)=>({x:(i-3)*7,y:10+(i%2),z:-18-(i%3)*5})),[]);return <>{clouds.map((c,i)=><Sphere key={i} args={[2.2,12,8]} scale={[2,1,1]} position={[c.x,c.y,c.z]}><meshBasicMaterial color="#f5f0df" transparent opacity={.65}/></Sphere>)}</>}
+import { useMemo } from 'react';
+import { Box, RoundedBox, Cylinder, Cone, Sphere } from '@react-three/drei';
+const wood = '#6f261d',
+  roof = '#8f2528',
+  gold = '#e8b94c',
+  stone = '#a7a39a';
+function CurvedRoof({
+  position,
+  scale = [1, 1, 1],
+}: {
+  position: [number, number, number];
+  scale?: [number, number, number];
+}) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh castShadow rotation={[0, 0, Math.PI / 18]} position={[-1.9, 0, 0]}>
+        <boxGeometry args={[4, 0.22, 3.2]} />
+        <meshStandardMaterial color={roof} roughness={0.72} />
+      </mesh>
+      <mesh castShadow rotation={[0, 0, -Math.PI / 18]} position={[1.9, 0, 0]}>
+        <boxGeometry args={[4, 0.22, 3.2]} />
+        <meshStandardMaterial color={roof} roughness={0.72} />
+      </mesh>
+      <mesh position={[0, 0.36, 0]} castShadow>
+        <cylinderGeometry args={[0.12, 0.12, 8, 12]} />
+        <meshStandardMaterial color={gold} />
+      </mesh>
+    </group>
+  );
+}
+export function TempleGate() {
+  return (
+    <group position={[0, 0, 7]}>
+      <Box args={[0.7, 4, 0.7]} position={[-3, 2, 0]} castShadow>
+        <meshStandardMaterial color={wood} />
+      </Box>
+      <Box args={[0.7, 4, 0.7]} position={[3, 2, 0]} castShadow>
+        <meshStandardMaterial color={wood} />
+      </Box>
+      <Box args={[6.8, 0.55, 0.7]} position={[0, 4, 0]} castShadow>
+        <meshStandardMaterial color={wood} />
+      </Box>
+      <CurvedRoof position={[0, 4.75, 0]} scale={[0.9, 0.9, 0.9]} />
+      <mesh position={[0, 3.65, 0.38]}>
+        <boxGeometry args={[2.7, 0.7, 0.12]} />
+        <meshStandardMaterial color="#3b1712" />
+        <mesh position={[0, 0, 0.07]}>
+          <planeGeometry args={[2.4, 0.45]} />
+          <meshStandardMaterial color={gold} />
+        </mesh>
+      </mesh>
+    </group>
+  );
+}
+export function TempleBuilding() {
+  return (
+    <group position={[0, 0, -7]}>
+      <RoundedBox args={[11, 5, 6]} position={[0, 2.5, 0]} radius={0.15} castShadow receiveShadow>
+        <meshStandardMaterial color="#d9b878" roughness={0.8} />
+      </RoundedBox>
+      {[-4.4, -2.2, 0, 2.2, 4.4].map((x) => (
+        <Cylinder key={x} args={[0.22, 0.28, 4.5, 12]} position={[x, 2.25, 3.1]} castShadow>
+          <meshStandardMaterial color={wood} />
+        </Cylinder>
+      ))}
+      <CurvedRoof position={[0, 5.8, 0]} scale={[1.55, 1.2, 1.4]} />
+      <Box args={[10, 0.5, 1]} position={[0, 0.4, 3.5]}>
+        <meshStandardMaterial color={stone} />
+      </Box>
+      <Box args={[9, 0.45, 1.2]} position={[0, 0.85, 3.2]}>
+        <meshStandardMaterial color="#bbb5a7" />
+      </Box>
+    </group>
+  );
+}
+export function BuddhaShrine() {
+  return (
+    <group position={[0, 1.15, -5]}>
+      <Box args={[3, 0.5, 2]} position={[0, 0, 0]} castShadow>
+        <meshStandardMaterial color="#4d251b" />
+      </Box>
+      <Cylinder args={[0.8, 1, 1.2, 24]} position={[0, 1, 0]} castShadow>
+        <meshStandardMaterial color={gold} metalness={0.25} />
+      </Cylinder>
+      <Sphere args={[0.58, 24, 16]} position={[0, 2.05, 0]} castShadow>
+        <meshStandardMaterial color="#e6bb58" metalness={0.2} />
+      </Sphere>
+      <Sphere args={[0.24, 16, 12]} position={[0, 2.68, 0]}>
+        <meshStandardMaterial color="#d9a93c" />
+      </Sphere>
+      <pointLight position={[0, 3, 1]} color="#ffd47a" intensity={2.5} distance={8} />
+    </group>
+  );
+}
+export function OfferingTable({ flowers }: { flowers: number }) {
+  return (
+    <group position={[-3, 1, -2.8]}>
+      <Box args={[2.6, 0.25, 1.4]} castShadow>
+        <meshStandardMaterial color="#6b2e20" />
+      </Box>
+      {[-1, 1].flatMap((x) =>
+        [-0.5, 0.5].map((z) => (
+          <Box key={`${x}${z}`} args={[0.18, 1.8, 0.18]} position={[x, -0.9, z]}>
+            <meshStandardMaterial color="#542117" />
+          </Box>
+        )),
+      )}
+      {Array.from({ length: Math.min(flowers, 12) }, (_, i) => (
+        <group key={i} position={[-0.9 + (i % 4) * 0.6, 0.32, -0.35 + Math.floor(i / 4) * 0.35]}>
+          <Cylinder args={[0.025, 0.025, 0.65, 6]} position={[0, 0.25, 0]}>
+            <meshStandardMaterial color="#2f7b3f" />
+          </Cylinder>
+          <Sphere args={[0.12, 10, 8]} position={[0, 0.62, 0]}>
+            <meshStandardMaterial color={i % 2 ? '#f7c2dc' : '#ef496f'} />
+          </Sphere>
+        </group>
+      ))}
+    </group>
+  );
+}
+export function IncenseBurner() {
+  return (
+    <group position={[2.8, 0.75, -2.8]}>
+      <Cylinder args={[0.65, 0.5, 1.2, 20]} castShadow>
+        <meshStandardMaterial color="#8d5a35" metalness={0.25} />
+      </Cylinder>
+      {[-0.25, 0, 0.25].map((x) => (
+        <group key={x}>
+          <Cylinder args={[0.018, 0.018, 1.3, 5]} position={[x, 1, 0]}>
+            <meshStandardMaterial color="#8e2e25" />
+          </Cylinder>
+          <Sphere args={[0.035, 6, 6]} position={[x, 1.65, 0]}>
+            <meshBasicMaterial color="#ffcc66" />
+          </Sphere>
+        </group>
+      ))}
+    </group>
+  );
+}
+export function Courtyard() {
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[50, 50]} />
+        <meshStandardMaterial color="#75845e" roughness={1} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 1]} receiveShadow>
+        <planeGeometry args={[6, 26]} />
+        <meshStandardMaterial color="#aaa698" roughness={0.95} />
+      </mesh>
+      {Array.from({ length: 10 }, (_, i) => (
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 9 - i * 2.25]}>
+          <planeGeometry args={[5.4, 0.06]} />
+          <meshStandardMaterial color="#d1cdc1" />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+function Tree({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      <Cylinder args={[0.24, 0.35, 3, 10]} position={[0, 1.5, 0]} castShadow>
+        <meshStandardMaterial color="#65412c" />
+      </Cylinder>
+      <Cone args={[1.5, 3, 10]} position={[0, 3.4, 0]} castShadow>
+        <meshStandardMaterial color="#356b45" />
+      </Cone>
+      <Cone args={[1.15, 2.3, 10]} position={[0, 4.6, 0]} castShadow>
+        <meshStandardMaterial color="#438254" />
+      </Cone>
+    </group>
+  );
+}
+export function Trees() {
+  return (
+    <>
+      {[-8, 8].flatMap((x) =>
+        [-5, 2, 9].map((z) => <Tree key={`${x}${z}`} position={[x, 0, z]} />),
+      )}
+    </>
+  );
+}
+export function Lanterns() {
+  return (
+    <>
+      {[-4.5, 4.5].flatMap((x) =>
+        [-1, 4].map((z) => (
+          <group key={`${x}${z}`} position={[x, 0, z]}>
+            <Cylinder args={[0.08, 0.1, 3, 8]} position={[0, 1.5, 0]}>
+              <meshStandardMaterial color="#30261f" />
+            </Cylinder>
+            <Sphere args={[0.32, 12, 10]} scale={[1, 0.75, 1]} position={[0, 2.8, 0]}>
+              <meshStandardMaterial color="#e84c38" emissive="#ff6a3d" emissiveIntensity={0.45} />
+            </Sphere>
+          </group>
+        )),
+      )}
+    </>
+  );
+}
+export function SceneLighting() {
+  return (
+    <>
+      <hemisphereLight args={['#b9d8ff', '#6b5b45', 1.6]} />
+      <directionalLight
+        position={[8, 14, 8]}
+        intensity={2.4}
+        color="#ffe1a8"
+        castShadow
+        shadow-mapSize={[1024, 1024]}
+        shadow-camera-left={-15}
+        shadow-camera-right={15}
+        shadow-camera-top={15}
+        shadow-camera-bottom={-15}
+      />
+      <fog attach="fog" args={['#8eb1c7', 28, 55]} />
+    </>
+  );
+}
+export function SkyGround() {
+  const clouds = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, i) => ({
+        x: (i - 3) * 7,
+        y: 10 + (i % 2),
+        z: -18 - (i % 3) * 5,
+      })),
+    [],
+  );
+  return (
+    <>
+      {clouds.map((c, i) => (
+        <Sphere key={i} args={[2.2, 12, 8]} scale={[2, 1, 1]} position={[c.x, c.y, c.z]}>
+          <meshBasicMaterial color="#f5f0df" transparent opacity={0.65} />
+        </Sphere>
+      ))}
+    </>
+  );
+}

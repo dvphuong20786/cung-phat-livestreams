@@ -24,6 +24,8 @@ interface GameStore {
   flowers: number;
   latest?: string;
   quality: Quality;
+  allowSimulated: boolean;
+  userInteractions: Record<string, number>;
   enqueue: (action: TempleGameAction) => void;
   setState: (id: string, state: CharacterState) => void;
   complete: (id: string) => void;
@@ -31,6 +33,7 @@ interface GameStore {
   clear: () => void;
   setPaused: (paused: boolean) => void;
   setQuality: (quality: Quality) => void;
+  setAllowSimulated: (allowed: boolean) => void;
 }
 const isCeremony = (a: TempleGameAction) =>
   a.actionType === 'OFFER_FLOWERS' || a.actionType === 'OFFER_INCENSE';
@@ -64,8 +67,20 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
   paused: false,
   flowers: 0,
   quality: 'MEDIUM',
+  allowSimulated: true,
+  userInteractions: {},
   enqueue: (action) =>
     set((state) => {
+      // Chế độ không thêm người giả lập
+      if (!state.allowSimulated && action.isSimulated) {
+        return state;
+      }
+      const count = Math.max(1, action.quantity ?? 1);
+      const userInteractions = {
+        ...state.userInteractions,
+        [action.userId]: (state.userInteractions[action.userId] || 0) + count,
+      };
+
       const previousSeat = state.seatedVisitors.findIndex(
         (visitor) => visitor.userId === action.userId,
       );
@@ -89,11 +104,16 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       if (existing && action.actionType === 'ENTER_TEMPLE')
         return { seatedVisitors, latest: `${action.nickname} đã gửi thêm lượt thích` };
 
-      // Người vào xem LIVE không có tương tác (JOIN): ngồi quỳ xem ở hàng dưới, không xếp vào hàng đợi cúng Phật
+      // Người vào xem LIVE không có tương tác (JOIN): ngồi quỳ xem ở hàng dưới trong 2 phút
       if (action.eventType === 'JOIN') {
+        const joinActionWithSeat = { ...action, seatedAt: Date.now() };
+        const updatedSeated = state.seatedVisitors.some((v) => v.userId === action.userId)
+          ? state.seatedVisitors.map((v) => (v.userId === action.userId ? joinActionWithSeat : v))
+          : [...state.seatedVisitors, joinActionWithSeat];
         return {
-          seatedVisitors,
+          seatedVisitors: updatedSeated.slice(0, 80),
           latest: `${action.nickname} vừa vào chánh điện`,
+          userInteractions,
         };
       }
 
@@ -101,6 +121,7 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       return {
         ...promote([...state.active], queue),
         seatedVisitors,
+        userInteractions,
         latest:
           action.actionType === 'OFFER_FLOWERS'
             ? `${action.nickname} đang chuẩn bị dâng hoa`
@@ -118,14 +139,33 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       ),
     })),
   complete: (id) =>
-    set((state) =>
-      promote(
-        state.active.filter((c) => c.action.actionId !== id),
-        state.queue,
-      ),
-    ),
+    set((state) => {
+      const completedChar = state.active.find((c) => c.action.actionId === id);
+      const now = Date.now();
+      const updatedSeated = completedChar
+        ? state.seatedVisitors.map((v) =>
+            v.userId === completedChar.action.userId ? { ...v, seatedAt: now } : v,
+          )
+        : state.seatedVisitors;
+      return {
+        ...promote(
+          state.active.filter((c) => c.action.actionId !== id),
+          state.queue,
+        ),
+        seatedVisitors: updatedSeated,
+      };
+    }),
   addFlower: () => set({ flowers: get().flowers + 1 }),
-  clear: () => set({ active: [], queue: [], seatedVisitors: [], flowers: 0, latest: undefined }),
+  clear: () =>
+    set({
+      active: [],
+      queue: [],
+      seatedVisitors: [],
+      flowers: 0,
+      latest: undefined,
+      userInteractions: {},
+    }),
   setPaused: (paused) => set({ paused }),
   setQuality: (quality) => set({ quality }),
+  setAllowSimulated: (allowSimulated) => set({ allowSimulated }),
 }));

@@ -105,11 +105,7 @@ function SeatedFigure({
       </mesh>
 
       {/* Phật tử ngồi niệm Phật */}
-      <Billboard
-        follow
-        position={[0, 0.78, 0]}
-        scale={[flip * figureScale, figureScale, 1]}
-      >
+      <Billboard follow position={[0, 0.78, 0]} scale={[flip * figureScale, figureScale, 1]}>
         <mesh>
           <planeGeometry args={[1.45, 1.95]} />
           <meshBasicMaterial
@@ -122,18 +118,26 @@ function SeatedFigure({
         </mesh>
       </Billboard>
 
-      {/* Avatar TikTok trên đầu & Tên/Comment */}
+      {/* Avatar TikTok trên đầu & Tên/Comment/Level */}
       <CharacterHeadOverlay
         name={nickname}
         avatarUrl={avatarUrl}
         message={message}
+        userId={userId}
+        isFemale={true}
         position={[0, 1.95, 0]}
       />
     </group>
   );
 }
 
-export function SeatedVisitors({ mobile = false }: { mobile?: boolean }) {
+export function SeatedVisitors({
+  mobile = false,
+  hideSimulated = false,
+}: {
+  mobile?: boolean;
+  hideSimulated?: boolean;
+}) {
   const seatedVisitors = useTempleGameStore((state) => state.seatedVisitors),
     active = useTempleGameStore((state) => state.active);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
@@ -156,10 +160,19 @@ export function SeatedVisitors({ mobile = false }: { mobile?: boolean }) {
   }, []);
   const activeUsers = new Set(active.map((character) => character.action.userId));
   const visitorsStillSeated = seatedVisitors.filter((visitor) => {
-    const seatingDuration = visitor.isSimulated ? 90_000 : 15 * 60_000;
-    return currentTime - visitor.createdAt <= seatingDuration;
+    // 11. Ở link overlay/overlay-mobile không hiển thị khách giả lập
+    if (hideSimulated && visitor.isSimulated) return false;
+
+    // 7. Khách ngồi quỳ quan sát trong vòng 2 phút (120_000 ms)
+    // 8. Khách tới donate, tương tác xong khi xuống ngồi thì 4 phút (240_000 ms) rồi mất
+    const isObserver = visitor.eventType === 'JOIN' || visitor.actionType === 'WELCOME';
+    const seatingDuration = isObserver ? 2 * 60_000 : 4 * 60_000;
+    const seatStartTime = visitor.seatedAt ?? visitor.createdAt;
+    return currentTime - seatStartTime <= seatingDuration;
   });
-  const visibleVisitors = mobile ? visitorsStillSeated.slice(0, 16) : visitorsStillSeated.slice(0, 24);
+  const visibleVisitors = mobile
+    ? visitorsStillSeated.slice(0, 16)
+    : visitorsStillSeated.slice(0, 24);
   return (
     <group>
       {visibleVisitors.map((visitor, index) =>

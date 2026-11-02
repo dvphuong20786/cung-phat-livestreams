@@ -24,24 +24,33 @@ function getTitle(score: number): string {
   return 'Thí Chủ';
 }
 
-export function MeritLeaderboard({ mobile = false }: { mobile?: boolean }) {
+export function MeritLeaderboard({
+  mobile = false,
+  hideSimulated = false,
+}: {
+  mobile?: boolean;
+  hideSimulated?: boolean;
+}) {
   const [collapsed, setCollapsed] = useState(false);
   const events = useMonitorStore((s) => s.events);
 
   const topDonors = useMemo(() => {
     const scores = new Map<string, { nickname: string; score: number; avatarUrl?: string }>();
 
-    // Khởi tạo điểm công đức mẫu ban đầu
-    for (const seed of seedDonors) {
-      scores.set(seed.userId, {
-        nickname: seed.nickname,
-        score: seed.score,
-        avatarUrl: seed.avatarUrl,
-      });
+    // Khởi tạo điểm công đức mẫu ban đầu (nếu không phải hideSimulated)
+    if (!hideSimulated) {
+      for (const seed of seedDonors) {
+        scores.set(seed.userId, {
+          nickname: seed.nickname,
+          score: seed.score,
+          avatarUrl: seed.avatarUrl,
+        });
+      }
     }
 
     // Cộng dồn quà tặng từ sự kiện realtime
     for (const e of events) {
+      if (hideSimulated && e.source === 'SIMULATOR') continue;
       if (e.type === 'GIFT' && e.gift) {
         const id = e.user.id || e.user.username;
         const pts = (e.gift.quantity ?? 1) * (e.gift.repeatEnd ? 1 : 1);
