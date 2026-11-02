@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { templeGameActionPriority, type TempleGameAction } from '@live/shared';
 import { calculateActionMeritPoints } from './cultivationLevel';
+import { templeAudio } from './services/TempleAudioService';
 export type CharacterState =
   | 'SPAWNING'
   | 'WALKING_TO_GATE'
@@ -121,10 +122,23 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       const existing =
         state.active.some((c) => c.action.userId === action.userId) ||
         state.queue.some((a) => a.userId === action.userId && a.actionType === action.actionType);
-      if (existing && action.actionType === 'ENTER_TEMPLE')
-        return { seatedVisitors, latest: `${action.nickname} đã gửi thêm lượt thích` };
+      if (existing && action.actionType === 'ENTER_TEMPLE') {
+        return {
+          seatedVisitors,
+          userInteractions,
+          latest: `${action.nickname} đã gửi thêm lượt thích`,
+        };
+      }
 
       const queue = sortActionsByPriority([...state.queue, action]);
+
+      // Phát hiệu ứng âm thanh tương ứng sự kiện
+      if (action.actionType === 'OFFER_FLOWERS') {
+        templeAudio.playOfferingChime();
+      } else if (action.actionType === 'BELL_EFFECT' || action.eventType === 'GIFT') {
+        templeAudio.playTempleBell();
+      }
+
       return {
         ...promote([...state.active], queue),
         seatedVisitors,
@@ -208,7 +222,6 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       seatedVisitors: [],
       flowers: 0,
       latest: undefined,
-      userInteractions: {},
     }),
   setPaused: (paused) => set({ paused }),
   setQuality: (quality) => set({ quality }),

@@ -59,7 +59,9 @@ export function setupSockets(
       characters,
     });
 
-    socket.on('state:request', (_v, ack) =>
+    socket.on('state:request', (_v, ack) => {
+      const currentCharacters = characterStore ? characterStore.getAllCharacters() : [];
+
       ack?.({
         success: true,
         data: {
@@ -67,10 +69,10 @@ export function setupSockets(
           events: events.recent(),
           stats: events.stats.snapshot(),
           game: { paused: gamePaused },
-          characters,
+          characters: currentCharacters,
         },
-      }),
-    );
+      });
+    });
 
     socket.on('characters:request', (_v, ack) => {
       const currentChars = characterStore ? characterStore.getAllCharacters() : [];
@@ -82,6 +84,7 @@ export function setupSockets(
       if (!p.success) return ack?.({ success: false, error: p.error.issues[0]?.message });
       try {
         await tiktok.connect(p.data.username, p.data.autoReconnect);
+        characterStore?.resetLiveSessionLimits();
         ack?.({ success: true });
       } catch (e) {
         ack?.({ success: false, error: e instanceof Error ? e.message : String(e) });

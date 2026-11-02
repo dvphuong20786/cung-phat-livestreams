@@ -126,6 +126,21 @@ export class CharacterStore {
     return rows.map((r) => this.mapRow(r));
   }
 
+  public resetLiveSessionLimits(): void {
+    // Tổng điểm, level, cấp bậc và trạng thái FOLLOW được giữ vĩnh viễn.
+    // Chỉ các giới hạn kiếm điểm theo từng buổi live được bắt đầu lại.
+    this.database
+      .prepare(`
+        UPDATE user_characters SET
+          like_points_today = 0,
+          last_comment_at = 0,
+          share_count_today = 0,
+          join_awarded_today = 0,
+          watch_time_awarded_today = 0
+      `)
+      .run();
+  }
+
   public awardPointsForEvent(event: LiveEvent): { character: UserCharacter; pointsAwarded: number } {
     const userId = event.user.id || event.user.username;
     const username = event.user.username;
@@ -235,6 +250,7 @@ export class CharacterStore {
       character.rankName = getRankName(character.level, isFemale);
     }
 
+    character.username = username;
     character.nickname = nickname;
     if (avatarUrl) character.avatarUrl = avatarUrl;
     character.lastActiveAt = now;
@@ -283,6 +299,7 @@ export class CharacterStore {
   private updateCharacter(char: UserCharacter): void {
     const stmt = this.database.prepare(`
       UPDATE user_characters SET
+        username = @username,
         nickname = @nickname,
         avatar_url = @avatarUrl,
         merit_points = @meritPoints,
@@ -299,6 +316,7 @@ export class CharacterStore {
     `);
     stmt.run({
       userId: char.userId,
+      username: char.username,
       nickname: char.nickname,
       avatarUrl: char.avatarUrl ?? '',
       meritPoints: char.meritPoints,

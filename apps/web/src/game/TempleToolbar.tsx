@@ -1,7 +1,9 @@
-import { Camera, ExternalLink, Pause, Play, Trash2, Users } from 'lucide-react';
+import { useState } from 'react';
+import { Camera, ExternalLink, Pause, Play, Trash2, Users, Volume2, VolumeX } from 'lucide-react';
 import { command } from '../services/socket';
 import { useTempleGameStore } from './useTempleGameStore';
 import type { CameraPreset, TempleTheme, WorshipDistance } from './TempleScene';
+import { templeAudio } from './services/TempleAudioService';
 
 interface TempleToolbarProps {
   preset: CameraPreset;
@@ -23,6 +25,24 @@ export function TempleToolbar({
   setWorshipDistance,
 }: TempleToolbarProps) {
   const { paused, quality, setQuality, allowSimulated, setAllowSimulated } = useTempleGameStore();
+  const [isMuted, setIsMuted] = useState(() => templeAudio.getMuted());
+  const [volume, setVolume] = useState(() => templeAudio.getVolume());
+
+  const handleToggleAudio = () => {
+    const nextMuted = templeAudio.toggleMute();
+    setIsMuted(nextMuted);
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nextVol = parseFloat(e.target.value);
+    templeAudio.setVolume(nextVol);
+    setVolume(nextVol);
+    if (isMuted && nextVol > 0) {
+      templeAudio.setMuted(false);
+      setIsMuted(false);
+    }
+  };
+
   return (
     <div
       className={`flex flex-wrap items-center gap-2 rounded-2xl border border-white/15 bg-slate-950/75 text-xs shadow-xl backdrop-blur-xl ${compact ? 'p-2' : 'p-3'}`}
@@ -51,6 +71,33 @@ export function TempleToolbar({
       >
         <Users size={13} /> {allowSimulated ? 'Giả lập: Bật' : 'Giả lập: Tắt'}
       </button>
+
+      {/* Nút Bật/Tắt Âm thanh & Tiếng Chuông Mõ */}
+      <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-950/40 px-2 py-1">
+        <button
+          type="button"
+          className={`flex items-center gap-1.5 font-medium transition ${
+            !isMuted ? 'text-amber-300 font-bold' : 'text-slate-400'
+          }`}
+          onClick={handleToggleAudio}
+          title={isMuted ? 'Bấm để bật âm thanh & tiếng chuông mõ' : 'Bấm để tắt âm thanh'}
+        >
+          {!isMuted ? <Volume2 size={14} /> : <VolumeX size={14} />}
+          <span>{!isMuted ? 'Nhạc: Bật' : 'Nhạc: Tắt'}</span>
+        </button>
+        {!isMuted && (
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={volume}
+            onChange={handleVolumeChange}
+            className="h-1.5 w-14 cursor-pointer accent-amber-400"
+            title={`Âm lượng: ${Math.round(volume * 100)}%`}
+          />
+        )}
+      </div>
       <select
         aria-label="Giao diện chùa"
         className="rounded-lg border border-amber-300/30 bg-amber-950/80 px-3 py-1.5 text-amber-100"

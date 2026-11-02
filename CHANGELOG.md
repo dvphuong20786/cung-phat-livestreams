@@ -1,5 +1,43 @@
 # Lịch sử thay đổi
 
+## [v0.22.2] - 2026-11-02
+- **Yêu cầu**: Sửa hạn mức tích điểm giữa các buổi livestream và đồng bộ username mới của nhân vật vào SQLite.
+- **Chi tiết kỹ thuật**:
+  - `CharacterStore.ts`: thêm `resetLiveSessionLimits()` để bắt đầu lại hạn mức LIKE, COMMENT cooldown, SHARE, JOIN và watch time cho mỗi lần kết nối live thành công; giữ nguyên vĩnh viễn tổng điểm, level, cấp bậc, hồ sơ và trạng thái thưởng FOLLOW.
+  - `CharacterStore.ts`: cập nhật `username` mới khi TikTok trả cùng `userId`, tránh giữ tên đăng nhập cũ trong database.
+  - `socketServer.ts`: gọi reset hạn mức phiên sau khi kết nối TikTok thành công; kết nối thất bại không làm thay đổi hạn mức.
+  - `CharacterStore.test.ts`: bổ sung kiểm thử reset phiên không mất tiến trình nhân vật và lưu username mới.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 9/9 test CharacterStore và game store đạt; TypeScript server không có lỗi.
+
+## [v0.22.1] - 2026-11-02
+- **Yêu cầu**: Sửa các lỗi đồng bộ điểm, level và thông tin nhân vật tồn tại vĩnh viễn giữa các buổi live; rà soát thêm lỗi runtime.
+- **Chi tiết kỹ thuật**:
+  - `apps/web/vite.config.ts`: thêm proxy `/api` sang server `127.0.0.1:3001` để API nhân vật hoạt động trong môi trường development.
+  - `useTempleGameStore.ts`: lưu điểm offline khi một nhân vật gửi LIKE liên tiếp; thao tác xóa cảnh không còn xóa điểm/level nhân vật đã đồng bộ; sửa quà Hoa phát đúng tiếng khánh dâng hoa.
+  - `socketServer.ts`: `state:request` luôn đọc danh sách nhân vật mới nhất từ SQLite thay vì trả snapshot cũ lúc kết nối.
+  - `MeritLeaderboard.tsx`: hiển thị cấp bậc `rankName` đã tính từ level trên server, không tự tạo hệ thống danh hiệu khác theo vị trí bảng xếp hạng.
+  - `ChantingMonks.tsx`: cập nhật trực tiếp texture của material khi đổi frame để hoạt ảnh tụng kinh thực sự chuyển động.
+  - `useTempleGameStore.test.ts`: bổ sung kiểm thử cộng điểm LIKE liên tiếp và giữ điểm nhân vật khi xóa cảnh.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 7/7 test game store đạt; TypeScript web/server và Vite production build thành công.
+  - Vite cảnh báo chunk `TempleToolbar` sau minify khoảng 882 KB; cần tách bundle ở một lượt tối ưu hiệu năng riêng.
+
+## [v0.22.0] - 2026-11-02
+- **Yêu cầu**: Thêm hệ thống âm thanh chánh điện (nhạc thiền BGM, tiếng gõ mõ, chuông đại hồng chung, khánh dâng hoa) và trang Cài đặt Nhạc & Âm thanh trong Admin.
+- **Chi tiết kỹ thuật**:
+  - File TempleAudioService.ts: Xây dựng service quản lý âm thanh bằng Web Audio API:
+    - Tiếng Gõ Mõ (Wooden Fish): Xung tần số 540Hz kèm hoạ âm gỗ mộc và bandpass filter buồng rỗng.
+    - Đại Hồng Chung (Temple Bell): Tiếng chuông chùa ngân vang 5.5s với 5 tầng hoạ âm ấm trầm uy nghiêm.
+    - Tiếng Khánh Dâng Hoa (Chime): Âm kim loại trong trẻo ngân nga khi thí chủ cúng dường.
+    - Nhạc nền chánh điện (BGM): Tự động phát lặp lại file /audio/bgm.mp3 (hoặc phát nhạc thiền Ambient Drone tự sinh nếu chưa có file MP3).
+  - File AudioSettingsPanel.tsx & AdminPage.tsx: Thêm mục "Cài đặt Nhạc & Âm thanh" (/admin/audio) trong menu Admin với giao diện tùy chỉnh âm lượng, bật/tắt tiếng, nghe thử tiếng chuông mõ và đổi URL nhạc nền.
+  - File TempleToolbar.tsx: Bổ sung nút Bật/Tắt âm thanh kèm thanh trượt âm lượng (Volume Slider) trực tiếp trên thanh điều khiển chánh điện 3D.
+  - File ChantingMonks.tsx & useTempleGameStore.ts: Đồng bộ tiếng gõ mõ theo nhịp chuyển động của Sư Trụ Trì và phát tiếng chuông/khánh khi có sự kiện SHARE hoặc GIFT.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 24/24 unit tests passed. TypeScript check và Vite build thành công 100%.
+
+
 ## [v0.21.4] - 2026-11-02
 - **Yêu cầu**: Chuyển bảng Công Đức sang lấy 100% dữ liệu thật từ Database SQLite, loại bỏ hoàn toàn danh sách mẫu seedDonors.
 - **Chi tiết kỹ thuật**:

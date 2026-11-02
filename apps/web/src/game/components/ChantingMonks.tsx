@@ -1,7 +1,8 @@
 import { useMemo, useRef } from 'react';
 import { Billboard, Cylinder, Html, Sphere, useTexture } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { AdditiveBlending, Group, MathUtils, Mesh } from 'three';
+import { AdditiveBlending, Group, MathUtils, Mesh, MeshBasicMaterial } from 'three';
+import { templeAudio } from '../services/TempleAudioService';
 
 interface MonkConfig {
   title: string;
@@ -17,12 +18,23 @@ const monks: MonkConfig[] = [
 
 function WoodenFish({ isAbbot = false }: { isAbbot?: boolean }) {
   const strikerRef = useRef<Group>(null);
+  const struckRef = useRef(false);
 
   useFrame((state) => {
     if (strikerRef.current) {
-      // Nhịp gõ mõ đều đặn thanh tịnh (khoảng 1.2 giây một tiếng gõ)
+      // Nhịp gõ mõ đều đặn thanh tịnh (khoảng 1.6 giây một tiếng gõ)
       const beat = Math.sin(state.clock.elapsedTime * 3.8);
       strikerRef.current.rotation.x = -0.4 + Math.max(0, beat) * 0.45;
+
+      // Khi dùi mõ chạm vào mặt mõ: phát âm thanh tiếng gõ mõ thanh tịnh
+      if (beat > 0.88 && !struckRef.current) {
+        struckRef.current = true;
+        if (isAbbot) {
+          templeAudio.playWoodenFish(0);
+        }
+      } else if (beat < 0.2) {
+        struckRef.current = false;
+      }
     }
   });
 
@@ -122,6 +134,7 @@ function MonkFigure({ config }: { config: MonkConfig }) {
 
   const cushionTexture = useTexture('/assets/lotus-cushion.svg');
   const figureRef = useRef<Group>(null);
+  const monkMaterialRef = useRef<MeshBasicMaterial>(null);
   const monkFrame = useRef(0);
 
   useFrame((state) => {
@@ -133,7 +146,12 @@ function MonkFigure({ config }: { config: MonkConfig }) {
 
       // Đổi frame nhẹ nhàng giữa tư thế chắp tay tĩnh tại và cúi niệm kinh
       const cycle = Math.sin(state.clock.elapsedTime * 1.9);
-      monkFrame.current = cycle > 0.6 ? 1 : 0;
+      const nextMonkFrame = cycle > 0.6 ? 1 : 0;
+      if (nextMonkFrame !== monkFrame.current && monkMaterialRef.current) {
+        monkFrame.current = nextMonkFrame;
+        monkMaterialRef.current.map = monkTextures[nextMonkFrame];
+        monkMaterialRef.current.needsUpdate = true;
+      }
     }
   });
 
@@ -160,6 +178,7 @@ function MonkFigure({ config }: { config: MonkConfig }) {
           <mesh>
             <planeGeometry args={[1.55, 2.05]} />
             <meshBasicMaterial
+              ref={monkMaterialRef}
               map={monkTextures[monkFrame.current]}
               transparent
               alphaTest={0.025}

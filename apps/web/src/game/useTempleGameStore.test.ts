@@ -13,7 +13,10 @@ const action = (
   createdAt: index,
 });
 describe('temple game queue', () => {
-  beforeEach(() => useTempleGameStore.getState().clear());
+  beforeEach(() => {
+    useTempleGameStore.getState().clear();
+    useTempleGameStore.setState({ userInteractions: {}, characterList: [] });
+  });
   it('bounds active characters and waiting queue during a burst', () => {
     for (let index = 0; index < 600; index++) useTempleGameStore.getState().enqueue(action(index));
     expect(useTempleGameStore.getState().active).toHaveLength(12);
@@ -24,6 +27,18 @@ describe('temple game queue', () => {
     useTempleGameStore.getState().enqueue(action(1));
     useTempleGameStore.getState().enqueue({ ...action(2, 'OFFER_FLOWERS'), userId: 'u-1' });
     expect(useTempleGameStore.getState().seatedVisitors).toHaveLength(1);
+  });
+  it('keeps accumulating offline merit points for repeated likes', () => {
+    useTempleGameStore.getState().enqueue({ ...action(1), eventType: 'LIKE' });
+    const firstPoints = useTempleGameStore.getState().userInteractions['u-1'];
+
+    useTempleGameStore.getState().enqueue({
+      ...action(2),
+      userId: 'u-1',
+      eventType: 'LIKE',
+    });
+
+    expect(useTempleGameStore.getState().userInteractions['u-1']).toBeGreaterThan(firstPoints);
   });
   it('prioritizes a flower ceremony in the waiting queue', () => {
     for (let index = 0; index < 12; index++) useTempleGameStore.getState().enqueue(action(index));
@@ -42,5 +57,13 @@ describe('temple game queue', () => {
     ]);
     expect(useTempleGameStore.getState().userInteractions['u-1']).toBe(1250);
     expect(useTempleGameStore.getState().userInteractions['u-2']).toBe(17500);
+  });
+  it('keeps persistent character points when clearing the temple scene', () => {
+    useTempleGameStore.getState().syncCharacters([{ userId: 'u-1', meritPoints: 1250 }]);
+
+    useTempleGameStore.getState().clear();
+
+    expect(useTempleGameStore.getState().userInteractions['u-1']).toBe(1250);
+    expect(useTempleGameStore.getState().characterList[0]?.meritPoints).toBe(1250);
   });
 });

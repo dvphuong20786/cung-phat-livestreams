@@ -2,12 +2,6 @@ import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useTempleGameStore } from '../useTempleGameStore';
 
-function getTitle(index: number, score: number): string {
-  if (index === 0 && score >= 500) return 'Đại Hộ Pháp';
-  if (index <= 2 && score >= 100) return 'Hộ Pháp';
-  return 'Thí Chủ';
-}
-
 export function MeritLeaderboard({
   mobile = false,
   hideSimulated = false,
@@ -43,12 +37,12 @@ export function MeritLeaderboard({
       return true;
     })
     .slice(0, 5)
-    .map((char, index) => ({
+    .map((char) => ({
       userId: char.userId,
       nickname: char.nickname || char.username || 'Thí chủ',
       score: char.meritPoints,
       avatarUrl: char.avatarUrl,
-      title: getTitle(index, char.meritPoints),
+      title: char.rankName ?? 'Khách hành hương',
     }));
 
   return (
