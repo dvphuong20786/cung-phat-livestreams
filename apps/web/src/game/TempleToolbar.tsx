@@ -13,6 +13,7 @@ interface TempleToolbarProps {
   compact?: boolean;
   worshipDistance?: WorshipDistance;
   setWorshipDistance?: (distance: WorshipDistance) => void;
+  extraAction?: React.ReactNode;
 }
 
 export function TempleToolbar({
@@ -23,8 +24,9 @@ export function TempleToolbar({
   compact = false,
   worshipDistance,
   setWorshipDistance,
+  extraAction,
 }: TempleToolbarProps) {
-  const { paused, quality, setQuality, allowSimulated, setAllowSimulated } = useTempleGameStore();
+  const { paused, quality, setQuality, allowSimulated, clear, setPaused } = useTempleGameStore();
   const [isMuted, setIsMuted] = useState(() => templeAudio.getMuted());
   const [volume, setVolume] = useState(() => templeAudio.getVolume());
 
@@ -49,13 +51,19 @@ export function TempleToolbar({
     >
       <button
         className="btn bg-white/10 px-3 py-2"
-        onClick={() => command('game:control', { command: paused ? 'RESUME' : 'PAUSE' })}
+        onClick={() => {
+          setPaused(!paused);
+          command('game:control', { command: paused ? 'RESUME' : 'PAUSE' }).catch(() => {});
+        }}
       >
         {paused ? <Play size={14} /> : <Pause size={14} />} {paused ? 'Tiếp tục' : 'Tạm dừng'}
       </button>
       <button
         className="btn bg-red-500/15 px-3 py-2 text-red-200"
-        onClick={() => command('game:control', { command: 'CLEAR' })}
+        onClick={() => {
+          clear();
+          command('game:control', { command: 'CLEAR' }).catch(() => {});
+        }}
       >
         <Trash2 size={14} /> Xóa cảnh
       </button>
@@ -66,8 +74,10 @@ export function TempleToolbar({
             ? 'border border-emerald-500/40 bg-emerald-500/15 text-emerald-200'
             : 'border border-slate-700 bg-slate-900/60 text-slate-400'
         }`}
-        onClick={() => setAllowSimulated(!allowSimulated)}
-        title="Bật / Tắt chế độ thêm và hiển thị người giả lập"
+        onClick={() => {
+          command('simulator:auto-control', { enabled: !allowSimulated }).catch(() => {});
+        }}
+        title="Bật / Tắt giả lập tự động dùng chung với trang Admin"
       >
         <Users size={13} /> {allowSimulated ? 'Giả lập: Bật' : 'Giả lập: Tắt'}
       </button>
@@ -190,6 +200,7 @@ export function TempleToolbar({
         <option value="MEDIUM">Đồ họa vừa</option>
         <option value="HIGH">Đồ họa cao</option>
       </select>
+      {extraAction}
       {!compact && (
         <a className="btn bg-violet-500/20 px-3 py-2 text-violet-200" href="/admin">
           <ExternalLink size={14} /> Quản trị

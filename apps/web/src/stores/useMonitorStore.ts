@@ -1,7 +1,88 @@
-import{create}from'zustand';import type{ConnectionStatus,LiveEvent,Snapshot,Statistics}from'@live/shared';
-const empty={likes:0,giftQuantity:0,giftEvents:0,comments:0,follows:0,shares:0,joins:0,uniqueUsers:0,eventRate:0};const initialStats:Statistics={total:{...empty},real:{...empty},simulated:{...empty}};
-type Prefs={autoReconnect:boolean;likeWindow:number;maxEvents:number;joinEvents:boolean;debug:boolean;display:'ALL'|'TIKTOK'|'SIMULATOR'};
-const stored=()=>{try{return JSON.parse(localStorage.getItem('live-monitor-prefs')||'{}')}catch{return{}}};
-interface Store{events:LiveEvent[];stats:Statistics;connection:ConnectionStatus;socketConnected:boolean;error?:string;prefs:Prefs;hydrate:(s:Snapshot)=>void;addEvent:(e:LiveEvent)=>void;setStats:(s:Statistics)=>void;setConnection:(s:ConnectionStatus)=>void;setSocketConnected:(v:boolean)=>void;setError:(e?:string)=>void;resetEvents:(source?:string)=>void;setPrefs:(p:Partial<Prefs>)=>void}
-const defaults:Prefs={autoReconnect:true,likeWindow:500,maxEvents:500,joinEvents:true,debug:false,display:'ALL'};
-export const useMonitorStore=create<Store>((set,get)=>({events:[],stats:initialStats,connection:{state:'DISCONNECTED',reconnectAttempt:0},socketConnected:false,prefs:{...defaults,...stored()},hydrate:s=>set({events:s.events,stats:s.stats,connection:s.connection}),addEvent:e=>set({events:[e,...get().events].slice(0,get().prefs.maxEvents)}),setStats:stats=>set({stats}),setConnection:connection=>set({connection}),setSocketConnected:socketConnected=>set({socketConnected}),setError:error=>set({error}),resetEvents:source=>set({events:source?get().events.filter(e=>e.source!==source):[]}),setPrefs:p=>{const prefs={...get().prefs,...p};localStorage.setItem('live-monitor-prefs',JSON.stringify(prefs));set({prefs})}}));
+import { create } from 'zustand';
+import type { ConnectionStatus, LiveEvent, Snapshot, Statistics } from '@live/shared';
+
+const emptyStats = {
+  likes: 0,
+  giftQuantity: 0,
+  giftEvents: 0,
+  comments: 0,
+  follows: 0,
+  shares: 0,
+  joins: 0,
+  uniqueUsers: 0,
+  eventRate: 0,
+};
+const initialStats: Statistics = {
+  total: { ...emptyStats },
+  real: { ...emptyStats },
+  simulated: { ...emptyStats },
+};
+type MonitorPreferences = {
+  autoReconnect: boolean;
+  likeWindow: number;
+  maxEvents: number;
+  joinEvents: boolean;
+  debug: boolean;
+  display: 'ALL' | 'TIKTOK' | 'SIMULATOR';
+};
+const defaultPreferences: MonitorPreferences = {
+  autoReconnect: true,
+  likeWindow: 500,
+  maxEvents: 500,
+  joinEvents: true,
+  debug: false,
+  display: 'ALL',
+};
+function loadStoredPreferences(): Partial<MonitorPreferences> {
+  try {
+    return JSON.parse(localStorage.getItem('live-monitor-prefs') || '{}');
+  } catch {
+    return {};
+  }
+}
+interface MonitorStore {
+  events: LiveEvent[];
+  stats: Statistics;
+  connection: ConnectionStatus;
+  socketConnected: boolean;
+  autoSimulationEnabled: boolean;
+  error?: string;
+  prefs: MonitorPreferences;
+  hydrate: (snapshot: Snapshot) => void;
+  addEvent: (event: LiveEvent) => void;
+  setStats: (stats: Statistics) => void;
+  setConnection: (connection: ConnectionStatus) => void;
+  setSocketConnected: (connected: boolean) => void;
+  setAutoSimulationEnabled: (enabled: boolean) => void;
+  setError: (error?: string) => void;
+  resetEvents: (source?: string) => void;
+  setPrefs: (preferences: Partial<MonitorPreferences>) => void;
+}
+export const useMonitorStore = create<MonitorStore>((set, get) => ({
+  events: [],
+  stats: initialStats,
+  connection: { state: 'DISCONNECTED', reconnectAttempt: 0 },
+  socketConnected: false,
+  autoSimulationEnabled: false,
+  prefs: { ...defaultPreferences, ...loadStoredPreferences() },
+  hydrate: (snapshot) =>
+    set({
+      events: snapshot.events,
+      stats: snapshot.stats,
+      connection: snapshot.connection,
+      autoSimulationEnabled: snapshot.simulation?.autoEnabled ?? false,
+    }),
+  addEvent: (event) => set({ events: [event, ...get().events].slice(0, get().prefs.maxEvents) }),
+  setStats: (stats) => set({ stats }),
+  setConnection: (connection) => set({ connection }),
+  setSocketConnected: (socketConnected) => set({ socketConnected }),
+  setAutoSimulationEnabled: (autoSimulationEnabled) => set({ autoSimulationEnabled }),
+  setError: (error) => set({ error }),
+  resetEvents: (source) =>
+    set({ events: source ? get().events.filter((event) => event.source !== source) : [] }),
+  setPrefs: (preferences) => {
+    const prefs = { ...get().prefs, ...preferences };
+    localStorage.setItem('live-monitor-prefs', JSON.stringify(prefs));
+    set({ prefs });
+  },
+}));

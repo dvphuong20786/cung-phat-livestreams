@@ -1,9 +1,57 @@
 import type { Server } from 'socket.io';
-import { connectSchema, simulatorSchema, templeGameActionFor, type LiveEvent } from '@live/shared';
+import {
+  connectSchema,
+  simulatorSchema,
+  templeGameActionFor,
+  type LiveEvent,
+  type SimulatorInput,
+} from '@live/shared';
 import type { EventService } from '../services/EventService.js';
 import type { LiveConnector as TikTokConnector } from '../connectors/LiveConnector.js';
 import type { CharacterStore } from '../services/CharacterStore.js';
 import { WatchTimeTracker } from '../services/WatchTimeTracker.js';
+
+const autoSimulationNames = [
+  'Thiện Tâm',
+  'Diệu Âm',
+  'Tuệ Minh',
+  'An Lạc',
+  'Ngọc Hoa',
+  'Tâm Từ',
+  'Liên Hoa',
+  'Trí Huệ',
+];
+const autoSimulationComments = [
+  'Nam Mô A Di Đà Phật',
+  'Cầu cho gia đạo bình an',
+  'Nguyện mọi người được an lành',
+  'Tâm an vạn sự an',
+];
+let autoSimulationCounter = 1;
+
+function createAutoSimulationInput(): SimulatorInput {
+  const nickname = autoSimulationNames[Math.floor(Math.random() * autoSimulationNames.length)];
+  const username = `auto_sim_${autoSimulationCounter++}`;
+  const randomValue = Math.random();
+  if (randomValue < 0.5) return { type: 'JOIN', username, nickname };
+  if (randomValue < 0.8) {
+    return { type: 'LIKE', username, nickname, likeCount: Math.floor(Math.random() * 5) + 1 };
+  }
+  if (randomValue < 0.95) {
+    return {
+      type: 'COMMENT',
+      username,
+      nickname,
+      comment: autoSimulationComments[Math.floor(Math.random() * autoSimulationComments.length)],
+    };
+  }
+  return {
+    type: 'GIFT',
+    username,
+    nickname,
+    gift: { name: 'Rose', quantity: 1, repeatEnd: true },
+  };
+}
 
 export function setupSockets(
   io: Server,
@@ -12,6 +60,9 @@ export function setupSockets(
   characterStore?: CharacterStore,
 ) {
   let gamePaused = false;
+  let autoSimulationEnabled = false;
+  let autoSimulationTimer: ReturnType<typeof setTimeout> | null = null;
+  let autoSimulationRunId = 0;
   const watchTimeTracker = new WatchTimeTracker();
 
   const publish = (event: LiveEvent, alreadyProcessed = false) => {
@@ -47,6 +98,33 @@ export function setupSockets(
     }
   };
 
+  const runAutoSimulationBatch = async (runId: number) => {
+    if (!autoSimulationEnabled || runId !== autoSimulationRunId) return;
+    const visitorCount = Math.random() < 0.5 ? 1 : 2;
+    for (let index = 0; index < visitorCount; index++) {
+      if (!autoSimulationEnabled || runId !== autoSimulationRunId) return;
+      const event = events.simulate(createAutoSimulationInput());
+      publish(event, true);
+      if (index < visitorCount - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
+    }
+    if (!autoSimulationEnabled || runId !== autoSimulationRunId) return;
+    autoSimulationTimer = setTimeout(() => void runAutoSimulationBatch(runId), 5000);
+    autoSimulationTimer.unref();
+  };
+
+  const setAutoSimulationEnabled = (enabled: boolean) => {
+    autoSimulationEnabled = enabled;
+    autoSimulationRunId += 1;
+    if (autoSimulationTimer) {
+      clearTimeout(autoSimulationTimer);
+      autoSimulationTimer = null;
+    }
+    io.emit('simulation:auto-status', { enabled });
+    if (enabled) void runAutoSimulationBatch(autoSimulationRunId);
+  };
+
   tiktok.on('event', (event: LiveEvent) => publish(event));
   tiktok.on('status', (status) => {
     if (status.state !== 'CONNECTED') watchTimeTracker.clear();
@@ -62,6 +140,7 @@ export function setupSockets(
       events: events.recent(),
       stats: events.stats.snapshot(),
       game: { paused: gamePaused },
+      simulation: { autoEnabled: autoSimulationEnabled },
       characters,
     });
 
@@ -75,6 +154,7 @@ export function setupSockets(
           events: events.recent(),
           stats: events.stats.snapshot(),
           game: { paused: gamePaused },
+          simulation: { autoEnabled: autoSimulationEnabled },
           characters: currentCharacters,
         },
       });
@@ -109,6 +189,14 @@ export function setupSockets(
       const event = events.simulate(p.data);
       publish(event, true);
       ack?.({ success: true, data: event });
+    });
+
+    socket.on('simulator:auto-control', (input, ack) => {
+      if (typeof input?.enabled !== 'boolean') {
+        return ack?.({ success: false, error: 'Trạng thái giả lập tự động không hợp lệ' });
+      }
+      setAutoSimulationEnabled(input.enabled);
+      ack?.({ success: true, data: { enabled: autoSimulationEnabled } });
     });
 
     socket.on('game:control', (input, ack) => {

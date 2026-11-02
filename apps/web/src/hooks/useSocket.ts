@@ -1,7 +1,13 @@
 import { useEffect } from 'react';
 import { socket } from '../services/socket';
 import { useMonitorStore } from '../stores/useMonitorStore';
-import type { ConnectionStatus, LiveEvent, Snapshot, Statistics, TempleGameAction } from '@live/shared';
+import type {
+  ConnectionStatus,
+  LiveEvent,
+  Snapshot,
+  Statistics,
+  TempleGameAction,
+} from '@live/shared';
 import { useTempleGameStore, type StoredCharacter } from '../game/useTempleGameStore';
 
 export function useSocket() {
@@ -20,6 +26,7 @@ export function useSocket() {
     ) => {
       s().hydrate(v);
       if (v.game) g().setPaused(v.game.paused);
+      if (v.simulation) g().setAllowSimulated(v.simulation.autoEnabled);
       if (v.characters && Array.isArray(v.characters)) {
         g().syncCharacters(v.characters);
       }
@@ -33,6 +40,10 @@ export function useSocket() {
     const gameAction = (v: TempleGameAction) => g().enqueue(v);
     const gameClear = () => g().clear();
     const gamePaused = (v: boolean) => g().setPaused(v);
+    const autoSimulationStatus = (value: { enabled: boolean }) => {
+      s().setAutoSimulationEnabled(value.enabled);
+      g().setAllowSimulated(value.enabled);
+    };
     const characterUpdated = (
       c: Partial<StoredCharacter> & { userId: string; meritPoints: number },
     ) => {
@@ -52,6 +63,7 @@ export function useSocket() {
     socket.on('game:action', gameAction);
     socket.on('game:clear', gameClear);
     socket.on('game:paused', gamePaused);
+    socket.on('simulation:auto-status', autoSimulationStatus);
     socket.on('character:updated', characterUpdated);
 
     if (socket.connected) connected();
@@ -68,6 +80,7 @@ export function useSocket() {
       socket.off('game:action', gameAction);
       socket.off('game:clear', gameClear);
       socket.off('game:paused', gamePaused);
+      socket.off('simulation:auto-status', autoSimulationStatus);
       socket.off('character:updated', characterUpdated);
     };
   }, []);

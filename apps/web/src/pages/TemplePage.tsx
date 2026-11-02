@@ -12,7 +12,6 @@ import { RecentDonorsList } from '../game/components/RecentDonorsList';
 import { useTempleGameStore } from '../game/useTempleGameStore';
 import { useMonitorStore } from '../stores/useMonitorStore';
 import { templeAudio } from '../game/services/TempleAudioService';
-import { sendSimulatedBatch } from '../services/simulatorService';
 
 export function TemplePage({
   overlay = false,
@@ -60,30 +59,6 @@ export function TemplePage({
       templeAudio.pauseBgm();
     };
   }, []);
-
-  // Giả lập ngẫu nhiên 1, 2 người đi vào 1 lần, 5 giây sau lại vào 1, 2 người; không tràn vào
-  useEffect(() => {
-    if (!allowSimulated) return;
-    if (connection.state === 'CONNECTED') return;
-
-    let timer: number | null = null;
-    let cancelled = false;
-
-    const runSimCycle = async () => {
-      if (cancelled) return;
-      await sendSimulatedBatch();
-      if (!cancelled) {
-        timer = window.setTimeout(runSimCycle, 5000);
-      }
-    };
-
-    timer = window.setTimeout(runSimCycle, 2500);
-
-    return () => {
-      cancelled = true;
-      if (timer) window.clearTimeout(timer);
-    };
-  }, [allowSimulated, connection.state]);
 
   return (
     <div

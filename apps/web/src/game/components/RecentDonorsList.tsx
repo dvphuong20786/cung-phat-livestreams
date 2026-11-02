@@ -21,7 +21,7 @@ export function RecentDonorsList({ mobile = false }: { mobile?: boolean }) {
         {recentDonors.slice(0, 5).map((donor, idx) => (
           <div
             key={`${donor.userId}-${donor.timestamp}-${idx}`}
-            className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-gradient-to-r from-[#2a170b]/90 via-[#1f1107]/85 to-transparent p-1.5 shadow-lg backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-left-3"
+            className="flex items-center gap-2 py-0.5 px-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)] transition-all duration-300 animate-in fade-in slide-in-from-left-3"
           >
             {/* Avatar tròn viền vàng */}
             <div className="relative shrink-0">

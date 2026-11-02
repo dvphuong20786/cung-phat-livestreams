@@ -74,6 +74,7 @@ export interface Snapshot {
   connection: ConnectionStatus;
   events: LiveEvent[];
   stats: Statistics;
+  simulation?: { autoEnabled: boolean };
 }
 
 const clean = (max: number) =>

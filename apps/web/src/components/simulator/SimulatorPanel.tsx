@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Zap, Send, Users, Play, Square, UserPlus } from 'lucide-react';
 import type { LiveEventType, SimulatorInput } from '@live/shared';
 import { command } from '../../services/socket';
 import { sendSimulatedBatch, sendSimulatedVisitor } from '../../services/simulatorService';
+import { useMonitorStore } from '../../stores/useMonitorStore';
 
 export function SimulatorPanel() {
   const [username, setUsername] = useState('thien_tam');
@@ -13,48 +14,21 @@ export function SimulatorPanel() {
   const [giftName, setGiftName] = useState('Rose');
   const [giftQty, setGiftQty] = useState(1);
 
-  const [isAutoSimulating, setIsAutoSimulating] = useState(false);
+  const isAutoSimulating = useMonitorStore((state) => state.autoSimulationEnabled);
   const [busyBatch, setBusyBatch] = useState(false);
   const [batchStatus, setBatchStatus] = useState<string>('');
 
-  const autoSimTimerRef = useRef<number | null>(null);
-  const isAutoSimulatingRef = useRef(isAutoSimulating);
-  isAutoSimulatingRef.current = isAutoSimulating;
-
   const stopBatchRef = useRef(false);
 
-  // Vòng lặp tự động giả lập 1-2 người mỗi 5 giây
-  useEffect(() => {
-    if (!isAutoSimulating) {
-      if (autoSimTimerRef.current) {
-        window.clearTimeout(autoSimTimerRef.current);
-        autoSimTimerRef.current = null;
-      }
-      return;
-    }
-
-    let active = true;
-
-    const runAutoStep = async () => {
-      if (!active || !isAutoSimulatingRef.current) return;
-      const count = await sendSimulatedBatch();
-      setBatchStatus(`Vừa vào: ${count} người. Chờ 5 giây cho lượt tiếp...`);
-
-      if (active && isAutoSimulatingRef.current) {
-        autoSimTimerRef.current = window.setTimeout(runAutoStep, 5000);
-      }
-    };
-
-    runAutoStep();
-
-    return () => {
-      active = false;
-      if (autoSimTimerRef.current) {
-        window.clearTimeout(autoSimTimerRef.current);
-        autoSimTimerRef.current = null;
-      }
-    };
-  }, [isAutoSimulating]);
+  const toggleAutoSimulation = async () => {
+    const enabled = !isAutoSimulating;
+    await command('simulator:auto-control', { enabled });
+    setBatchStatus(
+      enabled
+        ? 'Đã bật giả lập tự động trên server: 1-2 người mỗi 5 giây.'
+        : 'Đã dừng giả lập tự động trên toàn bộ overlay.',
+    );
+  };
 
   const send = async (p: Partial<SimulatorInput> = {}) => {
     const t = p.type ?? type;
@@ -62,9 +36,12 @@ export function SimulatorPanel() {
       type: t,
       username: p.username ?? username,
       nickname: p.nickname ?? nickname,
-      likeCount: t === 'LIKE' ? p.likeCount ?? likeCount : undefined,
-      comment: t === 'COMMENT' ? p.comment ?? comment : undefined,
-      gift: t === 'GIFT' ? p.gift ?? { name: giftName, quantity: giftQty, repeatEnd: true } : undefined,
+      likeCount: t === 'LIKE' ? (p.likeCount ?? likeCount) : undefined,
+      comment: t === 'COMMENT' ? (p.comment ?? comment) : undefined,
+      gift:
+        t === 'GIFT'
+          ? (p.gift ?? { name: giftName, quantity: giftQty, repeatEnd: true })
+          : undefined,
     });
   };
 
@@ -147,7 +124,7 @@ export function SimulatorPanel() {
                   ? 'bg-rose-500/20 text-rose-200 hover:bg-rose-500/30'
                   : 'bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30'
               }`}
-              onClick={() => setIsAutoSimulating(!isAutoSimulating)}
+              onClick={() => void toggleAutoSimulation()}
             >
               {isAutoSimulating ? <Square size={14} /> : <Play size={14} />}
               <span>{isAutoSimulating ? 'Dừng tự động' : 'Bật tự động (1-2 người / 5s)'}</span>
@@ -155,9 +132,7 @@ export function SimulatorPanel() {
           </div>
         </div>
         {batchStatus && (
-          <div className="mt-2 text-[11px] font-medium text-amber-300">
-            {batchStatus}
-          </div>
+          <div className="mt-2 text-[11px] font-medium text-amber-300">{batchStatus}</div>
         )}
       </div>
 
@@ -197,11 +172,7 @@ export function SimulatorPanel() {
           />
         )}
         {type === 'COMMENT' && (
-          <input
-            className="field"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
+          <input className="field" value={comment} onChange={(e) => setComment(e.target.value)} />
         )}
         {type === 'GIFT' && (
           <>
@@ -227,31 +198,50 @@ export function SimulatorPanel() {
 
       {/* Các nút sự kiện nhanh */}
       <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-        <button className="btn bg-pink-500/10 text-pink-300" onClick={() => send({ type: 'LIKE', likeCount: 1 })}>
+        <button
+          className="btn bg-pink-500/10 text-pink-300"
+          onClick={() => send({ type: 'LIKE', likeCount: 1 })}
+        >
           ❤️ Gửi Like
         </button>
-        <button className="btn bg-pink-500/10 text-pink-300" onClick={() => send({ type: 'LIKE', likeCount: 10 })}>
+        <button
+          className="btn bg-pink-500/10 text-pink-300"
+          onClick={() => send({ type: 'LIKE', likeCount: 10 })}
+        >
           ❤️ Gửi 10 Like
         </button>
         <button
           className="btn bg-violet-500/10 text-violet-300"
-          onClick={() => send({ type: 'GIFT', gift: { name: 'Rose', quantity: 1, repeatEnd: true } })}
+          onClick={() =>
+            send({ type: 'GIFT', gift: { name: 'Rose', quantity: 1, repeatEnd: true } })
+          }
         >
           🌹 Tặng Rose
         </button>
         <button
           className="btn bg-violet-500/10 text-violet-300"
-          onClick={() => send({ type: 'GIFT', gift: { name: 'TikTok Universe', quantity: 1, repeatEnd: true } })}
+          onClick={() =>
+            send({ type: 'GIFT', gift: { name: 'TikTok Universe', quantity: 1, repeatEnd: true } })
+          }
         >
           🎁 Tặng Gift
         </button>
-        <button className="btn bg-sky-500/10 text-sky-300" onClick={() => send({ type: 'COMMENT', comment })}>
+        <button
+          className="btn bg-sky-500/10 text-sky-300"
+          onClick={() => send({ type: 'COMMENT', comment })}
+        >
           💬 Bình luận
         </button>
-        <button className="btn bg-emerald-500/10 text-emerald-300" onClick={() => send({ type: 'FOLLOW' })}>
+        <button
+          className="btn bg-emerald-500/10 text-emerald-300"
+          onClick={() => send({ type: 'FOLLOW' })}
+        >
           ➕ Follow
         </button>
-        <button className="btn bg-orange-500/10 text-orange-300" onClick={() => send({ type: 'SHARE' })}>
+        <button
+          className="btn bg-orange-500/10 text-orange-300"
+          onClick={() => send({ type: 'SHARE' })}
+        >
           ↗️ Share
         </button>
         <button

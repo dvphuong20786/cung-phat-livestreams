@@ -1,4 +1,51 @@
-# Lịch sử thay đổi
+﻿# Lịch sử thay đổi
+
+## [v0.25.3] - 2026-11-02
+- **Yêu cầu**: Sửa lỗi hiển thị nhân vật 2D bị cắt sai (lộ chân lên đầu), sửa hoạt ảnh đi lùi đằng lưng cả 2D và 3D, chỉnh lại vị trí 3 Thầy Chùa, bỏ hoa bay ngang tượng Phật và tinh gọn Danh sách Cúng Dường mới nhất.
+- **Chi tiết kỹ thuật**:
+  - Mobile2DOverlayPage.tsx:
+    - Tạo component DevoteeSprite2D cắt ảnh sprite 4x3 bằng container overflow: hidden theo kích thước pixel chuẩn xác, giải quyết dứt điểm lỗi chân hàng trên (Row 1) lộ lên đầu hàng quỳ (Row 2).
+    - Khắc phục lỗi đi lùi đằng lưng: khi Phật tử hoàn thành lễ Phật từ trên điện bước xuống chỗ ngồi (EXITING), chuyển sang dùng hoạt ảnh walk-front (female-walk.png Row 1) với khuôn mặt hướng về phía người xem.
+    - Đặt lại vị trí 3 Vị Thầy Chùa đúng trên mặt sàn trước bàn thờ Tam Bảo (top: 67%-68%), không còn bị bay lơ lửng trên đèn lồng hay tượng Phật.
+    - Chuyển toạ độ 4 hàng ghế Phật tử xuống đúng mặt sàn gỗ (top: 80% - 98%), chừa thảm đỏ ở giữa cho lối đi hành lễ.
+    - Loại bỏ dải hoa emoji bay ngang thân tượng Phật.
+  - Character.tsx: bổ sung frontWalkTextures từ female-walk.png khi isWalkingFront (state === 'EXITING'), khắc phục triệt để lỗi đi lùi đằng lưng trên cả 2 màn hình 3D (/overlay và /overlay-mobile).
+  - RecentDonorsList.tsx: bỏ khung viền và nền gradient nâu dày thô, chuyển sang dạng danh sách trong suốt có bóng chữ nổi bật, thanh thoát và không chiếm diện tích.
+  - mobile2d.css: bổ sung lớp .mobile-2d-clipper và .mobile-2d-sheet-img hỗ trợ cắt sprite chính xác.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 41/41 unit test (pnpm test), không có lỗi TypeScript (tsc -b), production build thành công (ite build).
+
+## [v0.25.2] - 2026-11-02
+- **Yêu cầu**: Bỏ tự giả lập riêng trong từng overlay và đồng bộ giả lập 1–2 người/5 giây với đúng nút bật/tắt tại Admin.
+- **Chi tiết kỹ thuật**:
+  - `socketServer.ts`: chuyển timer giả lập tự động lên server thành một nguồn duy nhất; bổ sung lệnh `simulator:auto-control` và sự kiện đồng bộ `simulation:auto-status`.
+  - Snapshot/state request trả thêm `simulation.autoEnabled`, giúp Admin, 2D và 3D nhận đúng trạng thái hiện hành kể cả khi mở trang sau khi đã bật giả lập.
+  - `SimulatorPanel.tsx`: nút `Bật/Dừng tự động` điều khiển trực tiếp timer server; không còn tạo vòng lặp riêng trong tab Admin.
+  - `TemplePage.tsx` và `Mobile2DOverlayPage.tsx`: loại bỏ hoàn toàn `useEffect` tự tạo 1–2 người mỗi 5 giây; overlay chỉ nhận sự kiện do server phát.
+  - `TempleToolbar.tsx`: nút `Giả lập: Bật/Tắt` gọi chung lệnh server với nút Admin, không còn là cờ cục bộ độc lập.
+  - `useSocket.ts`, `useMonitorStore.ts` và `Snapshot`: đồng bộ trạng thái giả lập server xuống toàn bộ client; cờ hiển thị người giả trong game store thay đổi theo cùng trạng thái này.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã đạt 41/41 unit test, TypeScript typecheck và production build.
+  - Đã kiểm tra trực tiếp Socket: lệnh bật trả `enabled: true`, lệnh tắt trả `enabled: false` và client nhận đủ hai sự kiện trạng thái `[true, false]`.
+  - Giả lập mặc định tắt sau khi server khởi động lại; người dùng bật lại tại `/admin/simulator` khi cần kiểm thử.
+  - Các nút gửi sự kiện thủ công và `Vào ngay 1-2 người` tại Admin vẫn hoạt động độc lập theo thao tác người dùng.
+
+## [v0.25.1] - 2026-11-02
+- **Yêu cầu**: Tinh chỉnh và đồng bộ giao diện /overlay-mobile-2d giống hoàn toàn bản 3D /overlay-mobile, chỉ khác ở cơ chế hiển thị 2D.
+- **Chi tiết kỹ thuật**:
+  - Mobile2DOverlayPage.tsx:
+    - Tái cấu trúc toàn bộ layout theo tỉ lệ toàn màn hình (100vw x 100vh), bỏ giới hạn co cụm màn hình hẹp trên desktop để hiển thị khoáng đạt y hệt bản 3D.
+    - Bổ sung 3 Vị Thầy Chùa quỳ tụng kinh trước điện: Sư Trụ Trì (Lv.100, `nam6.png`, hào quang Phật quang rực rỡ, đệm sen to, mõ gỗ gõ nhịp), Thầy Minh Đạo (Lv.61), Thầy Tâm Từ (Lv.61).
+    - Đồng bộ 24 chỗ ngồi quỳ niệm Phật: 4 hàng x 6 chỗ trên mobile (3 chỗ bên trái, 3 chỗ bên phải, thảm đỏ rộng rãi ở giữa), mỗi chỗ ngồi đều có Đệm sen toà thêu vàng (`lotus-cushion.svg`).
+    - Đồng bộ huy hiệu DevoteeHeadBadge: Bong bóng comment hoàng kim viền hổ phách, avatar tròn, huy hiệu cấp độ Level, mũi tên trỏ xuống; Tag tên mờ hổ phách bo tròn khi chỉ có tên; ẩn tên Khán giả ảo generic y hệt 3D.
+    - Đồng bộ vòng hào quang Phật pháp xoay tròn sau đầu cho Phật tử đạt cấp bậc cao (Lv.81-100).
+    - Chu trình di chuyển nhân vật mượt mà bằng CSS transitions: đi vào dọc theo thảm đỏ -> dâng hoa (addFlower) / quỳ lạy 3 lạy / niệm Phật -> bước sang mép thảm đỏ rồi đi về đúng vị trí đệm sen của mình trong 24 chỗ ngồi.
+    - Sử dụng trực tiếp thanh điều khiển TempleToolbar chuẩn kèm nút Ẩn/Hiện Eye/EyeOff, link chuyển về "Bản 3D", Bảng Công Đức góc phải và Danh sách Donate góc trái.
+  - TempleToolbar.tsx: bổ sung prop extraAction và phản hồi lập tức các nút Tạm dừng, Xóa cảnh.
+  - mobile2d.css: chuẩn hóa sprite sheet 4x3 (đứng/chắp tay/dâng hoa, đi bộ 4 frame, quỳ lạy 4 frame, quỳ niệm Phật), hiệu ứng hào quang, mõ gỗ và đốm bụi vàng lơ lửng.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 41/41 unit test (`pnpm test`), không có lỗi TypeScript (`tsc -b`), production build thành công (`vite build`).
+  - Ghi chú đầy đủ tiến độ "đã có, đang có, sắp có" và hướng dẫn chi tiết trong file mã nguồn để dễ dàng đọc hiểu và chỉnh sửa thủ công.
 
 ## [v0.25.0] - 2026-11-02
 - **Yêu cầu**: Đồng bộ bản 2D thành bản sao đầy đủ chức năng của bản 3D, chỉ khác công nghệ và hiệu ứng dựng cảnh.

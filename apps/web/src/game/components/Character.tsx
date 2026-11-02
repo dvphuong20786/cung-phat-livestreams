@@ -176,6 +176,17 @@ function DevoteeSprite({
   const cultivation = getCultivationInfo(interactions, isFemale);
 
   const baseTexture = useTexture(cultivation.assetUrl);
+  const femaleWalkTexture = useTexture('/assets/female-walk.png');
+
+  const frontWalkTextures = useMemo(() => {
+    // Row 1 of female-walk.png (nửa dưới ảnh, UV V: 0.00 -> 0.50): 4 khung đi hướng về phía trước (mặt đối diện camera)
+    return Array.from({ length: 4 }, (_, i) => {
+      const t = femaleWalkTexture.clone();
+      t.repeat.set(0.25, 0.5);
+      t.offset.set(i * 0.25, 0);
+      return t;
+    });
+  }, [femaleWalkTexture]);
 
   const textures = useMemo(() => {
     // Sprite sheet 4 cột x 3 hàng:
@@ -230,7 +241,12 @@ function DevoteeSprite({
   let planeHeight = 2.45;
   let posY = 1.18;
 
-  if (isWalking) {
+  if (isWalkingFront) {
+    currentTexture = frontWalkTextures[stepIndex];
+    planeWidth = 1.95;
+    planeHeight = 2.45;
+    posY = 1.18;
+  } else if (isWalkingBack) {
     currentTexture = textures.walk[stepIndex];
     planeWidth = 1.95;
     planeHeight = 2.45;
