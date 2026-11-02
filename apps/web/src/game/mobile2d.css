@@ -1,0 +1,548 @@
+.mobile-2d-stage {
+  --worship-top: 29%;
+  --worship-scale: 0.78;
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #170903 url('/assets/temple-interior-mobile-backdrop.png') center/100% 100% no-repeat;
+  isolation: isolate;
+}
+.mobile-2d-stage--desktop {
+  --worship-top: 30%;
+  --worship-scale: 0.68;
+  background-image: url('/assets/temple-interior-full-backdrop.png');
+}
+.mobile-2d-stage--mobile.mobile-2d-theme-courtyard {
+  --worship-top: 43%;
+  --worship-scale: 0.82;
+  background-image: url('/assets/temple-courtyard-2d-mobile.png');
+}
+.mobile-2d-stage--desktop.mobile-2d-theme-courtyard {
+  --worship-top: 46%;
+  --worship-scale: 0.74;
+  background-image: url('/assets/temple-courtyard-2d-desktop.png');
+}
+.mobile-2d-stage--mobile.mobile-2d-worship-standard {
+  --worship-top: 38%;
+  --worship-scale: 0.84;
+}
+.mobile-2d-stage--desktop.mobile-2d-worship-standard {
+  --worship-top: 39%;
+  --worship-scale: 0.76;
+}
+.mobile-2d-stage--mobile.mobile-2d-theme-courtyard.mobile-2d-worship-standard {
+  --worship-top: 51%;
+  --worship-scale: 0.88;
+}
+.mobile-2d-stage--desktop.mobile-2d-theme-courtyard.mobile-2d-worship-standard {
+  --worship-top: 54%;
+  --worship-scale: 0.82;
+}
+.mobile-2d-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(24, 8, 0, 0.08), transparent 35%, rgba(16, 3, 0, 0.32));
+}
+.mobile-2d-light {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 25%, rgba(255, 221, 123, 0.22), transparent 34%);
+  animation: mobile-2d-glow 4s ease-in-out infinite alternate;
+}
+.mobile-2d-light::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255, 222, 122, 0.85) 0 1px, transparent 1.8px);
+  background-size: 73px 89px;
+  opacity: 0.3;
+  animation: mobile-2d-dust 9s linear infinite;
+}
+.mobile-2d-seats,
+.mobile-2d-active-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+.mobile-2d-active-layer {
+  z-index: 30;
+}
+.mobile-2d-person,
+.mobile-2d-seated {
+  position: absolute;
+  width: clamp(76px, 16vw, 116px);
+  height: clamp(132px, 25vw, 184px);
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 7px 7px rgba(24, 5, 0, 0.55));
+}
+.mobile-2d-person {
+  left: calc(50% + var(--lane-x));
+  top: 82%;
+  transform: translate(-50%, -50%);
+}
+.mobile-2d-person-enter {
+  animation: mobile-2d-enter 5.2s linear both;
+}
+.mobile-2d-person-join {
+  animation: mobile-2d-join 4.2s linear both;
+}
+.mobile-2d-person-worship {
+  top: var(--worship-top);
+  transform: translate(-50%, -50%) scale(var(--worship-scale));
+}
+.mobile-2d-person-exit {
+  top: var(--worship-top);
+  animation: mobile-2d-exit 5.2s linear both;
+}
+.mobile-2d-sprite {
+  position: absolute;
+  inset: 24px 0 0;
+  width: 100%;
+  height: calc(100% - 24px);
+  background-repeat: no-repeat;
+  animation-timing-function: steps(4);
+  animation-iteration-count: infinite;
+  animation-duration: 0.75s;
+}
+.mobile-2d-walk-back,
+.mobile-2d-walk-front {
+  background-image: url('/assets/female-walk.png');
+  background-size: 400% 200%;
+  animation-name: mobile-2d-walk;
+}
+.mobile-2d-walk-back {
+  background-position-y: 0%;
+}
+.mobile-2d-walk-front {
+  background-position-y: 100%;
+}
+.mobile-2d-bow {
+  background-image: url('/assets/female-bow.png');
+  background-size: 400% 100%;
+  background-position-y: 0;
+  animation-name: mobile-2d-bow;
+  animation-timing-function: step-end;
+}
+.mobile-2d-rank-sprite {
+  background-size: 400% 300%;
+}
+.mobile-2d-rank-walk {
+  background-position-y: 50%;
+  animation-name: mobile-2d-walk;
+}
+.mobile-2d-rank-bow {
+  background-position-y: 100%;
+  animation-name: mobile-2d-bow;
+  animation-timing-function: step-end;
+}
+.mobile-2d-rank-praying {
+  background-position: 33.333% 0;
+  animation-name: none;
+}
+.mobile-2d-rank-offering {
+  background-position: 100% 0;
+  animation-name: none;
+}
+.mobile-2d-halo {
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 26%;
+  width: 68%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 4px solid rgba(255, 214, 64, 0.72);
+  border-radius: 50%;
+  box-shadow:
+    0 0 18px #ffd54f,
+    inset 0 0 14px rgba(255, 224, 95, 0.8);
+  animation: mobile-2d-glow 1.8s ease-in-out infinite alternate;
+}
+.temple-2d-decorations {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+.temple-2d-monk {
+  position: absolute;
+  top: calc(var(--worship-top) - 5%);
+  width: clamp(54px, 7vw, 104px);
+  height: auto;
+  filter: drop-shadow(0 6px 7px rgba(35, 8, 0, 0.55));
+  opacity: 0.92;
+}
+.temple-2d-monk-left {
+  left: 27%;
+}
+.temple-2d-monk-right {
+  right: 27%;
+  transform: scaleX(-1);
+}
+.temple-2d-flower-table {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--worship-top) + 8%);
+  display: flex;
+  width: min(48vw, 520px);
+  min-height: 24px;
+  transform: translateX(-50%);
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  font-size: clamp(18px, 2.2vw, 34px);
+  filter: drop-shadow(0 4px 4px rgba(48, 8, 0, 0.55));
+}
+.mobile-2d-stage--mobile .temple-2d-monk-left {
+  left: 13%;
+}
+.mobile-2d-stage--mobile .temple-2d-monk-right {
+  right: 13%;
+}
+.mobile-2d-stage--mobile .temple-2d-flower-table {
+  width: 72%;
+  flex-wrap: wrap-reverse;
+  font-size: clamp(16px, 4.5vw, 25px);
+}
+.mobile-2d-name,
+.mobile-2d-speech {
+  position: absolute;
+  z-index: 5;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 170px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(253, 230, 138, 0.5);
+  background: rgba(15, 8, 5, 0.82);
+  color: #fff4d6;
+  font-size: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(5px);
+}
+.mobile-2d-speech {
+  border-radius: 10px;
+  background: rgba(255, 247, 214, 0.94);
+  color: #4b2606;
+  font-weight: 700;
+  white-space: normal;
+  text-align: center;
+  width: max-content;
+}
+.mobile-2d-name img,
+.mobile-2d-speech img {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid #fbbf24;
+  object-fit: cover;
+}
+.mobile-2d-name b,
+.mobile-2d-speech b {
+  flex: none;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f59e0b, #fde68a);
+  padding: 1px 4px;
+  color: #321802;
+  font-size: 8px;
+  font-weight: 900;
+}
+.mobile-2d-offering {
+  position: absolute;
+  z-index: 6;
+  right: -38px;
+  top: 35%;
+  display: flex;
+  min-width: 58px;
+  max-width: 92px;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid rgba(253, 230, 138, 0.65);
+  border-radius: 12px;
+  background: rgba(69, 26, 3, 0.84);
+  padding: 4px;
+  color: #fff7d6;
+  text-align: center;
+  font-size: 8px;
+  line-height: 1.1;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.5);
+}
+.mobile-2d-offering strong {
+  font-size: 38px;
+  line-height: 1;
+  filter: drop-shadow(0 3px 5px rgba(255, 190, 50, 0.65));
+  animation: mobile-2d-offering 1.1s ease-in-out infinite alternate;
+}
+.mobile-2d-offering b {
+  color: #fde047;
+  font-size: 11px;
+}
+.mobile-2d-toolbar-wrap {
+  position: absolute;
+  z-index: 70;
+  left: 8px;
+  right: 8px;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.mobile-2d-toolbar-wrap > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9px;
+  background: rgba(11, 8, 17, 0.82);
+  padding: 7px 10px;
+  color: #f5f0ff;
+  font-size: 11px;
+  font-weight: 700;
+  backdrop-filter: blur(12px);
+}
+.mobile-2d-show-toolbar {
+  position: absolute;
+  z-index: 70;
+  right: 10px;
+  bottom: 10px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  background: rgba(8, 8, 15, 0.55);
+  color: #e2e8f0;
+  opacity: 0.45;
+  backdrop-filter: blur(8px);
+}
+@keyframes mobile-2d-walk {
+  0%,
+  24.9% {
+    background-position-x: 0;
+  }
+  25%,
+  49.9% {
+    background-position-x: 33.333%;
+  }
+  50%,
+  74.9% {
+    background-position-x: 66.667%;
+  }
+  75%,
+  100% {
+    background-position-x: 100%;
+  }
+}
+@keyframes mobile-2d-bow {
+  0%,
+  18% {
+    background-position-x: 0;
+  }
+  35% {
+    background-position-x: 33.333%;
+  }
+  55%,
+  75% {
+    background-position-x: 100%;
+  }
+  100% {
+    background-position-x: 0;
+  }
+}
+@keyframes mobile-2d-enter {
+  0% {
+    top: 92%;
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+  58% {
+    top: 55%;
+    transform: translate(-50%, -50%) scale(0.94);
+  }
+  100% {
+    top: var(--worship-top);
+    transform: translate(-50%, -50%) scale(var(--worship-scale));
+  }
+}
+@keyframes mobile-2d-join {
+  0% {
+    top: 94%;
+    transform: translate(-50%, -50%) scale(1.12);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    top: 62%;
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 1;
+  }
+}
+@keyframes mobile-2d-exit {
+  0% {
+    top: var(--worship-top);
+    left: calc(50% + var(--lane-x));
+    transform: translate(-50%, -50%) scale(var(--worship-scale));
+  }
+  32% {
+    top: 44%;
+    left: calc(50% + var(--exit-x));
+    transform: translate(-50%, -50%) scale(0.84);
+  }
+  100% {
+    top: 92%;
+    left: calc(50% + var(--exit-x));
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+@keyframes mobile-2d-offering {
+  to {
+    transform: translateY(-5px) scale(1.08);
+  }
+}
+@keyframes mobile-2d-glow {
+  to {
+    opacity: 0.62;
+  }
+}
+@keyframes mobile-2d-dust {
+  from {
+    transform: translateY(12%);
+  }
+  to {
+    transform: translateY(-12%);
+  }
+}
+@media (min-aspect-ratio: 3/4) {
+  .mobile-2d-stage--mobile {
+    width: min(100vw, 56.25vh);
+    margin: 0 auto;
+  }
+  .mobile-2d-stage--mobile .mobile-2d-toolbar-wrap {
+    left: 6px;
+    right: 6px;
+  }
+}
+.mobile-2d-view-entrance {
+  background-size: 112% 112%;
+  background-position: center 62%;
+}
+.mobile-2d-view-shrine {
+  background-size: 138% 138%;
+  background-position: center 12%;
+}
+.mobile-2d-quality-low .mobile-2d-light {
+  display: none;
+}
+.mobile-2d-quality-high .mobile-2d-light {
+  filter: brightness(1.25) saturate(1.15);
+}
+.mobile-2d-paused .mobile-2d-person,
+.mobile-2d-paused .mobile-2d-sprite,
+.mobile-2d-paused .mobile-2d-light,
+.mobile-2d-paused .mobile-2d-light::after,
+.mobile-2d-paused .mobile-2d-offering strong {
+  animation-play-state: paused;
+}
+@media (min-aspect-ratio: 4/3) {
+  .mobile-2d-stage--desktop .mobile-2d-person,
+  .mobile-2d-stage--desktop .mobile-2d-seated {
+    width: clamp(64px, 6.2vw, 108px);
+    height: clamp(112px, 11vw, 178px);
+  }
+  .mobile-2d-stage--desktop .mobile-2d-person-worship {
+    top: var(--worship-top);
+    transform: translate(-50%, -50%) scale(var(--worship-scale));
+  }
+  .mobile-2d-stage--desktop .mobile-2d-person-enter {
+    animation-name: desktop-2d-enter;
+  }
+  .mobile-2d-stage--desktop .mobile-2d-person-join {
+    animation-name: desktop-2d-join;
+  }
+  .mobile-2d-stage--desktop .mobile-2d-person-exit {
+    animation-name: desktop-2d-exit;
+  }
+  .mobile-2d-stage--desktop .mobile-2d-name,
+  .mobile-2d-stage--desktop .mobile-2d-speech {
+    font-size: 11px;
+  }
+  .mobile-2d-stage--desktop .mobile-2d-offering {
+    right: -48px;
+  }
+}
+@keyframes desktop-2d-enter {
+  0% {
+    top: 96%;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  58% {
+    top: 58%;
+    transform: translate(-50%, -50%) scale(0.82);
+  }
+  100% {
+    top: var(--worship-top);
+    transform: translate(-50%, -50%) scale(var(--worship-scale));
+  }
+}
+@keyframes desktop-2d-join {
+  0% {
+    top: 96%;
+    transform: translate(-50%, -50%) scale(1.05);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    top: 72%;
+    transform: translate(-50%, -50%) scale(0.82);
+    opacity: 1;
+  }
+}
+@keyframes desktop-2d-exit {
+  0% {
+    top: var(--worship-top);
+    left: calc(50% + var(--lane-x));
+    transform: translate(-50%, -50%) scale(var(--worship-scale));
+  }
+  35% {
+    top: 49%;
+    left: calc(50% + var(--exit-x));
+    transform: translate(-50%, -50%) scale(0.76);
+  }
+  100% {
+    top: 94%;
+    left: calc(50% + var(--exit-x));
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mobile-2d-light,
+  .mobile-2d-light::after,
+  .mobile-2d-sprite,
+  .mobile-2d-offering strong {
+    animation: none;
+  }
+}

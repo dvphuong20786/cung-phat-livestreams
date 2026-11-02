@@ -1,5 +1,55 @@
 # Lịch sử thay đổi
 
+## [v0.25.0] - 2026-11-02
+- **Yêu cầu**: Đồng bộ bản 2D thành bản sao đầy đủ chức năng của bản 3D, chỉ khác công nghệ và hiệu ứng dựng cảnh.
+- **Chi tiết kỹ thuật**:
+  - `Mobile2DOverlayPage.tsx`: bổ sung tự giả lập 1–2 người mỗi 5 giây khi chưa kết nối TikTok, đọc tham số `sound`/`muted`, hoa tích lũy, tăng tụng niệm và đầy đủ chu kỳ đi vào → dâng hoa/quà → quỳ lễ → đi vòng → về ghế.
+  - `Overlay2DToolbar.tsx`: bổ sung lựa chọn `Ngoại cảnh/Nội điện` và `Lễ gần tượng/Lễ cuối thảm`, đồng bộ tên góc nhìn `Toàn cảnh/Lối vào hoặc Cổng chùa/Điện Phật` với toolbar 3D.
+  - Nhân vật 2D dùng chung asset cấp bậc `nu1..nu6`/`nam1..nam6`, công thức giới tính, level, danh hiệu và hào quang với 3D thay vì một sprite nữ cố định.
+  - `mobile2d.css`: đồng bộ khoảng cách hành lễ bằng biến chiều sâu, ba góc nhìn, ba mức chất lượng, pause animation, bàn hoa tích lũy và bố trí nội/ngoại cảnh cho desktop/mobile.
+  - Thêm hai backdrop ngoại cảnh độc lập `temple-courtyard-2d-desktop.png` và `temple-courtyard-2d-mobile.png`, có lối đi trung tâm và vùng trống hai bên dành cho nhân vật/ghế 2D.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã đạt 41/41 unit test, TypeScript typecheck và production build.
+  - Đã xác nhận `/overlay-2d`, `/overlay-mobile-2d` và `/overlay` trả HTTP 200 trên preview cục bộ.
+  - Khác biệt còn lại là chủ đích: 3D dùng WebGL, mesh, camera phối cảnh, đèn/bóng đổ; 2D dùng ảnh nền, sprite và CSS transform nên nhẹ hơn và không có xoay camera tự do/chiều sâu vật lý.
+
+## [v0.24.1] - 2026-11-02
+- **Yêu cầu**: Làm toolbar của overlay 2D giống toolbar 3D và tách biệt hoàn toàn trạng thái điều khiển giữa hai form.
+- **Chi tiết kỹ thuật**:
+  - Thêm `Overlay2DToolbar.tsx` độc lập, giữ cùng bố cục và nhóm công cụ của `TempleToolbar`: tạm dừng, xóa cảnh, bật/tắt giả lập, nhạc/âm lượng, Mõ–Chuông–Khánh, góc nhìn, chất lượng và chuyển về bản 3D.
+  - Tạm dừng và xóa cảnh trên form 2D chỉ tác động store/trạng thái cục bộ của tab 2D, không còn phát lệnh `game:control` điều khiển đồng thời form 3D.
+  - Thêm ba góc hiển thị 2D `Toàn cảnh`, `Lối vào`, `Điện Phật`; thêm chế độ đồ họa thấp/vừa/cao điều khiển hiệu ứng ánh sáng riêng của 2D.
+  - Khi tạm dừng, cả timer nghiệp vụ và CSS animation của nhân vật/ánh sáng/lễ vật đều dừng; tiếp tục sẽ khởi động lại đúng trên form 2D.
+  - Bổ sung phát nhạc nền và mở khóa audio theo tương tác người dùng cho các route 2D.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã đạt 41/41 unit test, TypeScript typecheck và production build.
+  - Đã xác nhận `/overlay-2d` và `/overlay-mobile-2d` trả HTTP 200 trên preview cục bộ.
+  - Hai form chỉ dùng chung nguồn sự kiện TikTok và cấu hình audio đã lưu; state camera/góc nhìn, chất lượng, pause và xóa cảnh được tách riêng.
+
+## [v0.24.0] - 2026-11-02
+- **Yêu cầu**: Bổ sung phiên bản 2D cho overlay màn hình ngang `/overlay` mà vẫn giữ nguyên bản 3D hiện tại.
+- **Chi tiết kỹ thuật**:
+  - Thêm route `/overlay-2d`, tái sử dụng dữ liệu và vòng đời nhân vật của `Mobile2DOverlayPage.tsx` nhưng dùng ảnh `temple-interior-full-backdrop.png` theo bố cục ngang 16:9.
+  - Bố trí 24 chỗ ngồi thành 2 hàng, mỗi hàng 12 vị trí hai bên lối đi; điều chỉnh tỉ lệ nhân vật theo chiều sâu cho khung hình desktop.
+  - Thêm bộ keyframe riêng cho người đi vào, JOIN và đi vòng hai bên khi rời điện Phật trên bản ngang.
+  - Giữ nguyên `/overlay`, `/overlay-mobile` và `/overlay-mobile-2d`; thêm nút trở về bản 3D tương ứng và link `/overlay-2d` trong menu quản trị/Không gian chùa.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã đạt 41/41 unit test, TypeScript typecheck và production build.
+  - Đã xác nhận `/overlay-2d`, `/overlay-mobile-2d` và `/overlay` đều trả HTTP 200 trên preview cục bộ.
+  - Vite vẫn cảnh báo chunk `TempleToolbar` khoảng 883 kB của renderer 3D cũ; cảnh báo không làm lỗi build.
+
+## [v0.23.0] - 2026-11-02
+- **Yêu cầu**: Thêm một màn hình overlay mobile 2D nhẹ mà không thay đổi hoặc phá vỡ các màn hình 3D hiện tại.
+- **Chi tiết kỹ thuật**:
+  - Thêm route `/overlay-mobile-2d` và component `Mobile2DOverlayPage.tsx`, dùng ảnh chánh điện full màn hình cùng các lớp DOM/CSS 2D thay cho Three.js.
+  - Dùng chung store TikTok hiện tại cho hàng đợi, ưu tiên người thật, comment, avatar, hoa/gift, điểm công đức và danh sách người ngồi.
+  - Bổ sung chu trình nhân vật 2D: đi từ cuối thảm lên khu vực lễ Phật, quỳ/lễ, mang hoa hoặc gift kích thước lớn, đi vòng sang hai bên rồi trở về chỗ ngồi.
+  - Thêm hiệu ứng sprite đi bộ/quỳ lễ, ánh sáng và đốm bụi nhẹ bằng CSS; hỗ trợ `prefers-reduced-motion` để giảm chuyển động khi thiết bị yêu cầu.
+  - Thêm nút ẩn/hiện thanh công cụ, tạm dừng, xóa cảnh và chuyển về `/overlay-mobile`; bổ sung link mở bản 2D trong menu quản trị và trang Không gian chùa.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã đạt 41/41 unit test, TypeScript typecheck và production build; route preview cục bộ trả HTTP 200.
+  - Vite vẫn cảnh báo chunk `TempleToolbar` khoảng 883 kB của màn 3D cũ; route 2D mới được tách riêng khoảng 5,15 kB và không phụ thuộc renderer Three.js khi hiển thị.
+
 ## [v0.22.15] - 2026-11-02
 - **Yêu cầu**: Sửa toàn bộ lỗi còn lại trong bảng quy đổi điểm, thời gian xem liên tục và phân bổ ghế nhân vật.
 - **Chi tiết kỹ thuật**:

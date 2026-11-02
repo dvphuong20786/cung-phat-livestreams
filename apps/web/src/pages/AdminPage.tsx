@@ -27,7 +27,9 @@ type AdminPageKey =
   | 'audio'
   | 'settings'
   | 'overlay'
-  | 'overlay-mobile';
+  | 'overlay-2d'
+  | 'overlay-mobile'
+  | 'overlay-mobile-2d';
 
 const menuItems = [
   { key: 'overview', label: 'Tổng quan', href: '/admin', icon: LayoutDashboard },
@@ -37,7 +39,24 @@ const menuItems = [
   { key: 'temple', label: 'Không gian chùa', href: '/admin/temple', icon: Landmark },
   { key: 'audio', label: 'Cài đặt Nhạc & Âm thanh', href: '/admin/audio', icon: Music },
   { key: 'overlay', label: 'Overlay OBS (Ngang)', href: '/overlay', icon: SlidersHorizontal },
-  { key: 'overlay-mobile', label: 'Overlay Mobile (Dọc)', href: '/overlay-mobile', icon: SlidersHorizontal },
+  {
+    key: 'overlay-2d',
+    label: 'Overlay OBS 2D (Ngang)',
+    href: '/overlay-2d',
+    icon: SlidersHorizontal,
+  },
+  {
+    key: 'overlay-mobile',
+    label: 'Overlay Mobile (Dọc)',
+    href: '/overlay-mobile',
+    icon: SlidersHorizontal,
+  },
+  {
+    key: 'overlay-mobile-2d',
+    label: 'Overlay Mobile 2D',
+    href: '/overlay-mobile-2d',
+    icon: SlidersHorizontal,
+  },
   { key: 'settings', label: 'Cài đặt', href: '/admin/settings', icon: Settings },
 ] as const;
 
@@ -70,9 +89,17 @@ const pageInfo: Record<AdminPageKey, { title: string; description: string }> = {
     title: 'Overlay OBS',
     description: 'Khung cảnh 16:9 dành riêng cho OBS Browser Source',
   },
+  'overlay-2d': {
+    title: 'Overlay OBS 2D',
+    description: 'Khung cảnh 2D nhẹ tỉ lệ ngang 16:9 dành cho OBS Browser Source',
+  },
   'overlay-mobile': {
     title: 'Overlay Mobile',
     description: 'Khung cảnh dọc 9:16 cho điện thoại và livestream mobile',
+  },
+  'overlay-mobile-2d': {
+    title: 'Overlay Mobile 2D',
+    description: 'Bản 2D nhẹ, ổn định vị trí nhân vật trên điện thoại',
   },
   settings: {
     title: 'Cài đặt',
@@ -82,14 +109,12 @@ const pageInfo: Record<AdminPageKey, { title: string; description: string }> = {
 
 function getAdminPage(pathname: string): AdminPageKey {
   const segment = pathname.replace(/^\/admin\/?/, '').split('/')[0];
-  return menuItems.some((item) => item.key === segment)
-    ? (segment as AdminPageKey)
-    : 'overview';
+  return menuItems.some((item) => item.key === segment) ? (segment as AdminPageKey) : 'overview';
 }
 
 function TempleLinks() {
   return (
-    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       <a
         className="card group p-6 transition hover:-translate-y-1 hover:border-amber-300/30"
         href="/temple"
@@ -102,6 +127,17 @@ function TempleLinks() {
         <span className="mt-6 inline-block text-sm font-bold text-amber-300">Mở không gian →</span>
       </a>
       <a
+        className="card group p-6 transition hover:-translate-y-1 hover:border-amber-300/30"
+        href="/overlay-mobile-2d"
+      >
+        <SlidersHorizontal className="text-amber-300" size={30} />
+        <h2 className="mt-5 text-lg font-black">Overlay mobile 2D</h2>
+        <p className="mt-2 text-sm text-slate-400">
+          Bản 2D nhẹ, không lỗi chiều sâu và giữ nguyên bản mobile 3D hiện tại.
+        </p>
+        <span className="mt-6 inline-block text-sm font-bold text-amber-300">Mở overlay 2D →</span>
+      </a>
+      <a
         className="card group p-6 transition hover:-translate-y-1 hover:border-violet-300/30"
         href="/test"
       >
@@ -110,9 +146,7 @@ function TempleLinks() {
         <p className="mt-2 text-sm text-slate-400">
           Giả lập sự kiện cạnh scene 3D và kiểm tra hàng đợi nhân vật.
         </p>
-        <span className="mt-6 inline-block text-sm font-bold text-violet-300">
-          Mở thử nghiệm →
-        </span>
+        <span className="mt-6 inline-block text-sm font-bold text-violet-300">Mở thử nghiệm →</span>
       </a>
       <a
         className="card group p-6 transition hover:-translate-y-1 hover:border-cyan-300/30"
@@ -128,6 +162,19 @@ function TempleLinks() {
         </span>
       </a>
       <a
+        className="card group p-6 transition hover:-translate-y-1 hover:border-emerald-300/30"
+        href="/overlay-2d"
+      >
+        <SlidersHorizontal className="text-emerald-300" size={30} />
+        <h2 className="mt-5 text-lg font-black">Overlay OBS ngang 2D</h2>
+        <p className="mt-2 text-sm text-slate-400">
+          Cảnh 16:9 nhẹ, cố định chiều sâu dành cho OBS trên desktop.
+        </p>
+        <span className="mt-6 inline-block text-sm font-bold text-emerald-300">
+          Mở overlay ngang 2D →
+        </span>
+      </a>
+      <a
         className="card group p-6 transition hover:-translate-y-1 hover:border-pink-300/30"
         href="/overlay-mobile"
       >
@@ -136,9 +183,7 @@ function TempleLinks() {
         <p className="mt-2 text-sm text-slate-400">
           Cảnh dọc 9:16 riêng cho điện thoại và livestream mobile.
         </p>
-        <span className="mt-6 inline-block text-sm font-bold text-pink-300">
-          Mở overlay dọc →
-        </span>
+        <span className="mt-6 inline-block text-sm font-bold text-pink-300">Mở overlay dọc →</span>
       </a>
     </div>
   );
@@ -159,7 +204,14 @@ function AdminContent({ page }: { page: AdminPageKey }) {
         <SimulatorPanel />
       </div>
     );
-  if (page === 'temple' || page === 'overlay' || page === 'overlay-mobile') return <TempleLinks />;
+  if (
+    page === 'temple' ||
+    page === 'overlay' ||
+    page === 'overlay-2d' ||
+    page === 'overlay-mobile' ||
+    page === 'overlay-mobile-2d'
+  )
+    return <TempleLinks />;
   if (page === 'audio')
     return (
       <div className="max-w-3xl">
