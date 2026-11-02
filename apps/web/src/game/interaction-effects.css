@@ -108,8 +108,8 @@
   background-image: url('/assets/hoa2.png');
   background-repeat: no-repeat;
   background-size: 400% 300%;
-  mix-blend-mode: screen;
   pointer-events: none;
+  filter: drop-shadow(0 0 18px rgba(255, 215, 100, 0.75));
 }
 
 /* 12 Frame của hoa sen phát sáng */

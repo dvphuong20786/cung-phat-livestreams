@@ -1,5 +1,34 @@
 # Lịch sử thay đổi
 
+## [v0.27.2] - 2026-11-03
+- **Yêu cầu**: Sửa dứt điểm lỗi hiệu ứng hoa sen bị viền khối vuông đen và xóa bỏ hoàn toàn các biểu tượng nút loa lơ lửng trên nhân vật.
+- **Chi tiết kỹ thuật**:
+  - `hoa2.png`: xử lý chuyển đổi toàn bộ nền đen của Sprite Sheet 4x3 hoa sen sang kênh Alpha trong suốt (True Transparent Alpha PNG), giúp hoa sen tỏa hào quang vàng hồng tự nhiên và không bao giờ bị khối vuông đen dù ở màn hình 2D hay 3D WebGL.
+  - `interaction-effects.css`: tối ưu `.lotus-glow-sprite` với bộ lọc ánh sáng `filter: drop-shadow(0 0 18px rgba(255, 215, 100, 0.75))` và loại bỏ phụ thuộc `mix-blend-mode: screen`, giúp hiệu ứng hiển thị trong suốt mượt mà trên mọi layer trình duyệt.
+  - `InteractionEffectsOverlay.tsx`: xóa bỏ hoàn toàn nút bật/tắt âm thanh dạng button lơ lửng ở góc dưới; âm thanh hiệu ứng tự động đồng bộ thống nhất với trạng thái âm thanh chung của hệ thống trên thanh `TempleToolbar`.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 43/43 unit test và build production Web thành công sạch sẽ.
+
+## [v0.27.1] - 2026-11-03
+- **Yêu cầu**: Ưu tiên hiển thị bong bóng bình luận nổi lên trên tất cả các tag tên nhân vật (không bị tên đè che mất); đồng bộ Bảng Công Đức và Danh Sách Cúng Dường bên trái thành bảng xếp hạng theo phiên live hiện tại.
+- **Chi tiết kỹ thuật**:
+  - `Mobile2DOverlayPage.tsx`:
+    + Thêm hàm `checkHasActiveComment`: phát hiện nhân vật đang có bình luận hợp lệ trong thời gian quy định (20s).
+    + Tự động nâng tầng `zIndex` của nhân vật có bình luận lên `+400` đến `+500` (so với mức 10-35 thông thường của các hàng ghế), đảm bảo bong bóng bình luận luôn luôn nổi lên trên cùng, triệt để loại bỏ hiện tượng tag tên của nhân vật phía trước hoặc phía sau đè lên che khuất chữ.
+    + Thêm `z-50` cho container `DevoteeHeadBadge` khi có comment; dọn dẹp các thẻ `InteractionEffectsOverlay` lọt vào các sub-components.
+  - `CharacterStore.ts`:
+    + Bổ sung trường và cột database `merit_points_in_session INTEGER DEFAULT 0` trong bảng SQLite `user_characters`.
+    + Tích hợp cộng dồn điểm công đức riêng của phiên live hiện tại (`meritPointsInSession`), tự động reset về 0 khi bắt đầu phiên live mới hoặc bấm Reset Stats trên Admin.
+  - `useTempleGameStore.ts` & `useSocket.ts`:
+    + Thêm quản lý `sessionMeritPoints` và action `resetSession`.
+    + Tự động dọn sạch điểm phiên live và danh sách người cúng dường khi nhận tín hiệu `events:reset` hoặc `characters:reset`.
+  - `MeritLeaderboard.tsx`:
+    + Chuyển Bảng Công Đức sang xếp hạng Top 5 thí chủ theo điểm công đức kiếm được trong phiên live hiện tại (`sessionMeritPoints`). Nếu phiên mới chưa có ai thì hiển thị *"Chưa có thí chủ công đức"*.
+  - `RecentDonorsList.tsx`:
+    + Chuyển danh sách bên trái sang Xếp Hạng Cúng Dường Phiên Live (`Cúng dường phiên live`): gom nhóm theo từng thí chủ và xếp hạng theo tổng số lượng/giá trị lễ vật cúng dường trong phiên live hiện tại.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 43/43 unit test và hoàn thành build production Web sạch sẽ không có bất kỳ lỗi nào.
+
 ## [v0.27.0] - 2026-11-02
 - **Yêu cầu**: Triển khai hệ thống điểm công đức, level nhân vật và toàn bộ hiệu ứng tương tác TikTok theo thời gian thực (Like, Comment, Share, Follow, Watch time, Hoa, Gift theo mốc coin, Lên level, Chuyển cấp bậc nhân vật).
 - **Chi tiết kỹ thuật**:

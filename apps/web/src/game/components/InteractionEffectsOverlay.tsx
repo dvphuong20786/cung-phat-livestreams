@@ -7,8 +7,8 @@
  * ============================================================================
  */
 
-import { useEffect, useMemo, useState } from 'react';
-import { Volume2, VolumeX, Sparkles, Award } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
+import { Sparkles, Award } from 'lucide-react';
 import {
   useInteractionEffectsStore,
   type ConcurrentEffect,
@@ -266,16 +266,6 @@ export function InteractionEffectsOverlay() {
           )}
         </>
       )}
-
-      {/* 5. Nút bật/tắt âm thanh hiệu ứng ở góc nhỏ (tùy chọn) */}
-      <button
-        type="button"
-        className="pointer-events-auto absolute bottom-4 left-4 z-50 flex h-8 w-8 items-center justify-center rounded-full border border-amber-400/40 bg-slate-950/70 text-amber-200 shadow-lg backdrop-blur hover:bg-slate-900/90"
-        title={soundEnabled ? 'Tắt âm thanh hiệu ứng' : 'Bật âm thanh hiệu ứng'}
-        onClick={() => setSoundEnabled(!soundEnabled)}
-      >
-        {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} className="text-slate-400" />}
-      </button>
     </div>
   );
 }

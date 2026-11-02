@@ -357,7 +357,7 @@ function DevoteeSprite2D({
         }}
       />
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      <InteractionEffectsOverlay />
+      
     </div>
   );
 }
@@ -366,6 +366,22 @@ function DevoteeSprite2D({
  * Huy hiệu Avatar + Level + Tên hoặc Bong bóng bình luận trên đầu Phật tử
  * Thiết kế hoàn toàn đồng nhất với CharacterHeadOverlay của bản 3D
  */
+
+/**
+ * Kiểm tra xem một hành động / nhân vật có bình luận còn hạn hay không
+ * Giúp ưu tiên z-index nâng hẳn lên trên mọi tag tên khác
+ */
+function checkHasActiveComment(
+  action: TempleGameAction,
+  durationSeconds: number,
+  now = Date.now(),
+): boolean {
+  const eventTime = action.createdAt || (action as any).timestamp || 0;
+  if (eventTime > 0 && now - eventTime > durationSeconds * 1000) return false;
+  const message = getDisplayedMessage(action);
+  return Boolean(message && message.trim().length > 0);
+}
+
 function DevoteeHeadBadge({
   action,
   isFemale,
@@ -395,7 +411,11 @@ function DevoteeHeadBadge({
   const visibleMessage = message && message.length > 80 ? `${message.slice(0, 80)}…` : message;
 
   return (
-    <div className="pointer-events-none mb-1 flex flex-col items-center select-none">
+    <div
+      className={`pointer-events-none mb-1 flex flex-col items-center select-none relative ${
+        hasComment ? 'z-50' : 'z-10'
+      }`}
+    >
       {hasComment ? (
         /* KHI CÓ COMMENT / LỜI NGUYỆN: BONG BÓNG COMMENT HOÀNG KIM CÓ AVATAR VÀ LEVEL */
         <div className="animate-in fade-in zoom-in relative mb-1 flex max-w-56 items-center gap-1.5 rounded-2xl border border-amber-300/80 bg-gradient-to-b from-amber-50 to-amber-100/95 px-3 py-1.5 text-center text-[11px] font-bold leading-snug text-amber-950 shadow-2xl backdrop-blur-sm duration-200">
@@ -451,7 +471,7 @@ function DevoteeHeadBadge({
         </div>
       )}
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      <InteractionEffectsOverlay />
+      
     </div>
   );
 }
@@ -498,7 +518,7 @@ function WoodenFish2D({ isAbbot = false }: { isAbbot?: boolean }) {
       {/* Chiếc dùi gõ mõ */}
       <div className="mobile-2d-mallet absolute -right-2 top-0.5 h-3.5 w-0.5 rounded-full bg-[#c29663]" />
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      <InteractionEffectsOverlay />
+      
     </div>
   );
 }
@@ -595,7 +615,7 @@ function ChantingMonks2D({ mobile }: { mobile: boolean }) {
         </div>
       ))}
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      <InteractionEffectsOverlay />
+      
     </div>
   );
 }
@@ -632,7 +652,7 @@ function OfferingBadge2D({
         <div className="text-xs font-black text-amber-300">×{action.quantity}</div>
       )}
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      <InteractionEffectsOverlay />
+      
     </div>
   );
 }
@@ -668,7 +688,7 @@ function TempleEffects2D({ quality }: { quality: 'LOW' | 'MEDIUM' | 'HIGH' }) {
         );
       })}
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      <InteractionEffectsOverlay />
+      
     </div>
   );
 }
@@ -693,6 +713,7 @@ function Mobile2DSeatedVisitors({
   const seatedVisitors = useTempleGameStore((state) => state.seatedVisitors);
   const active = useTempleGameStore((state) => state.active);
   const userInteractions = useTempleGameStore((state) => state.userInteractions);
+  const commentDurationSeconds = useMonitorStore((s) => s.prefs.commentDurationSeconds ?? 20);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -730,6 +751,7 @@ function Mobile2DSeatedVisitors({
         const interactions = userInteractions[visitor.userId] || 0;
         const isFemale = hashText(visitor.userId) % 12 !== 0;
         const cultivation = getCultivationInfo(interactions, isFemale);
+        const hasComment = checkHasActiveComment(visitor, commentDurationSeconds);
 
         return (
           <div
@@ -739,7 +761,7 @@ function Mobile2DSeatedVisitors({
               left: `${coords.left}%`,
               top: `${coords.top}%`,
               transform: `translate(-50%, -50%) scale(${coords.scale})`,
-              zIndex: coords.zIndex,
+              zIndex: hasComment ? coords.zIndex + 400 : coords.zIndex,
             }}
           >
             {/* Huy hiệu Avatar + Level + Tên hoặc Bong bóng bình luận */}
@@ -761,7 +783,7 @@ function Mobile2DSeatedVisitors({
         );
       })}
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      <InteractionEffectsOverlay />
+      
     </div>
   );
 }
@@ -808,7 +830,7 @@ function Mobile2DWaitingLine({
         </div>
       )}
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      <InteractionEffectsOverlay />
+      
     </div>
   );
 }
@@ -1026,7 +1048,7 @@ function Mobile2DCharacter({
       position.duration !== '0s'
         ? `top ${position.duration} linear, left ${position.duration} ease-out, transform ${position.duration} linear`
         : 'none',
-    zIndex: state === 'EXITING' ? seatCoords.zIndex : 35,
+    zIndex: checkHasActiveComment(action, timings.prayerMs ? 20 : 20) ? 450 : (state === 'EXITING' ? seatCoords.zIndex : 35),
   };
 
   // Khi bước chân chạm đích: lập tức chuyển tư thế quỳ lạy / chắp tay niệm Phật / dâng hoa không trễ 1 mili-giây
@@ -1071,7 +1093,7 @@ function Mobile2DCharacter({
         animTick={animTick}
       />
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      <InteractionEffectsOverlay />
+      
     </div>
   );
 }

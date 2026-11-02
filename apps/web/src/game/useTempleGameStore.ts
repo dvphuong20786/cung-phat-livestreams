@@ -380,9 +380,20 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       queue: [],
       seatedVisitors: [],
       recentDonors: [],
+      sessionMeritPoints: {},
       flowers: 0,
       latest: undefined,
     }),
+  resetSession: () =>
+    set((state) => ({
+      sessionMeritPoints: {},
+      recentDonors: [],
+      characterList: state.characterList.map((c) => ({
+        ...c,
+        meritPointsInSession: 0,
+        sessionMeritPoints: 0,
+      })),
+    })),
   setPaused: (paused) => set({ paused }),
   setQuality: (quality) => set({ quality }),
   setAllowSimulated: (allowSimulated) => set({ allowSimulated }),
