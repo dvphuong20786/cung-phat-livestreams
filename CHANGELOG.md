@@ -1,5 +1,39 @@
 # Lịch sử thay đổi
 
+## [v0.21.4] - 2026-11-02
+- **Yêu cầu**: Chuyển bảng Công Đức sang lấy 100% dữ liệu thật từ Database SQLite, loại bỏ hoàn toàn danh sách mẫu seedDonors.
+- **Chi tiết kỹ thuật**:
+  - File MeritLeaderboard.tsx: Xóa bỏ toàn bộ danh sách mẫu seedDonors. Bảng xếp hạng giờ đây kết nối trực tiếp với danh sách nhân vật thực tế từ SQLite (API /api/characters và socket realtime).
+  - Tự động vinh danh Top 5 thí chủ có điểm công đức cao nhất: Top 1 (Đại Hộ Pháp), Top 2-3 (Hộ Pháp), Top 4-5 (Thí Chủ). Khi chưa có ai công đức sẽ hiển thị thông báo "Chưa có thí chủ công đức".
+  - File useTempleGameStore.ts & useSocket.ts: Bổ sung characterList vào store và đồng bộ đầy đủ các trường thông tin nhân vật từ SQLite database.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 24/24 unit tests passed. TypeScript check 0 lỗi.
+
+
+## [v0.21.3] - 2026-11-02
+- **Yêu cầu**: Hiển thị số Level thuần túy trên đầu nhân vật (không có chữ Lv. và danh hiệu); đặt Sư Trụ Trì ở giữa (Lv.100), 2 thầy bên cạnh là Lv.61.
+- **Chi tiết kỹ thuật**:
+  - File Character.tsx: Cập nhật CharacterHeadOverlay hiển thị số level thuần túy trong huy hiệu màu gradient (không kèm tiền tố "Lv." và không kèm danh hiệu chữ). Tên và bong bóng bình luận giữ nguyên.
+  - File ChantingMonks.tsx:
+    - Thầy ngồi giữa (Sư Trụ Trì): Giữ cấp 100 với asset nam6.png và vòng hào quang Phật quang rực rỡ.
+    - 2 Thầy ngồi cạnh (Thầy Minh Đạo & Thầy Tâm Từ): Chuyển sang cấp 61 (nam5.png, phẩm cấp Tỳ kheo).
+    - Huy hiệu trên đầu 3 thầy hiển thị số level thuần túy (100 và 61).
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 24/24 unit tests passed. TypeScript check không có lỗi.
+
+
+## [v0.21.2] - 2026-11-02
+- **Yêu cầu**: Sửa lỗi tọa độ UV cắt sprite sheet khiến nhân vật đi bộ bị dính bàn chân của hàng trên vào đầu.
+- **Chi tiết kỹ thuật**:
+  - File Character.tsx, SeatedVisitors.tsx, ChantingMonks.tsx: Phân tích lại ranh giới thực tế của 12 bộ ảnh spritesheet (hàng 0 chiếm 38%, hàng 1 chiếm 33%, hàng 2 chiếm 27% chiều cao).
+  - Cập nhật UV Three.js:
+    - Hàng 0 (đứng): offset.y = 0.62, repeat.y = 0.38 (V: [0.62 .. 1.00])
+    - Hàng 1 (đi bộ): offset.y = 0.28, repeat.y = 0.33 (V: [0.28 .. 0.61]) -> triệt tiêu hoàn toàn phần chân của hàng 0
+    - Hàng 2 (quỳ lễ): offset.y = 0.00, repeat.y = 0.27 (V: [0.00 .. 0.27])
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã chạy kiểm tra Vite build (npx vite build) thành công 100%. Đã kiểm thử quét pixel 12 file spritesheet.
+
+
 ## [v0.21.1] - 2026-11-02
 - **Yêu cầu**: Sửa lỗi cú pháp syntax thừa dòng ở file ChantingMonks.tsx khiến Vite báo lỗi Pre-transform error.
 - **Chi tiết kỹ thuật**:

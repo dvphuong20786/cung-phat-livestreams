@@ -80,10 +80,10 @@ function SeatedFigure({
   const baseTexture = useTexture(cultivation.assetUrl);
 
   const bowTextures = useMemo(() => {
-    // Hàng 2 (dưới cùng ảnh, V: 0 -> 1/3): 4 khung quỳ và cúi lễ (bow)
+    // Hàng 2 (dưới cùng ảnh, Three.js UV V: 0.00 -> 0.27): 4 khung quỳ và cúi lễ (bow)
     return Array.from({ length: 4 }, (_, i) => {
       const t = baseTexture.clone();
-      t.repeat.set(0.25, 1 / 3);
+      t.repeat.set(0.25, 0.27);
       t.offset.set(i * 0.25, 0);
       return t;
     });

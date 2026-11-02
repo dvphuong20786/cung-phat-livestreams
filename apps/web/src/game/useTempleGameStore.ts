@@ -16,6 +16,15 @@ export interface ActiveCharacter {
   state: CharacterState;
   startedAt: number;
 }
+export interface StoredCharacter {
+  userId: string;
+  username?: string;
+  nickname: string;
+  avatarUrl?: string;
+  meritPoints: number;
+  level: number;
+  rankName?: string;
+}
 type Quality = 'LOW' | 'MEDIUM' | 'HIGH';
 interface GameStore {
   active: ActiveCharacter[];
@@ -27,8 +36,11 @@ interface GameStore {
   quality: Quality;
   allowSimulated: boolean;
   userInteractions: Record<string, number>;
+  characterList: StoredCharacter[];
   enqueue: (action: TempleGameAction) => void;
-  syncCharacters: (characters: Array<{ userId: string; meritPoints: number }>) => void;
+  syncCharacters: (
+    characters: Array<Partial<StoredCharacter> & { userId: string; meritPoints: number }>,
+  ) => void;
   setState: (id: string, state: CharacterState) => void;
   complete: (id: string) => void;
   addFlower: () => void;
@@ -71,6 +83,7 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
   quality: 'MEDIUM',
   allowSimulated: true,
   userInteractions: {},
+  characterList: [],
   enqueue: (action) =>
     set((state) => {
       // Chế độ không thêm người giả lập
@@ -128,13 +141,35 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
     }),
   syncCharacters: (characters) =>
     set((state) => {
-      const updated = { ...state.userInteractions };
-      for (const char of characters) {
-        if (char.userId) {
-          updated[char.userId] = char.meritPoints ?? 0;
-        }
+      const updatedInteractions = { ...state.userInteractions };
+      const map = new Map<string, StoredCharacter>();
+      for (const item of state.characterList) {
+        map.set(item.userId, item);
       }
-      return { userInteractions: updated };
+
+      for (const char of characters) {
+        if (!char.userId) continue;
+        updatedInteractions[char.userId] = char.meritPoints ?? 0;
+        const existing = map.get(char.userId);
+        map.set(char.userId, {
+          userId: char.userId,
+          username: char.username ?? existing?.username,
+          nickname: char.nickname ?? existing?.nickname ?? char.userId,
+          avatarUrl: char.avatarUrl ?? existing?.avatarUrl,
+          meritPoints: char.meritPoints ?? 0,
+          level: char.level ?? existing?.level ?? 1,
+          rankName: char.rankName ?? existing?.rankName,
+        });
+      }
+
+      const characterList = Array.from(map.values()).sort(
+        (a, b) => b.meritPoints - a.meritPoints,
+      );
+
+      return {
+        userInteractions: updatedInteractions,
+        characterList,
+      };
     }),
   setState: (id, characterState) =>
     set((state) => ({

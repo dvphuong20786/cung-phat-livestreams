@@ -83,16 +83,16 @@ export function CharacterHeadOverlay({
             )}
             {cultivation.level > 0 && (
               <span
-                className={`shrink-0 rounded bg-gradient-to-r ${cultivation.badgeColor} px-1 py-0.5 text-[8px] font-black text-slate-950 shadow-sm`}
+                className={`shrink-0 rounded bg-gradient-to-r ${cultivation.badgeColor} px-1.5 py-0.5 text-[8px] font-black text-slate-950 shadow-sm`}
               >
-                Lv.{cultivation.level}
+                {cultivation.level}
               </span>
             )}
             <span className="truncate">{visibleMessage}</span>
             <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-amber-100" />
           </div>
         ) : (
-          /* KHI KHÔNG CÓ COMMENT: HIỆN AVATAR, HUY HIỆU LEVEL VÀ TÊN */
+          /* KHI KHÔNG CÓ COMMENT: HIỆN AVATAR, SỐ LEVEL VÀ TÊN */
           <div className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-amber-300/40 bg-slate-950/85 px-2.5 py-1 text-[11px] font-semibold text-amber-100 shadow-xl backdrop-blur-md">
             {avatarUrl ? (
               <img
@@ -112,7 +112,7 @@ export function CharacterHeadOverlay({
               <span
                 className={`rounded bg-gradient-to-r ${cultivation.badgeColor} px-1.5 py-0.5 text-[8px] font-black text-slate-950 shadow-sm`}
               >
-                Lv.{cultivation.level} {cultivation.title}
+                {cultivation.level}
               </span>
             )}
             <span>{name}</span>
@@ -178,28 +178,33 @@ function DevoteeSprite({
   const baseTexture = useTexture(cultivation.assetUrl);
 
   const textures = useMemo(() => {
-    // Sprite sheet gồm lưới 4 cột x 3 hàng:
-    // Hàng 2 (dưới cùng ảnh, V: 0 -> 1/3): 4 khung quỳ và cúi lễ (bow)
+    // Sprite sheet 4 cột x 3 hàng:
+    // Ranh giới thực tế của ảnh (do các hàng không chia đều 1/3):
+    // Hàng 0 (đứng): Y pixel 0% - 38% -> Three.js UV V: 0.62 -> 1.00 (repeat.y = 0.38, offset.y = 0.62)
+    // Hàng 1 (đi bộ): Y pixel 39% - 72% -> Three.js UV V: 0.28 -> 0.61 (repeat.y = 0.33, offset.y = 0.28)
+    // Hàng 2 (quỳ lạy): Y pixel 73% - 100% -> Three.js UV V: 0.00 -> 0.27 (repeat.y = 0.27, offset.y = 0.00)
+
+    // Hàng 2: 4 khung quỳ và cúi lễ (bow)
     const bow = Array.from({ length: 4 }, (_, i) => {
       const t = baseTexture.clone();
-      t.repeat.set(0.25, 1 / 3);
+      t.repeat.set(0.25, 0.27);
       t.offset.set(i * 0.25, 0);
       return t;
     });
 
-    // Hàng 0 (trên cùng ảnh, V: 2/3 -> 1): 4 khung đứng và thực hiện nghi lễ (standing)
+    // Hàng 0: 4 khung đứng và thực hiện nghi lễ (standing)
     const standing = Array.from({ length: 4 }, (_, i) => {
       const t = baseTexture.clone();
-      t.repeat.set(0.25, 1 / 3);
-      t.offset.set(i * 0.25, 2 / 3);
+      t.repeat.set(0.25, 0.38);
+      t.offset.set(i * 0.25, 0.62);
       return t;
     });
 
-    // Hàng 1 (ở giữa ảnh, V: 1/3 -> 2/3): 4 khung đi bộ (walk)
+    // Hàng 1: 4 khung đi bộ (walk) - khoảng V [0.28, 0.61] không bị lấn chân của Hàng 0
     const walk = Array.from({ length: 4 }, (_, i) => {
       const t = baseTexture.clone();
-      t.repeat.set(0.25, 1 / 3);
-      t.offset.set(i * 0.25, 1 / 3);
+      t.repeat.set(0.25, 0.33);
+      t.offset.set(i * 0.25, 0.28);
       return t;
     });
 

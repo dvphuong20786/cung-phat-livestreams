@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { socket } from '../services/socket';
 import { useMonitorStore } from '../stores/useMonitorStore';
 import type { ConnectionStatus, LiveEvent, Snapshot, Statistics, TempleGameAction } from '@live/shared';
-import { useTempleGameStore } from '../game/useTempleGameStore';
+import { useTempleGameStore, type StoredCharacter } from '../game/useTempleGameStore';
 
 export function useSocket() {
   useEffect(() => {
@@ -15,7 +15,7 @@ export function useSocket() {
     const snapshot = (
       v: Snapshot & {
         game?: { paused: boolean };
-        characters?: Array<{ userId: string; meritPoints: number }>;
+        characters?: Array<Partial<StoredCharacter> & { userId: string; meritPoints: number }>;
       },
     ) => {
       s().hydrate(v);
@@ -33,7 +33,9 @@ export function useSocket() {
     const gameAction = (v: TempleGameAction) => g().enqueue(v);
     const gameClear = () => g().clear();
     const gamePaused = (v: boolean) => g().setPaused(v);
-    const characterUpdated = (c: { userId: string; meritPoints: number }) => {
+    const characterUpdated = (
+      c: Partial<StoredCharacter> & { userId: string; meritPoints: number },
+    ) => {
       if (c && c.userId) {
         g().syncCharacters([c]);
       }

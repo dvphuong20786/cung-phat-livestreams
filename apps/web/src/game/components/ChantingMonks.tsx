@@ -106,13 +106,15 @@ function AbbotAura({ isPrimary = false }: { isPrimary?: boolean }) {
 }
 
 function MonkFigure({ config }: { config: MonkConfig }) {
-  const baseTexture = useTexture('/assets/nam6.png');
+  // Người ngồi giữa là Sư Trụ Trì (Lv.100, nam6.png), 2 người ngồi cạnh là Tỳ kheo (Lv.61, nam5.png)
+  const assetUrl = config.isAbbot ? '/assets/nam6.png' : '/assets/nam5.png';
+  const baseTexture = useTexture(assetUrl);
   const monkTextures = useMemo(() => {
-    // Sprite sheet nam6.png (4 cột x 3 hàng):
-    // Hàng 2 (dưới cùng ảnh, V: 0 -> 1/3): 4 khung quỳ tụng kinh & cúi lễ
+    // Sprite sheet (4 cột x 3 hàng):
+    // Hàng 2 (dưới cùng ảnh, Three.js UV V: 0.00 -> 0.27): 4 khung quỳ tụng kinh & cúi lễ
     return Array.from({ length: 4 }, (_, i) => {
       const t = baseTexture.clone();
-      t.repeat.set(0.25, 1 / 3);
+      t.repeat.set(0.25, 0.27);
       t.offset.set(i * 0.25, 0);
       return t;
     });
@@ -137,8 +139,8 @@ function MonkFigure({ config }: { config: MonkConfig }) {
 
   return (
     <group position={config.position}>
-      {/* Vòng hào quang rực rỡ (Sư Trụ Trì ở giữa hào quang uy nghi, 2 thầy bên hào quang thanh tịnh) */}
-      <AbbotAura isPrimary={config.isAbbot} />
+      {/* Vòng hào quang rực rỡ Phật quang cho riêng Sư Trụ Trì ở giữa */}
+      {config.isAbbot && <AbbotAura isPrimary={true} />}
 
       {/* Đệm ngồi toà sen */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
@@ -171,7 +173,7 @@ function MonkFigure({ config }: { config: MonkConfig }) {
       {/* Mõ gỗ gõ nhịp nhàng */}
       <WoodenFish isAbbot={config.isAbbot} />
 
-      {/* Nhãn tên vàng trang nghiêm trên đầu kèm Max Level 100 */}
+      {/* Nhãn tên vàng trang nghiêm trên đầu kèm số Level thuần tuý */}
       <Html
         center
         position={[0, config.isAbbot ? 2.5 : 2.3, 0]}
@@ -185,8 +187,14 @@ function MonkFigure({ config }: { config: MonkConfig }) {
               : 'border-amber-400/60 bg-[#28150c]/90 text-[11px] font-bold text-amber-100'
           }`}
         >
-          <span className="rounded bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 px-1.5 py-0.5 text-[8px] font-black text-slate-950 shadow">
-            Lv.100 Trụ trì
+          <span
+            className={`rounded px-1.5 py-0.5 text-[8px] font-black text-slate-950 shadow ${
+              config.isAbbot
+                ? 'bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500'
+                : 'bg-gradient-to-r from-amber-500 to-orange-500'
+            }`}
+          >
+            {config.isAbbot ? 100 : 61}
           </span>
           <span>{config.title}</span>
         </div>
