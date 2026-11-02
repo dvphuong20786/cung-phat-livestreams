@@ -223,6 +223,9 @@ export function normalizeCloudMessage(message: CloudMessage): LiveEvent | null {
       id: String(message.data.giftId ?? giftDetails.id ?? '') || undefined,
       name: readString(giftDetails.name) || readString(message.data.giftName) || 'Quà tặng',
       quantity: readNumber(message.data.repeatCount, 1),
+      coinValue: readOptionalPositiveNumber(
+        giftDetails.diamondCount ?? message.data.diamondCount ?? message.data.coinValue,
+      ),
       repeatEnd,
     };
   }
@@ -237,6 +240,11 @@ function readString(value: unknown): string | undefined {
     : typeof value === 'number'
       ? String(value)
       : undefined;
+}
+
+function readOptionalPositiveNumber(value: unknown): number | undefined {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : undefined;
 }
 function readNumber(value: unknown, fallback: number): number {
   const number = Number(value);

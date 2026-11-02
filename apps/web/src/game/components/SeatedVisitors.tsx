@@ -5,6 +5,7 @@ import type { Texture } from 'three';
 import { useTempleGameStore } from '../useTempleGameStore';
 import { CharacterHeadOverlay, DevoteeHalo } from './Character';
 import { getCultivationInfo } from '../cultivationLevel';
+import { calculateSeatingDuration } from '../seatingDuration';
 
 export function isGenericAudienceName(nickname: string): boolean {
   const normalizedName = nickname
@@ -173,22 +174,9 @@ export function SeatedVisitors({
     // 11. Ở link overlay/overlay-mobile không hiển thị khách giả lập
     if (hideSimulated && visitor.isSimulated) return false;
 
-    const isDonation =
-      visitor.eventType === 'GIFT' ||
-      visitor.actionType === 'OFFER_FLOWERS' ||
-      visitor.actionType === 'OFFER_INCENSE';
-
-    // 1. Người JOIN không tương tác & 2. Tương tác LIKE/COMMENT: giữ đúng 2 phút rồi đi ra
-    let seatingDuration = 2 * 60_000;
-
-    // 3. Tương tác tặng donate hoa, gift: giữ 4 phút + level cao hoặc tặng nhiều thì lâu hơn chút
-    if (isDonation) {
-      const userInteractions = useTempleGameStore.getState().userInteractions[visitor.userId] || 0;
-      const level = Math.min(100, Math.floor(userInteractions / 10));
-      const giftCount = visitor.quantity ?? 1;
-      const extraSeconds = Math.min(180, level * 2 + Math.min(60, giftCount * 2));
-      seatingDuration = 4 * 60_000 + extraSeconds * 1000;
-    }
+    const userInteractionPoints =
+      useTempleGameStore.getState().userInteractions[visitor.userId] || 0;
+    const seatingDuration = calculateSeatingDuration(visitor, userInteractionPoints);
 
     const seatStartTime = visitor.seatedAt ?? visitor.createdAt;
     return currentTime - seatStartTime <= seatingDuration;

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { templeGameActionPriority, type TempleGameAction } from '@live/shared';
 import { calculateActionMeritPoints } from './cultivationLevel';
+import { calculateSeatingDuration } from './seatingDuration';
 export type CharacterState =
   | 'SPAWNING'
   | 'WALKING_TO_GATE'
@@ -45,6 +46,7 @@ interface GameStore {
   quality: Quality;
   allowSimulated: boolean;
   userInteractions: Record<string, number>;
+  userLikeCountsInSession: Record<string, number>;
   characterList: StoredCharacter[];
   recentDonors: RecentDonor[];
   enqueue: (action: TempleGameAction) => void;
@@ -109,11 +111,9 @@ export function allocateSeatIndex(
   const occupiedSeats = new Set<number>();
   for (const visitor of seatedVisitors) {
     if (visitor.seatIndex !== undefined && visitor.userId !== userId) {
-      const isDonation =
-        visitor.eventType === 'GIFT' ||
-        visitor.actionType === 'OFFER_FLOWERS' ||
-        visitor.actionType === 'OFFER_INCENSE';
-      const duration = isDonation ? 4 * 60_000 : 2 * 60_000;
+      const userInteractionPoints =
+        useTempleGameStore.getState().userInteractions[visitor.userId] || 0;
+      const duration = calculateSeatingDuration(visitor, userInteractionPoints);
       const startTime = visitor.seatedAt ?? visitor.createdAt;
       if (now - startTime <= duration) {
         occupiedSeats.add(visitor.seatIndex);
@@ -156,9 +156,7 @@ export function allocateSeatIndex(
   }
 
   // Nếu cả 2 hàng đều full, fallback chọn ngẫu nhiên theo user hash
-  const userHash = Math.abs(
-    [...userId].reduce((total, c) => total + c.charCodeAt(0), 0),
-  );
+  const userHash = Math.abs([...userId].reduce((total, c) => total + c.charCodeAt(0), 0));
   return userHash % totalSeats;
 }
 
@@ -171,6 +169,7 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
   quality: 'MEDIUM',
   allowSimulated: true,
   userInteractions: {},
+  userLikeCountsInSession: {},
   characterList: [],
   recentDonors: [],
   enqueue: (action) =>
@@ -179,11 +178,22 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       if (!state.allowSimulated && action.isSimulated) {
         return state;
       }
-      // Điểm công đức: lấy trực tiếp từ database nếu server gửi về, hoặc tính cộng dồn nếu chạy offline
+      const userLikeCountsInSession = { ...state.userLikeCountsInSession };
+      let offlinePointsAwarded = calculateActionMeritPoints(action);
+      if (action.eventType === 'LIKE') {
+        const previousLikeCount = userLikeCountsInSession[action.userId] || 0;
+        const currentLikeCount = previousLikeCount + Math.max(1, action.quantity ?? 1);
+        const completedGroupsBefore = Math.floor(previousLikeCount / 10);
+        const completedGroupsAfter = Math.floor(currentLikeCount / 10);
+        offlinePointsAwarded = (completedGroupsAfter - completedGroupsBefore) * 3;
+        userLikeCountsInSession[action.userId] = currentLikeCount;
+      }
+
+      // Ưu tiên tổng điểm từ database; khi mất server mới cộng dồn theo bảng điểm phía web.
       const points =
         action.meritPoints !== undefined
           ? action.meritPoints
-          : (state.userInteractions[action.userId] || 0) + calculateActionMeritPoints(action);
+          : (state.userInteractions[action.userId] || 0) + offlinePointsAwarded;
 
       const userInteractions = {
         ...state.userInteractions,
@@ -230,7 +240,8 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
           userId: action.userId,
           nickname: action.nickname,
           avatarUrl: action.avatarUrl,
-          giftName: action.giftName || (action.actionType === 'OFFER_FLOWERS' ? 'Hoa cúng Phật' : 'Lễ vật'),
+          giftName:
+            action.giftName || (action.actionType === 'OFFER_FLOWERS' ? 'Hoa cúng Phật' : 'Lễ vật'),
           quantity: action.quantity || 1,
           timestamp: Date.now(),
         };
@@ -245,6 +256,7 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
         return {
           seatedVisitors,
           userInteractions,
+          userLikeCountsInSession,
           recentDonors: updatedRecentDonors,
           latest: `${action.nickname} đã gửi thêm lượt thích`,
         };
@@ -256,15 +268,16 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
         ...promote([...state.active], queue),
         seatedVisitors,
         userInteractions,
+        userLikeCountsInSession,
         recentDonors: updatedRecentDonors,
         latest:
           action.actionType === 'OFFER_FLOWERS'
             ? `${action.nickname} đang chuẩn bị dâng hoa`
             : action.actionType === 'SAY_COMMENT'
               ? `${action.nickname}: ${action.message ?? ''}`
-            : action.actionType === 'WELCOME' || action.eventType === 'JOIN'
-              ? `${action.nickname} vừa vào chánh điện`
-              : `${action.nickname} đang vào chùa`,
+              : action.actionType === 'WELCOME' || action.eventType === 'JOIN'
+                ? `${action.nickname} vừa vào chánh điện`
+                : `${action.nickname} đang vào chùa`,
       };
     }),
   syncCharacters: (characters) =>
@@ -291,9 +304,7 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
         });
       }
 
-      const characterList = Array.from(map.values()).sort(
-        (a, b) => b.meritPoints - a.meritPoints,
-      );
+      const characterList = Array.from(map.values()).sort((a, b) => b.meritPoints - a.meritPoints);
 
       return {
         userInteractions: updatedInteractions,
@@ -315,7 +326,9 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
         const exists = state.seatedVisitors.some((v) => v.userId === completedChar.action.userId);
         if (exists) {
           updatedSeated = state.seatedVisitors.map((v) =>
-            v.userId === completedChar.action.userId ? { ...v, ...completedChar.action, seatedAt: now } : v,
+            v.userId === completedChar.action.userId
+              ? { ...v, ...completedChar.action, seatedAt: now }
+              : v,
           );
         } else {
           updatedSeated = [{ ...completedChar.action, seatedAt: now }, ...state.seatedVisitors];

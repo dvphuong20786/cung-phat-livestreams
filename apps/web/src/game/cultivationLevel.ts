@@ -121,7 +121,10 @@ export function calculateLevelFromPoints(points: number): number {
       const span = next.points - current.points;
       if (span <= 0) return current.level;
       const progress = (points - current.points) / span;
-      return Math.min(next.level, Math.floor(current.level + progress * (next.level - current.level)));
+      return Math.min(
+        next.level,
+        Math.floor(current.level + progress * (next.level - current.level)),
+      );
     }
   }
 
@@ -130,17 +133,13 @@ export function calculateLevelFromPoints(points: number): number {
 
 /**
  * Tính điểm công đức của từng hành động dựa trên bảng quy định:
- * - 10 lượt Like: +1 (tối đa 50 điểm/buổi)
- * - Comment hợp lệ: +2 (30 giây mới tính tiếp)
- * - Share livestream: +10 (tối đa 3 lần/buổi)
- * - Follow kênh: +30 (chỉ nhận một lần)
- * - Người xem mới tham gia live: +1 (một lần/buổi)
- * - Tặng Hoa/Hoa hồng: +5 (tính theo từng quà)
- * - Gift từ 1–9 coin: +5
- * - Gift từ 10–49 coin: +15
- * - Gift từ 50–99 coin: +30
- * - Gift từ 100–499 coin: +80
- * - Gift từ 500 coin trở lên: +200
+ * - 10 lượt Like: +3, chỉ cộng khi hoàn thành nhóm 10
+ * - Comment hợp lệ: +5
+ * - Share livestream: +30
+ * - Follow kênh: +100
+ * - Người xem mới tham gia live: +5
+ * - Tặng Hoa/Hoa hồng: +10 x số lượng
+ * - Gift theo giá coin: +15 / +40 / +100 / +250 / +600 x số lượng
  */
 export function calculateActionMeritPoints(action: TempleGameAction): number {
   if (action.eventType === 'JOIN') return 5;
@@ -155,7 +154,7 @@ export function calculateActionMeritPoints(action: TempleGameAction): number {
   }
   if (action.eventType === 'LIKE') {
     const likes = Math.max(1, action.quantity ?? 1);
-    return likes >= 10 ? Math.floor(likes / 10) * 3 : Math.max(1, Math.round((likes / 10) * 3));
+    return Math.floor(likes / 10) * 3;
   }
   if (
     action.eventType === 'GIFT' ||
@@ -170,7 +169,7 @@ export function calculateActionMeritPoints(action: TempleGameAction): number {
       return count * 10;
     }
     // Bậc coin quà: 1-9 coin (+15), 10-49 coin (+40), 50-99 coin (+100), 100-499 coin (+250), 500+ coin (+600)
-    const singleCoin = (action as any).coins || (action as any).diamondCount || 1;
+    const singleCoin = action.giftCoinValue ?? 1;
     let pointPerGift = 15;
     if (singleCoin >= 500) pointPerGift = 600;
     else if (singleCoin >= 100) pointPerGift = 250;

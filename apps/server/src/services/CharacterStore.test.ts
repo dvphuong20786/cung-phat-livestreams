@@ -37,7 +37,7 @@ describe('CharacterStore', () => {
     expect(characterAfterReset?.level).toBe(characterBeforeReset?.level);
     expect(characterAfterReset?.rankName).toBe(characterBeforeReset?.rankName);
     expect(characterAfterReset?.followAwarded).toBe(1);
-    expect(characterAfterReset?.likePointsToday).toBe(0);
+    expect(characterAfterReset?.likeCountInSession).toBe(0);
     expect(characterAfterReset?.lastCommentAt).toBe(0);
     expect(characterAfterReset?.shareCountToday).toBe(0);
     expect(characterAfterReset?.joinAwardedToday).toBe(0);
@@ -106,6 +106,39 @@ describe('CharacterStore', () => {
     const result = characterStore.awardWatchTime('user-1');
     expect(result?.pointsAwarded).toBe(20);
     expect(result?.character.meritPoints).toBe(25);
+    characterStore.close();
+  });
+
+  it('only awards likes when each group of 10 is completed', () => {
+    const characterStore = new CharacterStore(':memory:');
+    const firstLikes = createEvent('LIKE', 'like_user');
+    firstLikes.likeCount = 7;
+    const secondLikes = createEvent('LIKE', 'like_user');
+    secondLikes.likeCount = 2;
+    const completedGroup = createEvent('LIKE', 'like_user');
+    completedGroup.likeCount = 1;
+
+    expect(characterStore.awardPointsForEvent(firstLikes).pointsAwarded).toBe(0);
+    expect(characterStore.awardPointsForEvent(secondLikes).pointsAwarded).toBe(0);
+    expect(characterStore.awardPointsForEvent(completedGroup).pointsAwarded).toBe(3);
+    expect(characterStore.getCharacter('user-1')?.likeCountInSession).toBe(10);
+    characterStore.close();
+  });
+
+  it('awards a non-flower gift from its coin tier', () => {
+    const characterStore = new CharacterStore(':memory:');
+    const giftEvent = createEvent('GIFT', 'gift_user');
+    giftEvent.gift = {
+      name: 'TikTok Universe',
+      quantity: 2,
+      coinValue: 500,
+      repeatEnd: true,
+    };
+
+    const result = characterStore.awardPointsForEvent(giftEvent);
+
+    expect(result.pointsAwarded).toBe(1_200);
+    expect(result.character.meritPoints).toBe(1_200);
     characterStore.close();
   });
 });

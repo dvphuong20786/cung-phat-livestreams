@@ -12,7 +12,7 @@ export interface UserCharacter {
   meritPoints: number;
   level: number;
   rankName: string;
-  likePointsToday: number;
+  likeCountInSession: number;
   lastCommentAt: number;
   shareCountToday: number;
   followAwarded: number;
@@ -63,7 +63,10 @@ export function calculateLevelFromPoints(points: number): number {
       const span = next.points - current.points;
       if (span <= 0) return current.level;
       const progress = (points - current.points) / span;
-      return Math.min(next.level, Math.floor(current.level + progress * (next.level - current.level)));
+      return Math.min(
+        next.level,
+        Math.floor(current.level + progress * (next.level - current.level)),
+      );
     }
   }
 
@@ -101,6 +104,7 @@ export class CharacterStore {
         level INTEGER DEFAULT 1,
         rank_name TEXT DEFAULT 'Khách hành hương',
         like_points_today INTEGER DEFAULT 0,
+        like_count_in_session INTEGER DEFAULT 0,
         last_comment_at INTEGER DEFAULT 0,
         share_count_today INTEGER DEFAULT 0,
         follow_awarded INTEGER DEFAULT 0,
@@ -120,6 +124,11 @@ export class CharacterStore {
     }>;
     if (!columns.some((column) => column.name === 'is_simulated')) {
       this.database.exec('ALTER TABLE user_characters ADD COLUMN is_simulated INTEGER DEFAULT 0');
+    }
+    if (!columns.some((column) => column.name === 'like_count_in_session')) {
+      this.database.exec(
+        'ALTER TABLE user_characters ADD COLUMN like_count_in_session INTEGER DEFAULT 0',
+      );
     }
 
     this.database
@@ -209,18 +218,24 @@ export class CharacterStore {
     // Tổng điểm, level, cấp bậc và trạng thái FOLLOW được giữ vĩnh viễn.
     // Chỉ các giới hạn kiếm điểm theo từng buổi live được bắt đầu lại.
     this.database
-      .prepare(`
+      .prepare(
+        `
         UPDATE user_characters SET
           like_points_today = 0,
+          like_count_in_session = 0,
           last_comment_at = 0,
           share_count_today = 0,
           join_awarded_today = 0,
           watch_time_awarded_today = 0
-      `)
+      `,
+      )
       .run();
   }
 
-  public awardPointsForEvent(event: LiveEvent): { character: UserCharacter; pointsAwarded: number } {
+  public awardPointsForEvent(event: LiveEvent): {
+    character: UserCharacter;
+    pointsAwarded: number;
+  } {
     const incomingUserId = event.user.id || event.user.username;
     const username = event.user.username;
     const nickname = event.user.nickname || username;
@@ -245,7 +260,7 @@ export class CharacterStore {
         meritPoints: 0,
         level: 1,
         rankName: getRankName(1, isFemale),
-        likePointsToday: 0,
+        likeCountInSession: 0,
         lastCommentAt: 0,
         shareCountToday: 0,
         followAwarded: 0,
@@ -261,10 +276,12 @@ export class CharacterStore {
 
     switch (event.type) {
       case 'LIKE': {
-        // 10 lượt like = +3 điểm (không giới hạn)
+        // Chỉ cộng điểm cho từng nhóm đủ 10 like; số like dư được giữ lại trong phiên.
         const likes = Math.max(1, event.likeCount ?? 1);
-        pointsAwarded = likes >= 10 ? Math.floor(likes / 10) * 3 : Math.max(1, Math.round((likes / 10) * 3));
-        character.likePointsToday += pointsAwarded;
+        const completedGroupsBefore = Math.floor(character.likeCountInSession / 10);
+        character.likeCountInSession += likes;
+        const completedGroupsAfter = Math.floor(character.likeCountInSession / 10);
+        pointsAwarded = (completedGroupsAfter - completedGroupsBefore) * 3;
         break;
       }
 
@@ -310,7 +327,7 @@ export class CharacterStore {
           pointsAwarded = quantity * 10;
         } else {
           // Bậc coin quà: 1-9 coin (+15), 10-49 coin (+40), 50-99 coin (+100), 100-499 coin (+250), 500+ coin (+600)
-          const singleCoin = (event.gift as any)?.coins || (event.gift as any)?.diamondCount || 1;
+          const singleCoin = event.gift?.coinValue ?? 1;
           let pointPerGift = 15;
           if (singleCoin >= 500) pointPerGift = 600;
           else if (singleCoin >= 100) pointPerGift = 250;
@@ -345,7 +362,9 @@ export class CharacterStore {
   /**
    * Xem liên tục 5 phút: +20 điểm (cứ đủ 5 phút cộng tiếp 20 điểm)
    */
-  public awardWatchTime(userId: string): { character: UserCharacter; pointsAwarded: number } | null {
+  public awardWatchTime(
+    userId: string,
+  ): { character: UserCharacter; pointsAwarded: number } | null {
     const character = this.getCharacter(userId);
     if (!character) return null;
 
@@ -365,12 +384,14 @@ export class CharacterStore {
       INSERT OR REPLACE INTO user_characters (
         user_id, username, nickname, avatar_url, is_simulated, gender,
         merit_points, level, rank_name, like_points_today,
+        like_count_in_session,
         last_comment_at, share_count_today, follow_awarded,
         join_awarded_today, watch_time_awarded_today,
         last_active_at, created_at
       ) VALUES (
         @userId, @username, @nickname, @avatarUrl, @isSimulated, @gender,
-        @meritPoints, @level, @rankName, @likePointsToday,
+        @meritPoints, @level, @rankName, 0,
+        @likeCountInSession,
         @lastCommentAt, @shareCountToday, @followAwarded,
         @joinAwardedToday, @watchTimeAwardedToday,
         @lastActiveAt, @createdAt
@@ -386,7 +407,7 @@ export class CharacterStore {
       meritPoints: char.meritPoints,
       level: char.level,
       rankName: char.rankName,
-      likePointsToday: char.likePointsToday,
+      likeCountInSession: char.likeCountInSession,
       lastCommentAt: char.lastCommentAt,
       shareCountToday: char.shareCountToday,
       followAwarded: char.followAwarded,
@@ -407,7 +428,7 @@ export class CharacterStore {
         merit_points = @meritPoints,
         level = @level,
         rank_name = @rankName,
-        like_points_today = @likePointsToday,
+        like_count_in_session = @likeCountInSession,
         last_comment_at = @lastCommentAt,
         share_count_today = @shareCountToday,
         follow_awarded = @followAwarded,
@@ -425,7 +446,7 @@ export class CharacterStore {
       meritPoints: char.meritPoints,
       level: char.level,
       rankName: char.rankName,
-      likePointsToday: char.likePointsToday,
+      likeCountInSession: char.likeCountInSession,
       lastCommentAt: char.lastCommentAt,
       shareCountToday: char.shareCountToday,
       followAwarded: char.followAwarded,
@@ -446,7 +467,7 @@ export class CharacterStore {
       meritPoints: row.merit_points,
       level: row.level,
       rankName: row.rank_name,
-      likePointsToday: row.like_points_today,
+      likeCountInSession: row.like_count_in_session ?? 0,
       lastCommentAt: row.last_comment_at,
       shareCountToday: row.share_count_today,
       followAwarded: row.follow_awarded,
@@ -461,4 +482,3 @@ export class CharacterStore {
     this.database.close();
   }
 }
-

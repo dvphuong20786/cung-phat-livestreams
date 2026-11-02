@@ -32,7 +32,7 @@ describe('Euler Cloud WebSocket', () => {
         repeatCount: 2,
         repeatEnd: 0,
         giftId: 5655,
-        giftDetails: { type: 1, name: 'Rose' },
+        giftDetails: { type: 1, name: 'Rose', diamondCount: 10 },
         user: { uniqueId: 'phat_tu' },
       },
     };
@@ -42,7 +42,10 @@ describe('Euler Cloud WebSocket', () => {
         ...running,
         data: { ...running.data, repeatCount: 5, repeatEnd: 1 },
       }),
-    ).toMatchObject({ type: 'GIFT', gift: { name: 'Rose', quantity: 5, repeatEnd: true } });
+    ).toMatchObject({
+      type: 'GIFT',
+      gift: { name: 'Rose', quantity: 5, coinValue: 10, repeatEnd: true },
+    });
   });
   it('reads a TikTok avatar from the nested avatar structures', () => {
     const event = normalizeCloudMessage({

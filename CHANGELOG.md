@@ -1,5 +1,19 @@
 # Lịch sử thay đổi
 
+## [v0.22.15] - 2026-11-02
+- **Yêu cầu**: Sửa toàn bộ lỗi còn lại trong bảng quy đổi điểm, thời gian xem liên tục và phân bổ ghế nhân vật.
+- **Chi tiết kỹ thuật**:
+  - `CharacterStore.ts` và `useTempleGameStore.ts`: lưu số like tích lũy theo phiên, chỉ cộng 3 điểm khi hoàn thành từng nhóm đủ 10 like và giữ số like dư cho sự kiện tiếp theo.
+  - `LiveEvent`, `TikTokConnector.ts` và `EulerCloudConnector.ts`: truyền `coinValue` của gift xuyên suốt từ dữ liệu TikTok đến server và game action; gift không phải hoa được tính đúng bậc coin thay vì luôn rơi về bậc 1–9 coin.
+  - `WatchTimeTracker.ts` và `socketServer.ts`: bắt đầu theo dõi từ sự kiện JOIN, tự cộng 20 điểm sau mỗi 5 phút liên tục và dừng theo dõi khi LIVE mất kết nối hoặc kết thúc.
+  - `seatingDuration.ts`: dùng chung một công thức thời gian giữ ghế cho cả cấp ghế và hiển thị, tránh cấp lại ghế khi người cúng dường cũ vẫn còn ngồi.
+  - `cultivationLevel.ts`: cập nhật mô tả bảng điểm hiện hành và loại bỏ cách đọc gift bằng `any`.
+  - Bổ sung test hồi quy cho tích lũy like, bậc coin gift, chu kỳ xem 5 phút và thời gian giữ ghế.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã đạt 41/41 unit test, TypeScript typecheck và production build cho server, shared package và web.
+  - TikTok không cung cấp sự kiện rời phòng tương ứng cho từng người xem trong luồng hiện tại, nên thời gian xem được tính liên tục từ JOIN đến khi LIVE mất kết nối hoặc kết thúc.
+  - Vite vẫn cảnh báo chunk `TempleToolbar` khoảng 883 kB; cảnh báo hiệu năng này không làm lỗi build.
+
 ## [v0.22.14] - 2026-11-02
 - **Yêu cầu**: Cập nhật toàn bộ bảng quy đổi điểm công đức theo cấu hình mới từ người dùng.
 - **Chi tiết kỹ thuật**:

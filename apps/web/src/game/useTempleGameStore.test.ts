@@ -15,7 +15,11 @@ const action = (
 describe('temple game queue', () => {
   beforeEach(() => {
     useTempleGameStore.getState().clear();
-    useTempleGameStore.setState({ userInteractions: {}, characterList: [] });
+    useTempleGameStore.setState({
+      userInteractions: {},
+      userLikeCountsInSession: {},
+      characterList: [],
+    });
   });
   it('bounds active characters and waiting queue during a burst', () => {
     for (let index = 0; index < 600; index++) useTempleGameStore.getState().enqueue(action(index));
@@ -29,16 +33,18 @@ describe('temple game queue', () => {
     expect(useTempleGameStore.getState().seatedVisitors).toHaveLength(1);
   });
   it('keeps accumulating offline merit points for repeated likes', () => {
-    useTempleGameStore.getState().enqueue({ ...action(1), eventType: 'LIKE' });
+    useTempleGameStore.getState().enqueue({ ...action(1), eventType: 'LIKE', quantity: 6 });
     const firstPoints = useTempleGameStore.getState().userInteractions['u-1'];
 
     useTempleGameStore.getState().enqueue({
       ...action(2),
       userId: 'u-1',
       eventType: 'LIKE',
+      quantity: 4,
     });
 
-    expect(useTempleGameStore.getState().userInteractions['u-1']).toBeGreaterThan(firstPoints);
+    expect(firstPoints).toBe(0);
+    expect(useTempleGameStore.getState().userInteractions['u-1']).toBe(3);
   });
   it('prioritizes a flower ceremony in the waiting queue', () => {
     for (let index = 0; index < 12; index++) useTempleGameStore.getState().enqueue(action(index));
@@ -89,12 +95,16 @@ describe('temple game queue', () => {
 
   it('preserves assigned seat for the same user on repeated interactions', () => {
     useTempleGameStore.getState().enqueue(action(1));
-    const initialSeat = useTempleGameStore.getState().seatedVisitors.find((v) => v.userId === 'u-1')?.seatIndex;
+    const initialSeat = useTempleGameStore
+      .getState()
+      .seatedVisitors.find((v) => v.userId === 'u-1')?.seatIndex;
     expect(initialSeat).toBeDefined();
 
     // Người đó tương tác tiếp
     useTempleGameStore.getState().enqueue({ ...action(1), eventType: 'LIKE' });
-    const updatedSeat = useTempleGameStore.getState().seatedVisitors.find((v) => v.userId === 'u-1')?.seatIndex;
+    const updatedSeat = useTempleGameStore
+      .getState()
+      .seatedVisitors.find((v) => v.userId === 'u-1')?.seatIndex;
     expect(updatedSeat).toBe(initialSeat);
   });
 });

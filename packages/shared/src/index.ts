@@ -16,6 +16,7 @@ export interface TempleGameAction {
   actionType: TempleGameActionType;
   quantity?: number;
   giftName?: string;
+  giftCoinValue?: number;
   message?: string;
   isSimulated?: boolean;
   eventType?: LiveEventType;
@@ -35,7 +36,13 @@ export interface LiveEvent {
   user: { id?: string; username: string; nickname: string; avatarUrl?: string };
   likeCount?: number;
   comment?: string;
-  gift?: { id?: string; name: string; quantity: number; repeatEnd?: boolean };
+  gift?: {
+    id?: string;
+    name: string;
+    quantity: number;
+    coinValue?: number;
+    repeatEnd?: boolean;
+  };
   timestamp: number;
 }
 export interface SourceStats {
@@ -118,6 +125,7 @@ export const simulatorSchema = z.object({
       id: z.string().max(40).optional(),
       name: clean(80),
       quantity: z.number().int().min(1).max(999),
+      coinValue: z.number().int().min(1).max(1_000_000).optional(),
       repeatEnd: z.boolean().optional(),
     })
     .optional(),
@@ -155,6 +163,7 @@ export function templeGameActionFor(event: LiveEvent): TempleGameAction | null {
     actionType,
     quantity: event.likeCount ?? event.gift?.quantity,
     giftName: event.gift?.name,
+    giftCoinValue: event.gift?.coinValue,
     message: event.comment,
     isSimulated: event.source === 'SIMULATOR',
     eventType: event.type,

@@ -1,13 +1,9 @@
 import type { Server } from 'socket.io';
-import {
-  connectSchema,
-  simulatorSchema,
-  templeGameActionFor,
-  type LiveEvent,
-} from '@live/shared';
+import { connectSchema, simulatorSchema, templeGameActionFor, type LiveEvent } from '@live/shared';
 import type { EventService } from '../services/EventService.js';
 import type { LiveConnector as TikTokConnector } from '../connectors/LiveConnector.js';
 import type { CharacterStore } from '../services/CharacterStore.js';
+import { WatchTimeTracker } from '../services/WatchTimeTracker.js';
 
 export function setupSockets(
   io: Server,
@@ -16,6 +12,7 @@ export function setupSockets(
   characterStore?: CharacterStore,
 ) {
   let gamePaused = false;
+  const watchTimeTracker = new WatchTimeTracker();
 
   const publish = (event: LiveEvent, alreadyProcessed = false) => {
     let charData: { meritPoints?: number; level?: number; rankName?: string } = {};
@@ -32,6 +29,7 @@ export function setupSockets(
         rankName: character.rankName,
       };
       if (!character.isSimulated) io.emit('character:updated', character);
+      if (event.type === 'JOIN') watchTimeTracker.startWatching(character.userId, event.timestamp);
     }
 
     if (!alreadyProcessed) events.process(event);
@@ -50,7 +48,10 @@ export function setupSockets(
   };
 
   tiktok.on('event', (event: LiveEvent) => publish(event));
-  tiktok.on('status', (s) => io.emit('connection:status', s));
+  tiktok.on('status', (status) => {
+    if (status.state !== 'CONNECTED') watchTimeTracker.clear();
+    io.emit('connection:status', status);
+  });
   tiktok.on('error-safe', (message) => io.emit('system:error', { message }));
 
   io.on('connection', (socket) => {
@@ -90,6 +91,7 @@ export function setupSockets(
       try {
         await tiktok.connect(p.data.username, p.data.autoReconnect);
         characterStore?.resetLiveSessionLimits();
+        watchTimeTracker.clear();
         ack?.({ success: true });
       } catch (e) {
         ack?.({ success: false, error: e instanceof Error ? e.message : String(e) });
@@ -134,4 +136,17 @@ export function setupSockets(
       ack?.({ success: true });
     });
   });
+
+  const watchTimeInterval = setInterval(() => {
+    if (!characterStore || tiktok.status.state !== 'CONNECTED') return;
+
+    const dueUserIds = watchTimeTracker.collectDueUserIds();
+    for (const userId of dueUserIds) {
+      const result = characterStore.awardWatchTime(userId);
+      if (result && !result.character.isSimulated) {
+        io.emit('character:updated', result.character);
+      }
+    }
+  }, 10_000);
+  watchTimeInterval.unref();
 }

@@ -77,6 +77,7 @@ export class TikTokConnector extends EventEmitter {
         id: String(d.giftId ?? '') || undefined,
         name: String(d.giftName ?? 'Quà tặng'),
         quantity: Number(d.repeatCount ?? 1),
+        coinValue: readGiftCoinValue(d),
         repeatEnd: Boolean(d.repeatEnd),
       },
     }));
@@ -127,6 +128,28 @@ export class TikTokConnector extends EventEmitter {
       });
     }
   }
+}
+
+function readGiftCoinValue(data: unknown): number | undefined {
+  if (typeof data !== 'object' || data === null) return undefined;
+
+  const giftEvent = data as Record<string, unknown>;
+  const giftDetails =
+    typeof giftEvent.giftDetails === 'object' && giftEvent.giftDetails !== null
+      ? (giftEvent.giftDetails as Record<string, unknown>)
+      : {};
+  const extendedGiftInfo =
+    typeof giftEvent.extendedGiftInfo === 'object' && giftEvent.extendedGiftInfo !== null
+      ? (giftEvent.extendedGiftInfo as Record<string, unknown>)
+      : {};
+  const rawCoinValue =
+    giftDetails.diamondCount ??
+    extendedGiftInfo.diamondCount ??
+    giftEvent.diamondCount ??
+    giftEvent.coinValue;
+  const coinValue = Number(rawCoinValue);
+
+  return Number.isFinite(coinValue) && coinValue > 0 ? coinValue : undefined;
 }
 
 export function getTikTokConnectionErrorMessage(
