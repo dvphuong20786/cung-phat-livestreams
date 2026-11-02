@@ -88,6 +88,15 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
         state.queue.some((a) => a.userId === action.userId && a.actionType === action.actionType);
       if (existing && action.actionType === 'ENTER_TEMPLE')
         return { seatedVisitors, latest: `${action.nickname} đã gửi thêm lượt thích` };
+
+      // Người vào xem LIVE không có tương tác (JOIN): ngồi quỳ xem ở hàng dưới, không xếp vào hàng đợi cúng Phật
+      if (action.eventType === 'JOIN') {
+        return {
+          seatedVisitors,
+          latest: `${action.nickname} vừa vào chánh điện`,
+        };
+      }
+
       const queue = sortActionsByPriority([...state.queue, action]);
       return {
         ...promote([...state.active], queue),

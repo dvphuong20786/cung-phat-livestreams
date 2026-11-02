@@ -17,6 +17,7 @@ import {
   Trees,
 } from './components/TempleEnvironment';
 import { TempleInterior } from './components/TempleInterior';
+import { ChantingMonks } from './components/ChantingMonks';
 import { SeatedVisitors } from './components/SeatedVisitors';
 import { TempleEffects } from './components/TempleEffects';
 export type CameraPreset = 'OVERVIEW' | 'ENTRANCE' | 'SHRINE';
@@ -79,6 +80,7 @@ function World({
       {inside ? (
         <>
           <TempleInterior mobile={mobile} />
+          <ChantingMonks />
           <SeatedVisitors mobile={mobile} />
         </>
       ) : (

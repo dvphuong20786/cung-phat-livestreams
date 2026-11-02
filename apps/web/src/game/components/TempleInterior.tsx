@@ -50,23 +50,25 @@ function IncenseSmoke() {
   const smoke = useRef<Group>(null);
   useFrame((state) => {
     if (smoke.current) {
-      smoke.current.position.y = 1.5 + ((state.clock.elapsedTime * 0.18) % 1.1);
-      smoke.current.rotation.y = state.clock.elapsedTime * 0.2;
+      smoke.current.children.forEach((child, index) => {
+        const t = state.clock.elapsedTime * 0.75 + index * 0.22;
+        const progress = ((state.clock.elapsedTime * 0.22 + index / 18) % 1);
+        child.position.y = progress * 2.3;
+        child.position.x = Math.sin(t * 1.5) * 0.16 * (1 + progress * 1.8);
+        child.position.z = Math.cos(t * 1.2) * 0.11 * (1 + progress * 1.8);
+        const scale = 0.08 + progress * 0.38;
+        child.scale.set(scale * 1.6, scale * 0.75, scale);
+      });
     }
   });
   return (
-    <group ref={smoke} position={[0, 1.5, 0]}>
-      {Array.from({ length: 9 }, (_, index) => (
-        <Sphere
-          key={index}
-          args={[0.12 + index * 0.018, 10, 8]}
-          scale={[1.7, 0.38, 1]}
-          position={[Math.sin(index * 0.9) * 0.18, index * 0.23, 0]}
-        >
+    <group ref={smoke} position={[0, 2.5, 0]}>
+      {Array.from({ length: 18 }, (_, index) => (
+        <Sphere key={index} args={[1, 10, 8]}>
           <meshBasicMaterial
-            color="#dce7e8"
+            color="#edf3f0"
             transparent
-            opacity={0.22 - index * 0.014}
+            opacity={0.16 * (1 - index / 20)}
             depthWrite={false}
           />
         </Sphere>
@@ -141,9 +143,15 @@ export function InteriorSanctuary({ flowers }: { flowers: number }) {
           <meshStandardMaterial color="#80502d" metalness={0.35} />
         </Cylinder>
         {[-0.18, 0, 0.18].map((x) => (
-          <Cylinder key={x} args={[0.018, 0.018, 0.85, 6]} position={[x, 2.05, 0]}>
-            <meshStandardMaterial color="#9c3226" />
-          </Cylinder>
+          <group key={x}>
+            <Cylinder args={[0.018, 0.018, 0.85, 6]} position={[x, 2.05, 0]}>
+              <meshStandardMaterial color="#9c3226" />
+            </Cylinder>
+            <Sphere args={[0.026, 8, 8]} position={[x, 2.48, 0]}>
+              <meshBasicMaterial color="#ff5a22" />
+            </Sphere>
+            <pointLight position={[x, 2.5, 0.05]} color="#ff7a33" intensity={0.25} distance={0.8} />
+          </group>
         ))}
         <IncenseSmoke />
         {[-2.3, -1.65, 1.65, 2.3].map((x, index) => (

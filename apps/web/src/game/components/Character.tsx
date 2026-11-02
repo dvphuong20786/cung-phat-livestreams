@@ -44,90 +44,192 @@ const prayerPhrases = [
   'Nguyện phước lành đến muôn nơi',
 ];
 const prayerPhraseOffset = Math.floor(Math.random() * prayerPhrases.length);
-export function CharacterNameLabel({
+export function CharacterHeadOverlay({
   name,
   position = [0, 2.65, 0],
   avatarUrl,
+  message,
 }: {
   name: string;
   position?: [number, number, number];
   avatarUrl?: string;
+  message?: string;
 }) {
+  const hasComment = Boolean(message && message.trim().length > 0);
+  const visibleMessage = message && message.length > 90 ? `${message.slice(0, 90)}…` : message;
+
   return (
-    <Html center position={position} distanceFactor={13} zIndexRange={[10, 0]}>
-      <div className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-white/20 bg-slate-950/80 px-2 py-1 text-[11px] font-semibold text-white shadow-lg backdrop-blur">
-        {avatarUrl && (
-          <img
-            src={avatarUrl}
-            alt=""
-            className="h-5 w-5 rounded-full border border-white/30 object-cover"
-            onError={(event) => {
-              event.currentTarget.style.display = 'none';
-            }}
-          />
+    <Html center position={position} distanceFactor={13} zIndexRange={[12, 0]}>
+      <div className="flex flex-col items-center pointer-events-none select-none">
+        {hasComment ? (
+          /* KHI CÓ COMMENT: ẨN TÊN, HIỆN BONG BÓNG COMMENT KÈM AVATAR */
+          <div className="relative mb-1 flex items-center gap-1.5 max-w-56 rounded-2xl border border-amber-300/80 bg-gradient-to-b from-amber-50 to-amber-100/95 px-3 py-1.5 text-center text-[11px] font-bold leading-snug text-amber-950 shadow-2xl backdrop-blur-sm animate-in fade-in zoom-in duration-200">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt=""
+                className="h-5 w-5 shrink-0 rounded-full border border-amber-400 object-cover shadow-sm"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-800 text-[9px] text-amber-100">
+                🙏
+              </div>
+            )}
+            <span className="truncate">{visibleMessage}</span>
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-amber-100" />
+          </div>
+        ) : (
+          /* KHI KHÔNG CÓ COMMENT: HIỆN AVATAR VÀ TÊN */
+          <div className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-amber-300/40 bg-slate-950/85 px-2.5 py-1 text-[11px] font-semibold text-amber-100 shadow-xl backdrop-blur-md">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt=""
+                className="h-5 w-5 rounded-full border-2 border-amber-400 object-cover shadow-md"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="flex h-5 w-5 items-center justify-center rounded-full border border-amber-400 bg-amber-900/80 text-[10px] font-bold text-amber-200 shadow-sm">
+                {name.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <span>{name}</span>
+          </div>
         )}
-        {name}
       </div>
     </Html>
   );
 }
 
-function CharacterCommentBubble({ message, mobile }: { message: string; mobile: boolean }) {
-  const visibleMessage = message.length > 100 ? `${message.slice(0, 100)}…` : message;
-  return (
-    <Html
-      center
-      position={[0, mobile ? 3.45 : 3.15, 0]}
-      distanceFactor={mobile ? 11 : 13}
-      zIndexRange={[12, 0]}
-    >
-      <div
-        className="max-w-48 rounded-2xl border border-white/35 bg-white/95 px-3 py-2 text-center text-[11px] font-semibold leading-snug text-slate-900 shadow-xl"
-        title={message}
-      >
-        {visibleMessage}
-      </div>
-    </Html>
-  );
-}
-
-function MobileWorshipper({
-  name,
+function DevoteeSprite({
+  action,
   state,
+  elapsed,
   showName,
-  avatarUrl,
-  female,
+  message,
 }: {
-  name: string;
+  action: TempleGameAction;
   state: CharacterState;
+  elapsed: number;
   showName: boolean;
-  avatarUrl?: string;
-  female: boolean;
+  message?: string;
 }) {
-  const maleWalkingTexture = useTexture('/assets/worshipper-walking-mobile.png');
-  const maleKneelingTexture = useTexture('/assets/worshipper-kneeling-mobile.png');
-  const femaleWalkingTexture = useTexture('/assets/female-worshipper-walking-mobile.png');
-  const femaleKneelingTexture = useTexture('/assets/female-worshipper-kneeling-mobile.png');
-  const sprite = useRef<Group>(null);
-  const isKneeling =
-    state === 'PRAYING' || state === 'BOWING' || state === 'OFFERING_FLOWERS';
-  const walkingTexture = female ? femaleWalkingTexture : maleWalkingTexture;
-  const kneelingTexture = female ? femaleKneelingTexture : maleKneelingTexture;
+  const walkBase = useTexture('/assets/female-walk.png');
+  const bowBase = useTexture('/assets/female-bow.png');
+  const standBase = useTexture('/assets/female-standing.png');
+
+  const textures = useMemo(() => {
+    // 4 frames quỳ lạy (female-bow.png, 4 cột x 1 hàng)
+    const bow = Array.from({ length: 4 }, (_, i) => {
+      const t = bowBase.clone();
+      t.repeat.set(0.25, 1);
+      t.offset.set(i * 0.25, 0);
+      return t;
+    });
+
+    // 4 frames đứng chắp tay & dâng lễ (female-standing.png, 4 cột x 1 hàng)
+    const standing = Array.from({ length: 4 }, (_, i) => {
+      const t = standBase.clone();
+      t.repeat.set(0.25, 1);
+      t.offset.set(i * 0.25, 0);
+      return t;
+    });
+
+    // 4 frames bước đi hướng về bàn thờ (female-walk.png, hàng trên)
+    const walkBack = Array.from({ length: 4 }, (_, i) => {
+      const t = walkBase.clone();
+      t.repeat.set(0.25, 0.5);
+      t.offset.set(i * 0.25, 0.5);
+      return t;
+    });
+
+    // 4 frames bước đi quay ra (female-walk.png, hàng dưới)
+    const walkFront = Array.from({ length: 4 }, (_, i) => {
+      const t = walkBase.clone();
+      t.repeat.set(0.25, 0.5);
+      t.offset.set(i * 0.25, 0);
+      return t;
+    });
+
+    return { bow, standing, walkBack, walkFront };
+  }, [walkBase, bowBase, standBase]);
+
+  const spriteRef = useRef<Group>(null);
+
+  const isWalkingBack =
+    state === 'WALKING_TO_GATE' ||
+    state === 'WALKING_TO_AISLE' ||
+    state === 'WALKING_TO_ALTAR' ||
+    state === 'SPAWNING';
+  const isWalkingFront = state === 'EXITING';
+  const isWalking = isWalkingBack || isWalkingFront;
+  const isBowing = state === 'BOWING';
+  const isPraying = state === 'PRAYING' || state === 'WAITING';
+  const isOffering = state === 'OFFERING_FLOWERS';
+
+  const stepIndex = Math.floor(elapsed * 5.5) % 4;
+
+  let currentTexture = textures.standing[0];
+  let planeWidth = 1.88;
+  let planeHeight = 2.65;
+  let posY = 1.18;
+
+  if (isWalkingBack) {
+    currentTexture = textures.walkBack[stepIndex];
+    planeWidth = 1.92;
+    planeHeight = 2.65;
+    posY = 1.18;
+  } else if (isWalkingFront) {
+    currentTexture = textures.walkFront[stepIndex];
+    planeWidth = 1.92;
+    planeHeight = 2.65;
+    posY = 1.18;
+  } else if (isBowing) {
+    // Quỳ lạy cúng Phật 10-20s (chu kỳ ~4.6s mỗi lạy, lạy 3 lạy trang nghiêm)
+    const cycleTime = 4.6;
+    const bowCycleProgress = (elapsed % cycleTime) / cycleTime;
+    let frame = 0;
+    if (bowCycleProgress < 0.18) frame = 0;
+    else if (bowCycleProgress < 0.38) frame = 1;
+    else if (bowCycleProgress < 0.58) frame = 2;
+    else if (bowCycleProgress < 0.80) frame = 3;
+    else if (bowCycleProgress < 0.92) frame = 2;
+    else frame = 0;
+    currentTexture = textures.bow[frame];
+    planeWidth = 1.98;
+    planeHeight = 2.55;
+    posY = frame === 3 ? 0.72 : frame >= 1 ? 0.82 : 0.92;
+  } else if (isOffering) {
+    const offerFrame = elapsed > 1.2 ? 3 : 2;
+    currentTexture = textures.standing[offerFrame];
+    planeWidth = 1.88;
+    planeHeight = 2.65;
+    posY = 1.18;
+  } else if (isPraying) {
+    currentTexture = textures.standing[1];
+    planeWidth = 1.88;
+    planeHeight = 2.65;
+    posY = 1.18;
+  }
 
   useFrame((frameState) => {
-    if (!sprite.current) return;
-    const walkingBob = isKneeling ? 0 : Math.abs(Math.sin(frameState.clock.elapsedTime * 6)) * 0.08;
-    sprite.current.position.y = walkingBob;
-    sprite.current.rotation.z = isKneeling ? 0 : Math.sin(frameState.clock.elapsedTime * 4) * 0.018;
+    if (!spriteRef.current) return;
+    const walkingBob = isWalking ? Math.abs(Math.sin(frameState.clock.elapsedTime * 6)) * 0.08 : 0;
+    spriteRef.current.position.y = posY + walkingBob;
   });
 
   return (
-    <group ref={sprite}>
-      <Billboard follow position={[0, isKneeling ? 0.75 : 1.3, 0]}>
+    <group ref={spriteRef}>
+      <Billboard follow position={[0, 0, 0]}>
         <mesh>
-          <planeGeometry args={[isKneeling ? 1.86 : 1.74, isKneeling ? 2.76 : 3.24]} />
+          <planeGeometry args={[planeWidth, planeHeight]} />
           <meshBasicMaterial
-            map={isKneeling ? kneelingTexture : walkingTexture}
+            map={currentTexture}
             transparent
             alphaTest={0.025}
             depthWrite={false}
@@ -136,17 +238,18 @@ function MobileWorshipper({
         </mesh>
       </Billboard>
       {showName && (
-        <CharacterNameLabel
-          name={name}
-          avatarUrl={avatarUrl}
-          position={[0, isKneeling ? 2.2 : 3.15, 0]}
+        <CharacterHeadOverlay
+          name={action.nickname}
+          avatarUrl={action.avatarUrl}
+          message={message}
+          position={[0, isBowing ? 2.15 : 2.75, 0]}
         />
       )}
     </group>
   );
 }
 
-function MobileOfferingBadge({
+function OfferingBadge({
   action,
   state,
 }: {
@@ -239,18 +342,19 @@ export function Character({
     }
     const gate = inside ? interiorGate : outdoorGate;
     const aisle = inside ? interiorAisle : outdoorCourtyard;
-    const shrine = inside ? interiorShrine : outdoorShrine;
-    const flowers = inside ? interiorFlowers : outdoorFlowers;
-    const offeringTarget = ceremony && action.actionType === 'OFFER_FLOWERS' ? flowers : shrine;
+    // Khu vực cắm hương riêng: trước lư hương chính ở cuối thảm đỏ
+    const incenseStation = inside
+      ? new Vector3(approachLane * 0.25, 0, 1.35)
+      : outdoorShrine;
     if (inside) {
       return [
         new Vector3(approachLane * 0.35, 0, gate.z),
-        new Vector3(approachLane, 0, aisle.z),
-        new Vector3(approachLane * 0.8, 0, interiorAltarStep.z),
-        new Vector3(approachLane * 0.7, 0, offeringTarget.z + altarRow * 0.42),
+        new Vector3(approachLane * 0.45, 0, aisle.z),
+        new Vector3(approachLane * 0.25, 0, interiorAltarStep.z),
+        incenseStation,
       ];
     }
-    return [gate, aisle, offeringTarget];
+    return [gate, aisle, incenseStation];
   }, [
     action.actionType,
     altarRow,
@@ -262,26 +366,18 @@ export function Character({
     worshipDistance,
   ]);
   const returnPath = useMemo(() => {
-    const visibleVisitors = mobile ? seatedVisitors.slice(0, 24) : seatedVisitors;
+    const visibleVisitors = mobile ? seatedVisitors.slice(0, 16) : seatedVisitors.slice(0, 24);
     const seatIndex = visibleVisitors.findIndex((visitor) => visitor.userId === action.userId);
     const [seatX, seatY, seatZ] = mobile
       ? getMobileSeatPosition(seatIndex >= 0 ? seatIndex : 0)
       : getSeatPosition(seatIndex >= 0 ? seatIndex : 0);
     if (!inside) return [exit];
     const side = seatX < 0 ? -1 : 1;
-    if (mobile) {
-      return [
-        new Vector3(side * 2, 0, 6.5),
-        new Vector3(side * 5.1, 0, 6.5),
-        new Vector3(side * 5.1, 0, seatZ),
-        new Vector3(seatX, seatY, seatZ),
-      ];
-    }
+    // Rời khu vực cắm hương, đi dạt sang mép thảm đỏ rồi vào chỗ ngồi 2 hàng bên dưới
     return [
-      new Vector3(side * 4.2, 0, 0.65),
-      new Vector3(side * 11.6, 0, 0.65),
-      new Vector3(side * 11.6, 0, seatZ),
-      new Vector3(seatX, seatY, seatZ),
+      new Vector3(side * 1.5, 0, 2.6),
+      new Vector3(side * (Math.abs(seatX) + 0.1), 0, 3.8),
+      new Vector3(seatX, 0, seatZ),
     ];
   }, [action.userId, inside, mobile, seatedVisitors]);
   useFrame((state, delta) => {
@@ -294,7 +390,8 @@ export function Character({
       0,
       1,
     );
-    const depthScale = inside ? 0.34 + depthProgress * 0.46 : 0.8;
+    // Nhân vật chỉ bé đi tầm 90% khi đi vào tới chánh điện (giữ kích thước to rõ, trang nghiêm)
+    const depthScale = inside ? 0.90 + depthProgress * 0.10 : 0.95;
     const smoothScale = MathUtils.lerp(
       group.scale.x,
       depthScale,
@@ -319,7 +416,7 @@ export function Character({
     }
     if (currentState === 'SPAWNING') {
       group.position.copy(spawn);
-      group.scale.setScalar(0.8);
+      group.scale.setScalar(1.0);
       targetIndex.current = 0;
       setState(action.actionId, 'WALKING_TO_GATE');
       return;
@@ -393,7 +490,14 @@ export function Character({
         offered.current = true;
         addFlower();
       }
-      if (elapsed.current > (currentState === 'OFFERING_FLOWERS' ? 3.2 : 2.4)) {
+      // Quỳ lạy cúng Phật tầm 10-20s (14 giây: lạy 3 lạy sâu ngũ thể đầu địa trang nghiêm)
+      const worshipDuration =
+        currentState === 'BOWING'
+          ? 14.0
+          : currentState === 'PRAYING'
+            ? (ceremony ? 3.0 : 12.0)
+            : 3.5;
+      if (elapsed.current > worshipDuration) {
         elapsed.current = 0;
         if (currentState === 'OFFERING_FLOWERS') setState(action.actionId, 'PRAYING');
         else if (currentState === 'PRAYING' && ceremony) setState(action.actionId, 'BOWING');
@@ -412,105 +516,15 @@ export function Character({
   });
   const carrying = ceremony && character.state !== 'EXITING';
   return (
-    <group ref={root} position={[spawn.x, spawn.y, spawn.z]} scale={0.8}>
-      {displayedMessage && <CharacterCommentBubble message={displayedMessage} mobile={mobile} />}
-      {mobile && <MobileOfferingBadge action={action} state={character.state} />}
-      {mobile && (
-        <MobileWorshipper
-          name={action.nickname}
-          state={character.state}
-          showName={!shouldHideName}
-          avatarUrl={action.avatarUrl}
-          female={isFemaleCharacter}
-        />
-      )}
-      <group ref={body} position={[0, 1.05, 0]} visible={!mobile}>
-        {!shouldHideName && (
-          <CharacterNameLabel
-            name={action.nickname}
-            avatarUrl={action.avatarUrl}
-            position={[0, 1.6, 0]}
-          />
-        )}
-        <mesh position={[0, 0.08, 0]} scale={[1, 1.08, 0.72]} castShadow>
-          <capsuleGeometry args={[0.38, 0.86, 8, 14]} />
-          <meshStandardMaterial color={color} />
-        </mesh>
-        <mesh position={[0, 0.92, 0]} scale={[0.9, 1.08, 0.9]} castShadow>
-          <sphereGeometry args={[0.34, 24, 18]} />
-          <meshStandardMaterial color="#dca77e" />
-        </mesh>
-        <mesh position={[0, 1.06, -0.12]} scale={[0.94, 0.56, 0.92]} castShadow>
-          <sphereGeometry args={[0.35, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.62]} />
-          <meshStandardMaterial color="#241714" roughness={0.9} />
-        </mesh>
-        <mesh position={[0, 0.92, 0.31]} scale={[0.42, 0.28, 0.35]}>
-          <sphereGeometry args={[0.12, 12, 8]} />
-          <meshStandardMaterial color="#c98d6d" />
-        </mesh>
-        <group ref={leftArm} position={[-0.48, 0.3, 0]}>
-          <mesh position={[0, -0.42, 0]} castShadow>
-            <capsuleGeometry args={[0.11, 0.65, 4, 8]} />
-            <meshStandardMaterial color="#dca77e" />
-          </mesh>
-          <mesh position={[0, -0.82, 0]}>
-            <sphereGeometry args={[0.13, 10, 8]} />
-            <meshStandardMaterial color="#dca77e" />
-          </mesh>
-        </group>
-        <group ref={rightArm} position={[0.48, 0.3, 0]}>
-          <mesh position={[0, -0.42, 0]} castShadow>
-            <capsuleGeometry args={[0.11, 0.65, 4, 8]} />
-            <meshStandardMaterial color="#dca77e" />
-          </mesh>
-          <mesh position={[0, -0.82, 0]}>
-            <sphereGeometry args={[0.13, 10, 8]} />
-            <meshStandardMaterial color="#dca77e" />
-          </mesh>
-        </group>
-        <group ref={leftLeg} position={[-0.2, -0.65, 0]}>
-          <mesh position={[0, -0.48, 0]} castShadow>
-            <capsuleGeometry args={[0.14, 0.75, 4, 8]} />
-            <meshStandardMaterial color="#28344c" />
-          </mesh>
-        </group>
-        <group ref={rightLeg} position={[0.2, -0.65, 0]}>
-          <mesh position={[0, -0.48, 0]} castShadow>
-            <capsuleGeometry args={[0.14, 0.75, 4, 8]} />
-            <meshStandardMaterial color="#28344c" />
-          </mesh>
-        </group>
-        {carrying && action.actionType === 'OFFER_FLOWERS' && (
-          <group position={[0, 0.2, 0.65]}>
-            <mesh>
-              <coneGeometry args={[0.28, 0.7, 9]} />
-              <meshStandardMaterial color="#4c8a45" />
-            </mesh>
-            {[-0.18, 0, 0.18].map((x, i) => (
-              <mesh key={i} position={[x, 0.42, 0]}>
-                <sphereGeometry args={[0.14, 10, 8]} />
-                <meshStandardMaterial color={i % 2 ? '#fff0f5' : '#ef5277'} />
-              </mesh>
-            ))}
-          </group>
-        )}
-        {carrying && action.actionType === 'OFFER_INCENSE' && (
-          <group position={[0, 0.18, 0.66]}>
-            <mesh castShadow>
-              <boxGeometry args={[0.72, 0.55, 0.58]} />
-              <meshStandardMaterial color="#b52d36" roughness={0.58} />
-            </mesh>
-            <mesh position={[0, 0.02, 0.3]}>
-              <boxGeometry args={[0.12, 0.58, 0.025]} />
-              <meshStandardMaterial color="#efc34e" metalness={0.3} />
-            </mesh>
-            <mesh position={[0, 0.31, 0]}>
-              <torusGeometry args={[0.18, 0.055, 8, 18]} />
-              <meshStandardMaterial color="#efc34e" metalness={0.3} />
-            </mesh>
-          </group>
-        )}
-      </group>
+    <group ref={root} position={[spawn.x, spawn.y, spawn.z]} scale={1.0}>
+      <OfferingBadge action={action} state={character.state} />
+      <DevoteeSprite
+        action={action}
+        state={character.state}
+        elapsed={elapsed.current}
+        showName={!shouldHideName}
+        message={displayedMessage}
+      />
     </group>
   );
 }

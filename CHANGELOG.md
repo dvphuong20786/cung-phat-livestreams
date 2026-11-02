@@ -1,5 +1,23 @@
 # Lịch sử thay đổi
 
+## [v0.16.1] - 2026-11-02
+- **Yêu cầu**: Sửa lỗi cú pháp Babel unexpected token ở cuối file `SeatedVisitors.tsx`.
+- **Chi tiết kỹ thuật**:
+  - Loại bỏ các thẻ đóng dư thừa (`</group>`, `);`, `}`) ở cuối `apps/web/src/game/components/SeatedVisitors.tsx`.
+  - Kiểm tra chạy lại `vite build` và xác nhận build thành công trơn tru.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Không có. Build production Vite và TypeScript typecheck đều hoàn tất thành công.
+
+## [v0.16.0] - 2026-11-02
+- **Yêu cầu**: Thay thế hình ảnh người que/khối thô bằng bộ assets Phật tử, hoạt ảnh cúi lạy, đệm sen và khói hương từ dự án chuaonline (PhatMTV3).
+- **Chi tiết kỹ thuật**:
+  - Sao chép toàn bộ bộ assets đồ họa từ `D:\WORK\HKD\another-products\chuaonline\PhatMTV3\app\public\assets\` vào `apps/web/public/assets/`, bao gồm: `female-walk.png`, `female-standing.png`, `female-bow.png`, `lotus-cushion.svg`, `luxury-cushion.svg`, `golden-lotus.svg`, `peach-blossom.svg`, `temple-warm-carpet.png`, `tiktok-gifts-atlas.png`, `top-supporter-frame.svg`.
+  - Thay thế các khối hình học người que 3D (`capsuleGeometry`, `sphereGeometry`) trong `apps/web/src/game/components/Character.tsx` bằng `DevoteeSprite` cắt frame spritesheet 2D sống động: bước đi vào chánh điện (walk cycle 4 frames), đứng niệm Phật/dâng hoa/hương (standing 4 frames) và quỳ lạy sát đất ngũ thể đầu địa (bow cycle 4 frames).
+  - Cập nhật `apps/web/src/game/components/SeatedVisitors.tsx`: Bỏ các hộp khối nâu và người que 3D, thay bằng đệm toà sen thêu vàng `lotus-cushion.svg` và Phật tử áo lam ngồi chắp tay niệm Phật, có hoạt ảnh cúi lạy nhẹ nhàng định kỳ.
+  - Cập nhật `apps/web/src/game/components/TempleInterior.tsx`: Nâng cấp làn khói hương `IncenseSmoke` uốn lượn bay lên mềm mại cùng đốm than đỏ rực sáng và ánh sáng dịu nhẹ ở đầu các nén nhang trên bàn thờ chính.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Toàn bộ 22 unit tests đều pass. Đã kiểm tra build TypeScript không có lỗi. Các texture frame được tạo và tái sử dụng hiệu quả, đảm bảo hiệu năng 60 FPS mượt mà.
+
 ## [v0.15.1] - 2026-10-31
 - **Yêu cầu**: Thay ni cô bằng nữ Phật tử có tóc và làm hoa/gift thật lớn, dễ nhìn trên mobile.
 - **Chi tiết kỹ thuật**:
