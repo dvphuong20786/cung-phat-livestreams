@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { templeGameActionPriority, type TempleGameAction } from '@live/shared';
 import { calculateActionMeritPoints } from './cultivationLevel';
 import { calculateSeatingDuration } from './seatingDuration';
+import { useInteractionEffectsStore } from './useInteractionEffectsStore';
 export type CharacterState =
   | 'SPAWNING'
   | 'WALKING_TO_GATE'
@@ -26,6 +27,8 @@ export interface StoredCharacter {
   meritPoints: number;
   level: number;
   rankName?: string;
+  watchTimeAwardedToday?: number;
+  gender?: 'male' | 'female';
 }
 type Quality = 'LOW' | 'MEDIUM' | 'HIGH';
 export interface RecentDonor {

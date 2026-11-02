@@ -9,6 +9,7 @@ import type {
   TempleGameAction,
 } from '@live/shared';
 import { useTempleGameStore, type StoredCharacter } from '../game/useTempleGameStore';
+import { useInteractionEffectsStore } from '../game/useInteractionEffectsStore';
 
 export function useSocket() {
   useEffect(() => {
@@ -32,7 +33,10 @@ export function useSocket() {
       }
     };
 
-    const event = (v: LiveEvent) => s().addEvent(v);
+    const event = (v: LiveEvent) => {
+      s().addEvent(v);
+      useInteractionEffectsStore.getState().triggerFromEvent(v);
+    };
     const stats = (v: Statistics) => s().setStats(v);
     const status = (v: ConnectionStatus) => s().setConnection(v);
     const error = (v: { message: string }) => s().setError(v.message);
@@ -45,9 +49,17 @@ export function useSocket() {
       g().setAllowSimulated(value.enabled);
     };
     const characterUpdated = (
-      c: Partial<StoredCharacter> & { userId: string; meritPoints: number },
+      c: Partial<StoredCharacter> & { userId: string; meritPoints: number; watchTimeAwardedToday?: number },
     ) => {
       if (c && c.userId) {
+        const oldChar = g().characterList.find((x: StoredCharacter) => x.userId === c.userId);
+        if (
+          oldChar &&
+          c.watchTimeAwardedToday !== undefined &&
+          c.watchTimeAwardedToday > (oldChar.watchTimeAwardedToday ?? 0)
+        ) {
+          useInteractionEffectsStore.getState().triggerWatchTimeOrbit(c.nickname || c.username);
+        }
         g().syncCharacters([c]);
       }
     };

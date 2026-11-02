@@ -242,6 +242,14 @@ class TempleAudioService {
   /**
    * Tiếng Khánh Đồng Dâng Hoa (Chime) - Trong trẻo ngân nga
    */
+  public playBell(intensity = 1.0): void {
+    this.playTempleBell(intensity);
+  }
+
+  public playMoktak(pitchVariance = 0): void {
+    this.playWoodenFish(pitchVariance);
+  }
+
   public playOfferingChime(): void {
     if (this.isMuted) return;
     const ctx = this.initContext();

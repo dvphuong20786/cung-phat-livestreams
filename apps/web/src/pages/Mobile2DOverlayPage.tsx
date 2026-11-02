@@ -5,6 +5,19 @@
  *
  * TIẾN ĐỘ PHÁT TRIỂN:
  * 1. ĐÃ CÓ:
+ *    - Tích hợp Hệ thống Hiệu ứng Tương tác Toàn diện (InteractionEffectsOverlay):
+ *      + Like: 10 Like -> 1-3 cánh hoa bay quanh nhân vật (1s); 100 Like -> mưa hoa nhỏ (2s).
+ *      + Comment: Bông sen nở sáng cạnh tên người chơi; "Nam mô A Di Đà Phật" -> hoa sen nở dưới chân.
+ *      + Share: Mưa hoa rơi từ trên màn hình 3s và thông báo chia sẻ livestream.
+ *      + Follow: Hoa sen nở & hào quang tỏa quanh nhân vật 3s và thông báo chào mừng.
+ *      + Thời gian xem (15 phút): Cánh hoa bay lượn quanh nhân vật 2s.
+ *      + Tặng Hoa: 1 hoa -> bay tới nhân vật; 5 hoa -> mưa hoa nhỏ; 10 hoa combo -> mưa hoa lớn toàn màn hình.
+ *      + Tặng Gift theo mốc coin: 1-9 (cụm cánh hoa), 10-49 (mưa hoa & sáng nhẹ), 50-99 (hoa sen nở & hào quang),
+ *        100-499 (mưa hoa toàn màn hình & banner tên gift), >=500 coin (Đại cảnh hoa sen hoàng kim & chuông khánh).
+ *      + Lên cấp (Level Up) & Chuyển cấp bậc (Rank Up): Hoa sen lớn phát quang, mờ nhân vật cũ đổi sprite mới.
+ *      + Tự động cắt Sprite Sheet hoa1.png (4x4 cánh hoa rơi) và hoa2.png (4x3 hoa sen phát quang blend screen).
+ *      + Hàng đợi ưu tiên (Priority Queue): Chuyển cấp > Gift >=500 > Gift 100-499 > Lên Level > Follow > Share > Like/Comment.
+ *      + Chống ghi nhận trùng bằng event ID và cho phép bật/tắt âm thanh hiệu ứng.
  *    - Nâng vị trí 3 Vị Thầy Chùa lên thêm 5~10px (top: 61.8% trên mobile, 51% trên desktop),
  *      đặt trang nghiêm sát chân bàn thờ Tam Bảo theo đúng ảnh phản hồi thực tế.
  *    - Nâng vị trí khách tới lễ lên thêm 5~10px (top: 63.2% trên mobile, 54% trên desktop),
@@ -37,10 +50,11 @@
  * 2. ĐANG CÓ:
  *    - Dựng toàn bộ đồ họa và chuyển động bằng thuần React DOM, CSS Clipper & CSS GPU transform.
  *    - Hoạt động nhẹ nhàng, mượt mà trên mọi thiết bị di động yếu không hỗ trợ WebGL tốt.
+ *    - Lớp phủ InteractionEffectsOverlay đón nhận sự kiện TikTok tương tác trực tiếp theo thời gian thực.
  *
  * 3. SẮP CÓ (HƯỚNG PHÁT TRIỂN TIẾP THEO):
  *    - Bổ sung hiệu ứng ánh nến lung linh 2D và khói trầm hương bay lượn ở lư hương.
- *    - Bổ sung hiệu ứng cánh hoa sen bay rơi khi có người tặng quà lớn.
+ *    - Bổ sung tùy biến âm thanh chuông mõ riêng cho từng loại quà tặng trong cài đặt Admin.
  * ============================================================================
  */
 
@@ -49,6 +63,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { templeGameActionPriority, type TempleGameAction } from '@live/shared';
 import { MeritLeaderboard } from '../game/components/MeritLeaderboard';
 import { RecentDonorsList } from '../game/components/RecentDonorsList';
+import { InteractionEffectsOverlay } from '../game/components/InteractionEffectsOverlay';
 import { TempleToolbar } from '../game/TempleToolbar';
 import type { CameraPreset, TempleTheme, WorshipDistance } from '../game/TempleScene';
 import { calculateSeatingDuration } from '../game/seatingDuration';
@@ -341,6 +356,8 @@ function DevoteeSprite2D({
           left: '-216px',
         }}
       />
+      {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
+      <InteractionEffectsOverlay />
     </div>
   );
 }
@@ -433,6 +450,8 @@ function DevoteeHeadBadge({
           <span>{action.nickname}</span>
         </div>
       )}
+      {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
+      <InteractionEffectsOverlay />
     </div>
   );
 }
@@ -478,6 +497,8 @@ function WoodenFish2D({ isAbbot = false }: { isAbbot?: boolean }) {
       </div>
       {/* Chiếc dùi gõ mõ */}
       <div className="mobile-2d-mallet absolute -right-2 top-0.5 h-3.5 w-0.5 rounded-full bg-[#c29663]" />
+      {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
+      <InteractionEffectsOverlay />
     </div>
   );
 }
@@ -573,6 +594,8 @@ function ChantingMonks2D({ mobile }: { mobile: boolean }) {
           />
         </div>
       ))}
+      {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
+      <InteractionEffectsOverlay />
     </div>
   );
 }
@@ -608,6 +631,8 @@ function OfferingBadge2D({
       {(action.quantity ?? 1) > 1 && (
         <div className="text-xs font-black text-amber-300">×{action.quantity}</div>
       )}
+      {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
+      <InteractionEffectsOverlay />
     </div>
   );
 }
@@ -642,6 +667,8 @@ function TempleEffects2D({ quality }: { quality: 'LOW' | 'MEDIUM' | 'HIGH' }) {
           />
         );
       })}
+      {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
+      <InteractionEffectsOverlay />
     </div>
   );
 }
@@ -733,6 +760,8 @@ function Mobile2DSeatedVisitors({
           </div>
         );
       })}
+      {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
+      <InteractionEffectsOverlay />
     </div>
   );
 }
@@ -778,6 +807,8 @@ function Mobile2DWaitingLine({
           +{actions.length - visibleActions.length} người đang chờ
         </div>
       )}
+      {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
+      <InteractionEffectsOverlay />
     </div>
   );
 }
@@ -1039,6 +1070,8 @@ function Mobile2DCharacter({
         pose={activePose}
         animTick={animTick}
       />
+      {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
+      <InteractionEffectsOverlay />
     </div>
   );
 }
@@ -1411,6 +1444,11 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
           <Eye size={16} />
         </button>
       )}
+
+      {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
+      <InteractionEffectsOverlay />
+      {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
+      <InteractionEffectsOverlay />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
 import { TempleToolbar } from '../game/TempleToolbar';
 import { MeritLeaderboard } from '../game/components/MeritLeaderboard';
 import { RecentDonorsList } from '../game/components/RecentDonorsList';
+import { InteractionEffectsOverlay } from '../game/components/InteractionEffectsOverlay';
 import { useTempleGameStore } from '../game/useTempleGameStore';
 import { useMonitorStore } from '../stores/useMonitorStore';
 import { templeAudio } from '../game/services/TempleAudioService';
@@ -165,6 +166,9 @@ export function TemplePage({
           </div>
         </>
       )}
+
+      {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
+      <InteractionEffectsOverlay />
     </div>
   );
 }

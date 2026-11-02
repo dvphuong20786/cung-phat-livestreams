@@ -5,6 +5,7 @@ import App from './App';
 import { useSocket } from './hooks/useSocket';
 import './index.css';
 import './game/mobile2d.css';
+import './game/interaction-effects.css';
 const TemplePage = lazy(() =>
   import('./pages/TemplePage').then((module) => ({ default: module.TemplePage })),
 );

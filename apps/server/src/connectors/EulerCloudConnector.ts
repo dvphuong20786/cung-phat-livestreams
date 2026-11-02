@@ -41,7 +41,7 @@ export class EulerCloudConnector extends EventEmitter {
   async connect(username: string, autoReconnect = true): Promise<void> {
     await this.disconnect(false);
     const apiKey = getEulerApiKey();
-    if (!apiKey) throw new Error('Thiếu EULER_API_KEY (hoặc TIKTOK_SIGN_API_KEY) trong file .env.');
+    if (!apiKey) throw new Error('Thiếu TIKTOK_SIGN_API_KEY trong file .env.');
     this.explicitDisconnect = false;
     this.username = username;
     this.autoReconnect = autoReconnect;
@@ -144,7 +144,7 @@ export class EulerCloudConnector extends EventEmitter {
 }
 
 export function getEulerApiKey(): string | undefined {
-  return process.env.EULER_API_KEY?.trim() || process.env.TIKTOK_SIGN_API_KEY?.trim() || undefined;
+  return process.env.TIKTOK_SIGN_API_KEY?.trim() || undefined;
 }
 export function getCloudCloseMessage(code: number, reason = ''): string {
   if (code === ClientCloseCode.INVALID_AUTH)

@@ -1,5 +1,23 @@
 # Lịch sử thay đổi
 
+## [v0.26.3] - 2026-11-02
+- **Yêu cầu**: Sửa dứt điểm lỗi backend vẫn báo thiếu `TIKTOK_SIGN_API_KEY` dù biến đã có trong `.env`.
+- **Chi tiết kỹ thuật**:
+  - `apps/server/src/index.ts`: nạp `.env` bằng đường dẫn tuyệt đối tính từ vị trí mã nguồn/build về thư mục gốc monorepo, không còn phụ thuộc working directory của `pnpm`, package filter hoặc file `.bat`.
+  - Đã dừng đúng backend cũ trên cổng 3001 và khởi động backend mới từ `apps/server` để kiểm chứng trường hợp từng gây lỗi.
+  - `/health` sau khi khởi động lại trả về `eulerApiKeyConfigured: true` và `tiktokSignConfigured: true`.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 43/43 unit test và build backend thành công. Chưa chạy lại build toàn web vì lỗi âm thanh ngoài phạm vi đã xác định ở lượt trước.
+
+## [v0.26.2] - 2026-11-02
+- **Yêu cầu**: Xóa biến trùng `EULER_API_KEY`, chỉ giữ một biến API key EulerStream và giải thích mục đích của key.
+- **Chi tiết kỹ thuật**:
+  - `.env` và `.env.1`: xóa dòng `EULER_API_KEY`, giữ nguyên `TIKTOK_SIGN_API_KEY` hiện có mà không hiển thị hoặc thay đổi giá trị bí mật.
+  - `.env.example` và `README.md`: chuẩn hóa hướng dẫn Cloud WebSocket và direct connector cùng đọc `TIKTOK_SIGN_API_KEY`.
+  - `EulerCloudConnector.ts`: bỏ fallback `EULER_API_KEY`; thông báo thiếu cấu hình giờ chỉ yêu cầu `TIKTOK_SIGN_API_KEY`.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 43/43 unit test và build riêng backend thành công. Build toàn workspace bị dừng bởi lỗi có sẵn ngoài phạm vi thay đổi: `useInteractionEffectsStore.ts` gọi `playBell`/`playMoktak` chưa tồn tại trên `TempleAudioService`.
+
 ## [v0.26.1] - 2026-11-02
 - **Yêu cầu**: Đồng bộ hàng chờ và điều phối ưu tiên từ `/overlay-mobile-2d` sang `/overlay-2d`.
 - **Chi tiết kỹ thuật**:

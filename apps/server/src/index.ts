@@ -1,8 +1,9 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { EventService } from './services/EventService.js';
@@ -11,6 +12,13 @@ import { CharacterStore } from './services/CharacterStore.js';
 import { TikTokConnector } from './connectors/TikTokConnector.js';
 import { EulerCloudConnector, getEulerApiKey } from './connectors/EulerCloudConnector.js';
 import { setupSockets } from './socket/socketServer.js';
+
+// Luôn đọc file .env ở thư mục gốc monorepo, không phụ thuộc lệnh được chạy từ đâu.
+const projectRootEnvPath = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../../.env',
+);
+dotenv.config({ path: projectRootEnvPath });
 
 const port = Number(process.env.SERVER_PORT || 3001);
 const origin = process.env.WEB_ORIGIN || 'http://localhost:5173';

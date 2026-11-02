@@ -21,10 +21,10 @@ Mặc định server dùng EulerStream Cloud WebSocket (`cloud`), phù hợp v�
 
 ```env
 TIKTOK_CONNECTION_MODE=cloud
-EULER_API_KEY=your_eulerstream_api_key
+TIKTOK_SIGN_API_KEY=your_eulerstream_api_key
 ```
 
-Muốn quay lại connector trực tiếp cũ, đặt `TIKTOK_CONNECTION_MODE=direct` và `TIKTOK_SIGN_API_KEY`; cách này cần quyền TikTok LIVE Signature. Khởi động lại server sau khi đổi `.env`. Không đưa API key vào frontend hoặc commit lên Git; `.env` đã nằm trong `.gitignore`. Chế độ simulator và toàn bộ chùa 3D không cần API key.
+`TIKTOK_SIGN_API_KEY` là API key EulerStream dùng để xác thực kết nối TikTok LIVE. Ở mode `cloud`, key gói Community có thể mở Cloud WebSocket; mode `direct` cần key có quyền TikTok LIVE Signature/Business. Khởi động lại server sau khi đổi `.env`. Không đưa API key vào frontend hoặc commit lên Git; `.env` đã nằm trong `.gitignore`. Chế độ simulator và toàn bộ chùa 3D không cần API key.
 
 Khi EulerStream trả mã `4429` (quá nhiều kết nối/request), server chuyển sang trạng thái lỗi và **không tự reconnect** để tránh tiêu thêm quota. Hãy đóng Cloud WebSocket cũ trong dashboard EulerStream hoặc chờ giới hạn được reset, rồi bấm **Kết nối** lại. Các lỗi mạng tạm thời vẫn retry theo exponential backoff, tối đa 30 giây; simulator vẫn dùng bình thường.
 
