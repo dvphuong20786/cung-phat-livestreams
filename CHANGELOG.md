@@ -1,5 +1,27 @@
 # Lịch sử thay đổi
 
+## [v0.22.4] - 2026-11-02
+- **Yêu cầu**: Sửa rò rỉ bộ nhớ khi người dùng tải và đổi nhiều file nhạc nền từ máy tính.
+- **Chi tiết kỹ thuật**:
+  - `TempleAudioService.ts`: thu hồi `blob:` URL cũ bằng `URL.revokeObjectURL()` khi chuyển sang file hoặc preset khác.
+  - Giữ nguyên object URL của bài đang phát để nhạc không bị ngắt khi người dùng rời trang Cài đặt âm thanh.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 28/28 unit test đạt; TypeScript web và Vite production build thành công.
+  - Vite vẫn cảnh báo chunk `TempleToolbar` khoảng 882 KB; đây là cảnh báo tối ưu hiệu năng, không làm build thất bại.
+
+## [v0.22.3] - 2026-11-02
+- **Yêu cầu**: Cải tiến cấu hình nhạc nền BGM thành Combobox chọn bài có sẵn, hỗ trợ nạp file trực tiếp từ máy tính và tạo sẵn file âm thanh mẫu trong thư mục audio.
+- **Chi tiết kỹ thuật**:
+  - `AudioSettingsPanel.tsx`:
+    - Thay thế ô nhập URL thô bằng thẻ `<select>` (Combobox) với các tùy chọn bài nhạc mẫu có sẵn (`/audio/bgm-thien-tinh-tam.wav`, `/audio/bgm.wav`), chế độ âm thiền tự sinh (`synth`) và tùy chọn nhập URL tùy biến.
+    - Bổ sung nút "Chọn file nhạc từ máy tính (.mp3, .wav)" qua `<input type="file">` giúp người dùng nạp bài nhạc bất kỳ từ máy tính để phát ngay lập tức bằng `URL.createObjectURL(file)`.
+    - Bổ sung bảng hướng dẫn nguồn tải nhạc nền Phật giáo (Nam Mô A Di Đà Phật, Chú Đại Bi, YouTube Audio Library, Pixabay Music, FreePD).
+  - `TempleAudioService.ts`: Bổ sung hàm `setBgmTrack(url)` và `getCurrentBgmUrl()` hỗ trợ chuyển đổi linh hoạt giữa các track BGM, cập nhật tức thời khi người dùng chọn trong combobox.
+  - `apps/web/public/audio/`: Tạo sẵn 2 file âm thanh chuẩn 16-bit PCM Stereo 44.1kHz (`bgm-thien-tinh-tam.wav` và `bgm.wav`) với âm sắc chuông thiền Tây Tạng êm dịu.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 28/28 unit tests passed. TypeScript web/server compile không có lỗi.
+
+
 ## [v0.22.2] - 2026-11-02
 - **Yêu cầu**: Sửa hạn mức tích điểm giữa các buổi livestream và đồng bộ username mới của nhân vật vào SQLite.
 - **Chi tiết kỹ thuật**:

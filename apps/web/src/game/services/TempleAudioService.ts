@@ -7,6 +7,7 @@ class TempleAudioService {
   private isMuted: boolean = true;
   private volume: number = 0.7;
   private bgmAudio: HTMLAudioElement | null = null;
+  private currentBgmUrl: string = '/audio/bgm-thien-tinh-tam.wav';
   private isBgmPlaying: boolean = false;
   private ambientOscillators: OscillatorNode[] = [];
 
@@ -21,6 +22,10 @@ class TempleAudioService {
       if (savedVol !== null) {
         const v = parseFloat(savedVol);
         if (!isNaN(v)) this.volume = Math.max(0, Math.min(1, v));
+      }
+      const savedBgm = localStorage.getItem('temple_bgm_url');
+      if (savedBgm) {
+        this.currentBgmUrl = savedBgm;
       }
     }
   }
@@ -58,6 +63,10 @@ class TempleAudioService {
     return this.volume;
   }
 
+  public getCurrentBgmUrl(): string {
+    return this.currentBgmUrl;
+  }
+
   public toggleMute(): boolean {
     this.setMuted(!this.isMuted);
     return this.isMuted;
@@ -83,6 +92,32 @@ class TempleAudioService {
     const ctx = this.initContext();
     if (this.masterGain && ctx && !this.isMuted) {
       this.masterGain.gain.setTargetAtTime(this.volume, ctx.currentTime, 0.05);
+    }
+    if (this.bgmAudio) {
+      this.bgmAudio.volume = this.volume * 0.6;
+    }
+  }
+
+  public setBgmTrack(url: string): void {
+    const previousBgmUrl = this.currentBgmUrl;
+
+    if (this.bgmAudio) {
+      this.bgmAudio.pause();
+      this.bgmAudio = null;
+    }
+    this.stopAmbientDrone();
+
+    // URL blob giữ dữ liệu file trong bộ nhớ. Khi đổi bài phải thu hồi URL cũ,
+    // nhưng vẫn giữ URL hiện tại để nhạc tiếp tục phát khi rời trang cài đặt.
+    if (previousBgmUrl !== url && previousBgmUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previousBgmUrl);
+    }
+
+    this.currentBgmUrl = url;
+    localStorage.setItem('temple_bgm_url', url);
+
+    if (!this.isMuted && this.isBgmPlaying) {
+      this.startBgm();
     }
   }
 
@@ -141,7 +176,6 @@ class TempleAudioService {
     if (!ctx || !this.sfxGain) return;
 
     const t = ctx.currentTime;
-    // Tần số cơ bản của đại hồng chung (Khoảng nốt C3 / F2 trầm)
     const rootFreq = 216;
     const harmonics = [
       { f: rootFreq, gain: 0.85, decay: 5.5 },
@@ -157,8 +191,6 @@ class TempleAudioService {
 
       osc.type = 'sine';
       osc.frequency.setValueAtTime(h.f, t);
-
-      // Tremolo chấn động kim loại nhẹ
       osc.frequency.linearRampToValueAtTime(h.f * 0.996, t + h.decay);
 
       gain.gain.setValueAtTime(0.001, t);
@@ -205,16 +237,20 @@ class TempleAudioService {
   }
 
   /**
-   * Nhạc nền chánh điện (BGM):
-   * Tự động ưu tiên phát file /audio/bgm.mp3 nếu bạn bỏ file vào,
-   * hoặc phát nhạc thiền Ambient Singing Bowl tự sinh êm dịu nếu chưa có file MP3.
+   * Nhạc nền chánh điện (BGM)
    */
   public startBgm(): void {
     if (this.isMuted) return;
     this.initContext();
 
+    if (this.currentBgmUrl === 'synth') {
+      this.startAmbientDrone();
+      this.isBgmPlaying = true;
+      return;
+    }
+
     if (!this.bgmAudio) {
-      this.bgmAudio = new Audio('/audio/bgm.mp3');
+      this.bgmAudio = new Audio(this.currentBgmUrl);
       this.bgmAudio.loop = true;
       this.bgmAudio.volume = this.volume * 0.6;
     }
@@ -225,9 +261,9 @@ class TempleAudioService {
         this.isBgmPlaying = true;
       })
       .catch(() => {
-        // Nếu không có file /audio/bgm.mp3 hoặc chưa tải được,
-        // phát tiếng chuông thiền vi vu Ambient Meditation Drone
+        // Fallback tự sinh âm thiền nếu không tải được file
         this.startAmbientDrone();
+        this.isBgmPlaying = true;
       });
   }
 
@@ -252,8 +288,7 @@ class TempleAudioService {
 
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
-
-      gain.gain.setValueAtTime(0.02, ctx.currentTime);
+      gain.gain.setValueAtTime(0.025, ctx.currentTime);
 
       osc.connect(gain);
       gain.connect(this.bgmGain!);
@@ -275,4 +310,3 @@ class TempleAudioService {
 }
 
 export const templeAudio = new TempleAudioService();
-

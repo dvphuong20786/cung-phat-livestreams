@@ -1,18 +1,69 @@
-import { useState, useEffect } from 'react';
-import { Music, Volume2, VolumeX, Bell, Play, Pause, Disc3, Sparkles } from 'lucide-react';
+import { useState, useRef } from 'react';
+import {
+  Music,
+  Volume2,
+  VolumeX,
+  Bell,
+  Play,
+  Pause,
+  Disc3,
+  Upload,
+  ExternalLink,
+  HelpCircle,
+  FileAudio,
+} from 'lucide-react';
 import { templeAudio } from '../../game/services/TempleAudioService';
+
+interface PresetTrack {
+  id: string;
+  label: string;
+  url: string;
+  description: string;
+}
+
+const PRESET_TRACKS: PresetTrack[] = [
+  {
+    id: 'thien-tinh-tam',
+    label: 'Nhạc chuông thiền tĩnh tâm (Có sẵn)',
+    url: '/audio/bgm-thien-tinh-tam.wav',
+    description: 'Hòa âm chuông thiền Tây Tạng êm dịu, tạo không gian trang nghiêm',
+  },
+  {
+    id: 'bgm-default',
+    label: 'Nhạc chánh điện mặc định (Có sẵn)',
+    url: '/audio/bgm.wav',
+    description: 'Bản nhạc nền chánh điện tiêu chuẩn trong thư mục public/audio/',
+  },
+  {
+    id: 'synth-drone',
+    label: 'Nhạc thiền Singing Bowl (Tự sinh trực tiếp)',
+    url: 'synth',
+    description: 'Tự động tạo âm thiền thanh tịnh liên tục không phụ thuộc file ngoài',
+  },
+  {
+    id: 'custom-input',
+    label: 'Đường dẫn nhạc tùy chỉnh (URL)',
+    url: '',
+    description: 'Nhập link file nhạc online hoặc đường dẫn file tùy ý',
+  },
+];
 
 export function AudioSettingsPanel() {
   const [isMuted, setIsMuted] = useState(() => templeAudio.getMuted());
   const [volume, setVolume] = useState(() => templeAudio.getVolume());
   const [isPlayingTestBgm, setIsPlayingTestBgm] = useState(false);
-  const [customBgmUrl, setCustomBgmUrl] = useState(() => {
-    return localStorage.getItem('temple_bgm_url') || '/audio/bgm.mp3';
-  });
 
-  useEffect(() => {
-    localStorage.setItem('temple_bgm_url', customBgmUrl);
-  }, [customBgmUrl]);
+  const initialUrl = templeAudio.getCurrentBgmUrl();
+  const matchedPreset = PRESET_TRACKS.find((t) => t.url === initialUrl);
+  const [selectedTrackId, setSelectedTrackId] = useState<string>(
+    matchedPreset ? matchedPreset.id : 'custom-input',
+  );
+  const [customBgmUrl, setCustomBgmUrl] = useState(() =>
+    matchedPreset && matchedPreset.id !== 'custom-input' ? '' : initialUrl,
+  );
+  const [uploadedFileName, setUploadedFileName] = useState<string>('');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleToggleMute = () => {
     const next = templeAudio.toggleMute();
@@ -26,6 +77,51 @@ export function AudioSettingsPanel() {
       templeAudio.setMuted(false);
       setIsMuted(false);
     }
+  };
+
+  const handleSelectTrack = (trackId: string) => {
+    setSelectedTrackId(trackId);
+    const track = PRESET_TRACKS.find((t) => t.id === trackId);
+    if (track && track.id !== 'custom-input') {
+      templeAudio.setBgmTrack(track.url);
+      if (isPlayingTestBgm) {
+        templeAudio.startBgm();
+      }
+    } else if (customBgmUrl.trim()) {
+      templeAudio.setBgmTrack(customBgmUrl.trim());
+      if (isPlayingTestBgm) {
+        templeAudio.startBgm();
+      }
+    }
+  };
+
+  const handleCustomUrlChange = (url: string) => {
+    setCustomBgmUrl(url);
+    if (selectedTrackId === 'custom-input' && url.trim()) {
+      templeAudio.setBgmTrack(url.trim());
+      if (isPlayingTestBgm) {
+        templeAudio.startBgm();
+      }
+    }
+  };
+
+  // Tải file trực tiếp từ máy tính
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const objectUrl = URL.createObjectURL(file);
+    setUploadedFileName(file.name);
+    setSelectedTrackId('custom-input');
+    setCustomBgmUrl(objectUrl);
+    templeAudio.setBgmTrack(objectUrl);
+
+    if (isMuted) {
+      templeAudio.setMuted(false);
+      setIsMuted(false);
+    }
+    templeAudio.startBgm();
+    setIsPlayingTestBgm(true);
   };
 
   const handleTestWoodenFish = () => {
@@ -68,7 +164,7 @@ export function AudioSettingsPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Khối điều khiển chính */}
+      {/* Khối điều khiển âm thanh tổng */}
       <section className="card p-6 border-amber-500/20 bg-gradient-to-b from-[#18110c]/90 to-[#0e0906]/95 text-amber-50 shadow-2xl backdrop-blur-xl">
         <div className="flex items-center justify-between border-b border-amber-500/20 pb-4">
           <div className="flex items-center gap-3">
@@ -116,42 +212,148 @@ export function AudioSettingsPanel() {
         </div>
       </section>
 
-      {/* Khối nhạc nền BGM */}
+      {/* Khối chọn Nhạc Nền (BGM) qua Combobox */}
       <section className="card p-6 border-white/10 bg-[#0d111e]/90 text-slate-200">
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <div className="flex items-center gap-2">
             <Disc3 size={18} className="text-violet-400" />
-            <h3 className="font-bold text-sm text-slate-100">Nhạc nền chánh điện (BGM)</h3>
+            <h3 className="font-bold text-sm text-slate-100">Chọn Nhạc Nền Chánh Điện (BGM)</h3>
           </div>
           <button
             type="button"
             onClick={handleToggleBgm}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
               isPlayingTestBgm
-                ? 'border border-violet-400 bg-violet-600 text-white'
+                ? 'border border-violet-400 bg-violet-600 text-white shadow-lg shadow-violet-600/30'
                 : 'border border-white/15 bg-white/5 text-slate-300 hover:bg-white/10'
             }`}
           >
             {isPlayingTestBgm ? <Pause size={14} /> : <Play size={14} />}
-            <span>{isPlayingTestBgm ? 'Dừng nhạc' : 'Nghe thử nhạc'}</span>
+            <span>{isPlayingTestBgm ? 'Dừng phát nhạc' : 'Nghe thử nhạc'}</span>
           </button>
         </div>
 
-        <div className="mt-4 space-y-3 text-xs">
+        <div className="mt-4 space-y-4 text-xs">
+          {/* Combobox chọn bài nhạc */}
           <div>
-            <label className="block font-medium text-slate-300 mb-1">
-              Đường dẫn file nhạc nền (.mp3 hoặc .wav)
+            <label className="block font-medium text-slate-300 mb-1.5">
+              Danh sách bài nhạc nền có sẵn:
             </label>
-            <input
-              type="text"
-              value={customBgmUrl}
-              onChange={(e) => setCustomBgmUrl(e.target.value)}
-              placeholder="/audio/bgm.mp3 hoặc URL nhạc online"
-              className="field w-full text-xs font-mono"
-            />
-            <p className="mt-1 text-[11px] text-slate-400">
-              💡 Bạn chỉ cần copy file nhạc vào thư mục <code className="text-amber-300">apps/web/public/audio/bgm.mp3</code>, hệ thống sẽ tự động phát lặp lại. Nếu chưa có file MP3, hệ thống sẽ tự phát nhạc thiền thanh tịnh Ambient Drone.
+            <select
+              value={selectedTrackId}
+              onChange={(e) => handleSelectTrack(e.target.value)}
+              className="field w-full text-xs font-medium bg-slate-900 border-white/15 text-amber-100 py-2"
+            >
+              {PRESET_TRACKS.map((track) => (
+                <option key={track.id} value={track.id}>
+                  {track.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-[11px] text-slate-400">
+              {PRESET_TRACKS.find((t) => t.id === selectedTrackId)?.description}
             </p>
+          </div>
+
+          {/* Nút tải file nhạc trực tiếp từ máy tính */}
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="audio/*"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 rounded-lg border border-amber-400/40 bg-gradient-to-r from-amber-500/20 to-orange-500/20 px-3.5 py-2 font-bold text-amber-200 transition hover:border-amber-300 hover:bg-amber-500/30"
+            >
+              <Upload size={14} />
+              <span>Tải file nhạc từ máy tính (.mp3, .wav)</span>
+            </button>
+            {uploadedFileName && (
+              <div className="flex items-center gap-1.5 text-[11px] text-emerald-300">
+                <FileAudio size={14} />
+                <span className="font-semibold">Đang nạp file:</span>
+                <span className="underline truncate max-w-xs">{uploadedFileName}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Ô nhập link tùy chỉnh nếu chọn Tùy chỉnh */}
+          {selectedTrackId === 'custom-input' && (
+            <div className="space-y-1">
+              <label className="block font-medium text-slate-300">
+                Hoặc nhập đường dẫn / URL file nhạc:
+              </label>
+              <input
+                type="text"
+                value={customBgmUrl}
+                onChange={(e) => handleCustomUrlChange(e.target.value)}
+                placeholder="/audio/ten-file.mp3 hoặc https://..."
+                className="field w-full text-xs font-mono"
+              />
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Hướng dẫn chi tiết: Lấy nhạc ở đâu? */}
+      <section className="card p-6 border-amber-500/25 bg-[#171109]/90 text-amber-100">
+        <div className="flex items-center gap-2 border-b border-amber-500/20 pb-3">
+          <HelpCircle size={18} className="text-amber-400" />
+          <h3 className="font-bold text-sm text-amber-200 font-serif">
+            Lấy file nhạc nền Phật giáo ở đâu?
+          </h3>
+        </div>
+
+        <div className="mt-3 space-y-3 text-xs leading-relaxed text-amber-200/80">
+          <p>
+            Bạn có thể dễ dàng tải các bản nhạc tụng kinh hoặc nhạc thiền hay nhất qua các nguồn sau:
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-amber-500/20 bg-amber-950/30 p-3">
+              <div className="font-bold text-amber-300 mb-1">1. Nhạc Tụng Kinh & Niệm Phật (MP3)</div>
+              <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-300">
+                <li>
+                  <strong>Nam Mô A Di Đà Phật</strong> (Thầy Thích Trí Thoát tụng kinh hoặc nhạc niệm Phật du dương).
+                </li>
+                <li>
+                  <strong>Chú Đại Bi</strong> (phiên bản tiếng Phạn hoặc tiếng Việt êm dịu).
+                </li>
+                <li>
+                  Có thể tìm và tải MP3 miễn phí từ <em>Phatam.com</em>, <em>Chiasenhac</em> hoặc YouTube.
+                </li>
+              </ul>
+            </div>
+
+            <div className="rounded-xl border border-amber-500/20 bg-amber-950/30 p-3">
+              <div className="font-bold text-amber-300 mb-1">2. Nhạc Thiền Không Bản Quyền (Royalty-Free)</div>
+              <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-300">
+                <li>
+                  <strong>YouTube Audio Library</strong>: Tìm từ khóa <em>"Meditation"</em>, <em>"Zen"</em>, <em>"Temple"</em>.
+                </li>
+                <li>
+                  <strong>Pixabay Music</strong>: Rất nhiều bản nhạc sáo trúc, chuông xoay Tây Tạng miễn phí 100%.
+                </li>
+                <li>
+                  <strong>Archive.org</strong>: Kho tàng tụng kinh truyền thống các chùa.
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-amber-500/10 border border-amber-400/30 p-2.5 text-[11px] text-amber-100">
+            👉 <strong>Cách sử dụng:</strong> Sau khi tải file <code>.mp3</code> hoặc <code>.wav</code> về máy tính:
+            <ol className="list-decimal pl-4 mt-1 space-y-0.5">
+              <li>
+                <strong>Cách 1 (Nhanh nhất):</strong> Bấm nút <code>[Tải file nhạc từ máy tính]</code> ở trên, chọn file và hệ thống sẽ phát ngay lập tức.
+              </li>
+              <li>
+                <strong>Cách 2 (Cố định):</strong> Copy file vào thư mục dự án <code>apps/web/public/audio/</code> (ví dụ: đổi tên thành <code>bgm.mp3</code> hoặc <code>bgm.wav</code>).
+              </li>
+            </ol>
           </div>
         </div>
       </section>
@@ -207,4 +409,3 @@ export function AudioSettingsPanel() {
     </div>
   );
 }
-
