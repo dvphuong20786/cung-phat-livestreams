@@ -44,6 +44,22 @@ describe('Euler Cloud WebSocket', () => {
       }),
     ).toMatchObject({ type: 'GIFT', gift: { name: 'Rose', quantity: 5, repeatEnd: true } });
   });
+  it('reads a TikTok avatar from the nested avatar structures', () => {
+    const event = normalizeCloudMessage({
+      type: 'WebcastChatMessage',
+      data: {
+        comment: 'Nam mô A Di Đà Phật',
+        user: {
+          userId: '1',
+          uniqueId: 'thien_tam',
+          nickname: 'Thiện Tâm',
+          avatarMedium: { urlList: ['https://p16-sign.tiktokcdn.com/avatar.jpeg'] },
+        },
+      },
+    });
+
+    expect(event?.user.avatarUrl).toBe('https://p16-sign.tiktokcdn.com/avatar.jpeg');
+  });
   it('explains quota and offline close codes', () => {
     expect(getCloudCloseMessage(4429)).toContain('dừng tự reconnect');
     expect(getCloudCloseMessage(4404)).toContain('không phát LIVE');

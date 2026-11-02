@@ -42,7 +42,7 @@ app.get('/health', (_q, r) =>
 );
 
 app.get('/api/characters', (_q, r) => {
-  r.json({ ok: true, data: characterStore.getAllCharacters() });
+  r.json({ ok: true, data: characterStore.getRealCharacters() });
 });
 
 app.get('/api/characters/:userId', (q, r) => {

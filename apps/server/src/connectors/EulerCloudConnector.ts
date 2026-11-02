@@ -243,16 +243,34 @@ function readNumber(value: unknown, fallback: number): number {
   return Number.isFinite(number) && number > 0 ? number : fallback;
 }
 function readAvatarUrl(user: JsonRecord): string | undefined {
-  const image = isRecord(user.profilePicture)
-    ? user.profilePicture
-    : isRecord(user.avatarThumb)
-      ? user.avatarThumb
-      : undefined;
-  if (!image) return undefined;
-  const urls = Array.isArray(image.urlList)
-    ? image.urlList
-    : Array.isArray(image.url_list)
-      ? image.url_list
-      : [];
-  return readString(urls[0]);
+  const directAvatarUrl =
+    readString(user.profilePictureUrl) ||
+    readString(user.avatarUrl) ||
+    readString(user.avatar_url) ||
+    readString(user.avatarThumb) ||
+    readString(user.avatarMedium) ||
+    readString(user.avatarLarger);
+  if (directAvatarUrl) return directAvatarUrl;
+
+  const imageCandidates = [
+    user.profilePicture,
+    user.avatarThumb,
+    user.avatarMedium,
+    user.avatarLarger,
+  ];
+  for (const imageCandidate of imageCandidates) {
+    if (!isRecord(imageCandidate)) continue;
+
+    const urls = Array.isArray(imageCandidate.urlList)
+      ? imageCandidate.urlList
+      : Array.isArray(imageCandidate.url_list)
+        ? imageCandidate.url_list
+        : Array.isArray(imageCandidate.urls)
+          ? imageCandidate.urls
+          : [];
+    const avatarUrl = readString(urls[0]) || readString(imageCandidate.url);
+    if (avatarUrl) return avatarUrl;
+  }
+
+  return undefined;
 }

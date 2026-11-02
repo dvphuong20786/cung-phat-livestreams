@@ -4,10 +4,8 @@ import { useTempleGameStore } from '../useTempleGameStore';
 
 export function MeritLeaderboard({
   mobile = false,
-  hideSimulated = false,
 }: {
   mobile?: boolean;
-  hideSimulated?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const characterList = useTempleGameStore((s) => s.characterList);
@@ -31,9 +29,8 @@ export function MeritLeaderboard({
   const topDonors = characterList
     .filter((char) => {
       if (char.meritPoints <= 0) return false;
-      if (hideSimulated && (char.userId.startsWith('sim-') || char.username?.startsWith('sim_'))) {
-        return false;
-      }
+      if (char.isSimulated) return false;
+      if (char.userId.startsWith('sim-') || char.username?.startsWith('sim_')) return false;
       return true;
     })
     .slice(0, 5)

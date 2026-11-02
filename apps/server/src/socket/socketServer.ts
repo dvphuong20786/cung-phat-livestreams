@@ -18,20 +18,25 @@ export function setupSockets(
   let gamePaused = false;
 
   const publish = (event: LiveEvent, alreadyProcessed = false) => {
-    if (!alreadyProcessed) events.process(event);
-    io.emit('tiktok:event', event);
-    io.emit('stats:update', events.stats.snapshot());
-
     let charData: { meritPoints?: number; level?: number; rankName?: string } = {};
     if (characterStore) {
       const { character } = characterStore.awardPointsForEvent(event);
+      // Các event tiếp theo dùng chung ID bền vững đã lưu trong SQLite.
+      event.user.id = character.userId;
+      event.user.username = character.username;
+      event.user.nickname = character.nickname;
+      if (character.avatarUrl) event.user.avatarUrl = character.avatarUrl;
       charData = {
         meritPoints: character.meritPoints,
         level: character.level,
         rankName: character.rankName,
       };
-      io.emit('character:updated', character);
+      if (!character.isSimulated) io.emit('character:updated', character);
     }
+
+    if (!alreadyProcessed) events.process(event);
+    io.emit('tiktok:event', event);
+    io.emit('stats:update', events.stats.snapshot());
 
     const action = templeGameActionFor(event);
     if (action) {
@@ -49,7 +54,7 @@ export function setupSockets(
   tiktok.on('error-safe', (message) => io.emit('system:error', { message }));
 
   io.on('connection', (socket) => {
-    const characters = characterStore ? characterStore.getAllCharacters() : [];
+    const characters = characterStore ? characterStore.getRealCharacters() : [];
 
     socket.emit('snapshot', {
       connection: tiktok.status,
@@ -60,7 +65,7 @@ export function setupSockets(
     });
 
     socket.on('state:request', (_v, ack) => {
-      const currentCharacters = characterStore ? characterStore.getAllCharacters() : [];
+      const currentCharacters = characterStore ? characterStore.getRealCharacters() : [];
 
       ack?.({
         success: true,
@@ -75,7 +80,7 @@ export function setupSockets(
     });
 
     socket.on('characters:request', (_v, ack) => {
-      const currentChars = characterStore ? characterStore.getAllCharacters() : [];
+      const currentChars = characterStore ? characterStore.getRealCharacters() : [];
       ack?.({ success: true, data: currentChars });
     });
 

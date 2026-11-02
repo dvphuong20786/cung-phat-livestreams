@@ -24,7 +24,9 @@ interface FolderAudioFile {
 export function AudioSettingsPanel() {
   const [isMuted, setIsMuted] = useState(() => templeAudio.getMuted());
   const [volume, setVolume] = useState(() => templeAudio.getVolume());
-  const [isPlayingTestBgm, setIsPlayingTestBgm] = useState(false);
+  const [isPlayingTestBgm, setIsPlayingTestBgm] = useState(() =>
+    templeAudio.getIsBgmPlaying(),
+  );
 
   const [folderFiles, setFolderFiles] = useState<FolderAudioFile[]>([]);
   const [isLoadingFolder, setIsLoadingFolder] = useState(false);
@@ -76,25 +78,18 @@ export function AudioSettingsPanel() {
       setCurrentUrl('custom');
       if (customBgmUrl.trim()) {
         templeAudio.setBgmTrack(customBgmUrl.trim());
-        if (isPlayingTestBgm) templeAudio.startBgm();
       }
       return;
     }
 
     setCurrentUrl(url);
     templeAudio.setBgmTrack(url);
-    if (isPlayingTestBgm) {
-      templeAudio.startBgm();
-    }
   };
 
   const handleCustomUrlChange = (url: string) => {
     setCustomBgmUrl(url);
     if (url.trim()) {
       templeAudio.setBgmTrack(url.trim());
-      if (isPlayingTestBgm) {
-        templeAudio.startBgm();
-      }
     }
   };
 

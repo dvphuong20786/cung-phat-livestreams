@@ -215,7 +215,6 @@ function DevoteeSprite({
 
   const isWalkingBack =
     state === 'WALKING_TO_GATE' ||
-    state === 'WALKING_TO_AISLE' ||
     state === 'WALKING_TO_ALTAR' ||
     state === 'SPAWNING';
   const isWalkingFront = state === 'EXITING';

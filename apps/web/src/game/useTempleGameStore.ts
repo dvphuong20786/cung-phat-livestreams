@@ -21,6 +21,7 @@ export interface StoredCharacter {
   username?: string;
   nickname: string;
   avatarUrl?: string;
+  isSimulated?: boolean;
   meritPoints: number;
   level: number;
   rankName?: string;
@@ -162,6 +163,7 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
           username: char.username ?? existing?.username,
           nickname: char.nickname ?? existing?.nickname ?? char.userId,
           avatarUrl: char.avatarUrl ?? existing?.avatarUrl,
+          isSimulated: char.isSimulated ?? existing?.isSimulated,
           meritPoints: char.meritPoints ?? 0,
           level: char.level ?? existing?.level ?? 1,
           rankName: char.rankName ?? existing?.rankName,

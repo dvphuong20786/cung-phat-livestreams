@@ -10,6 +10,8 @@ import { TempleToolbar } from '../game/TempleToolbar';
 import { MeritLeaderboard } from '../game/components/MeritLeaderboard';
 import { useTempleGameStore } from '../game/useTempleGameStore';
 import { useMonitorStore } from '../stores/useMonitorStore';
+import { templeAudio } from '../game/services/TempleAudioService';
+
 export function TemplePage({
   overlay = false,
   mobile = false,
@@ -25,6 +27,37 @@ export function TemplePage({
   const connection = useMonitorStore((s) => s.connection);
 
   const hideSimulated = !allowSimulated;
+
+  // Tự động phát nhạc nền chánh điện trên các trang /temple, /overlay, /overlay-mobile
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('sound') === '1' || searchParams.get('muted') === '0') {
+        templeAudio.setMuted(false);
+      } else if (searchParams.get('sound') === '0' || searchParams.get('muted') === '1') {
+        templeAudio.setMuted(true);
+      }
+    }
+
+    if (!templeAudio.getMuted()) {
+      templeAudio.startBgm();
+    }
+
+    const handleUnlockAudio = () => {
+      if (!templeAudio.getMuted()) {
+        templeAudio.startBgm();
+      }
+    };
+
+    window.addEventListener('pointerdown', handleUnlockAudio, { once: true });
+    window.addEventListener('keydown', handleUnlockAudio, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', handleUnlockAudio);
+      window.removeEventListener('keydown', handleUnlockAudio);
+      templeAudio.pauseBgm();
+    };
+  }, []);
 
   return (
     <div
@@ -51,7 +84,7 @@ export function TemplePage({
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30" />
       {/* Bảng Top Donate / Công Đức ✦ */}
       <div className={`absolute z-30 ${mobile ? 'right-2 top-14' : 'right-4 top-20'}`}>
-        <MeritLeaderboard mobile={mobile} hideSimulated={hideSimulated} />
+        <MeritLeaderboard mobile={mobile} />
       </div>
       {overlay && isOverlayToolbarVisible && (
         <div

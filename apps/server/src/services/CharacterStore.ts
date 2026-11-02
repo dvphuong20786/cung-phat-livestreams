@@ -7,6 +7,7 @@ export interface UserCharacter {
   username: string;
   nickname: string;
   avatarUrl?: string;
+  isSimulated: boolean;
   gender: 'male' | 'female';
   meritPoints: number;
   level: number;
@@ -94,6 +95,7 @@ export class CharacterStore {
         username TEXT NOT NULL,
         nickname TEXT NOT NULL,
         avatar_url TEXT,
+        is_simulated INTEGER DEFAULT 0,
         gender TEXT DEFAULT 'female',
         merit_points INTEGER DEFAULT 0,
         level INTEGER DEFAULT 1,
@@ -109,6 +111,56 @@ export class CharacterStore {
       );
       CREATE INDEX IF NOT EXISTS idx_characters_merit ON user_characters(merit_points DESC);
     `);
+    this.migrateSimulatedCharacters();
+  }
+
+  private migrateSimulatedCharacters(): void {
+    const columns = this.database.prepare('PRAGMA table_info(user_characters)').all() as Array<{
+      name: string;
+    }>;
+    if (!columns.some((column) => column.name === 'is_simulated')) {
+      this.database.exec('ALTER TABLE user_characters ADD COLUMN is_simulated INTEGER DEFAULT 0');
+    }
+
+    this.database
+      .prepare(
+        `UPDATE user_characters
+         SET is_simulated = 1
+         WHERE user_id GLOB 'sim-*' OR username GLOB 'sim_*'`,
+      )
+      .run();
+
+    const eventTable = this.database
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'live_events'")
+      .get();
+    if (!eventTable) return;
+
+    const eventRows = this.database
+      .prepare('SELECT source, event_json FROM live_events')
+      .all() as Array<{ source: string; event_json: string }>;
+    const realIdentities = new Set<string>();
+    const simulatedIdentities = new Set<string>();
+    for (const eventRow of eventRows) {
+      try {
+        const event = JSON.parse(eventRow.event_json) as LiveEvent;
+        const identities = [event.user.id, event.user.username]
+          .filter((identity): identity is string => Boolean(identity))
+          .map((identity) => identity.toLocaleLowerCase());
+        const target = eventRow.source === 'SIMULATOR' ? simulatedIdentities : realIdentities;
+        identities.forEach((identity) => target.add(identity));
+      } catch {
+        // Bỏ qua event lịch sử bị lỗi JSON, không thay đổi dữ liệu nhân vật.
+      }
+    }
+
+    const markSimulatedCharacter = this.database.prepare(
+      `UPDATE user_characters
+       SET is_simulated = 1
+       WHERE LOWER(user_id) = ? OR LOWER(username) = ?`,
+    );
+    for (const identity of simulatedIdentities) {
+      if (!realIdentities.has(identity)) markSimulatedCharacter.run(identity, identity);
+    }
   }
 
   public getCharacter(userId: string): UserCharacter | null {
@@ -119,11 +171,38 @@ export class CharacterStore {
     return this.mapRow(row);
   }
 
+  private getCharacterByUsername(username: string): UserCharacter | null {
+    if (!username || username === 'không rõ') return null;
+
+    const row = this.database
+      .prepare(
+        `SELECT * FROM user_characters
+         WHERE username = ? COLLATE NOCASE
+         ORDER BY last_active_at DESC
+         LIMIT 1`,
+      )
+      .get(username) as any;
+    if (!row) return null;
+    return this.mapRow(row);
+  }
+
   public getAllCharacters(): UserCharacter[] {
     const rows = this.database
       .prepare('SELECT * FROM user_characters ORDER BY merit_points DESC LIMIT 200')
       .all() as any[];
     return rows.map((r) => this.mapRow(r));
+  }
+
+  public getRealCharacters(): UserCharacter[] {
+    const rows = this.database
+      .prepare(
+        `SELECT * FROM user_characters
+         WHERE is_simulated = 0
+         ORDER BY merit_points DESC
+         LIMIT 200`,
+      )
+      .all() as any[];
+    return rows.map((row) => this.mapRow(row));
   }
 
   public resetLiveSessionLimits(): void {
@@ -142,22 +221,26 @@ export class CharacterStore {
   }
 
   public awardPointsForEvent(event: LiveEvent): { character: UserCharacter; pointsAwarded: number } {
-    const userId = event.user.id || event.user.username;
+    const incomingUserId = event.user.id || event.user.username;
     const username = event.user.username;
     const nickname = event.user.nickname || username;
     const avatarUrl = event.user.avatarUrl || '';
     const now = Date.now();
 
+    // Một số COMMENT không có cùng dạng userId như JOIN/LIKE. Username TikTok là
+    // khóa dự phòng để tiếp tục đúng nhân vật cũ thay vì tạo nhân vật thứ hai.
+    let character = this.getCharacter(incomingUserId) ?? this.getCharacterByUsername(username);
+    const userId = character?.userId ?? incomingUserId;
     const isFemale = (userId.charCodeAt(0) || 0) % 12 !== 0;
     const gender = isFemale ? 'female' : 'male';
 
-    let character = this.getCharacter(userId);
     if (!character) {
       character = {
         userId,
         username,
         nickname,
         avatarUrl,
+        isSimulated: event.source === 'SIMULATOR',
         gender,
         meritPoints: 0,
         level: 1,
@@ -253,6 +336,8 @@ export class CharacterStore {
     character.username = username;
     character.nickname = nickname;
     if (avatarUrl) character.avatarUrl = avatarUrl;
+    // Một tài khoản từng giả lập nhưng sau đó xuất hiện từ TikTok thật được tính là người thật.
+    if (event.source === 'TIKTOK') character.isSimulated = false;
     character.lastActiveAt = now;
 
     this.updateCharacter(character);
@@ -263,13 +348,13 @@ export class CharacterStore {
   private insertCharacter(char: UserCharacter): void {
     const stmt = this.database.prepare(`
       INSERT OR REPLACE INTO user_characters (
-        user_id, username, nickname, avatar_url, gender,
+        user_id, username, nickname, avatar_url, is_simulated, gender,
         merit_points, level, rank_name, like_points_today,
         last_comment_at, share_count_today, follow_awarded,
         join_awarded_today, watch_time_awarded_today,
         last_active_at, created_at
       ) VALUES (
-        @userId, @username, @nickname, @avatarUrl, @gender,
+        @userId, @username, @nickname, @avatarUrl, @isSimulated, @gender,
         @meritPoints, @level, @rankName, @likePointsToday,
         @lastCommentAt, @shareCountToday, @followAwarded,
         @joinAwardedToday, @watchTimeAwardedToday,
@@ -281,6 +366,7 @@ export class CharacterStore {
       username: char.username,
       nickname: char.nickname,
       avatarUrl: char.avatarUrl ?? '',
+      isSimulated: char.isSimulated ? 1 : 0,
       gender: char.gender,
       meritPoints: char.meritPoints,
       level: char.level,
@@ -302,6 +388,7 @@ export class CharacterStore {
         username = @username,
         nickname = @nickname,
         avatar_url = @avatarUrl,
+        is_simulated = @isSimulated,
         merit_points = @meritPoints,
         level = @level,
         rank_name = @rankName,
@@ -319,6 +406,7 @@ export class CharacterStore {
       username: char.username,
       nickname: char.nickname,
       avatarUrl: char.avatarUrl ?? '',
+      isSimulated: char.isSimulated ? 1 : 0,
       meritPoints: char.meritPoints,
       level: char.level,
       rankName: char.rankName,
@@ -338,6 +426,7 @@ export class CharacterStore {
       username: row.username,
       nickname: row.nickname,
       avatarUrl: row.avatar_url || undefined,
+      isSimulated: row.is_simulated === 1,
       gender: row.gender === 'male' ? 'male' : 'female',
       meritPoints: row.merit_points,
       level: row.level,

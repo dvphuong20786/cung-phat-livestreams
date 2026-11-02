@@ -1,5 +1,61 @@
 # Lịch sử thay đổi
 
+## [v0.22.10] - 2026-11-02
+- **Yêu cầu**: Bảng Công Đức chỉ được hiển thị người xem TikTok thật, không nhận nhân vật từ trình giả lập.
+- **Chi tiết kỹ thuật**:
+  - `CharacterStore.ts`: bổ sung cờ SQLite `is_simulated`, tự migration database cũ và nhận diện dữ liệu giả lập từ lịch sử `live_events` cùng quy ước ID/tên `sim-*`, `sim_*`.
+  - Tài khoản từng dùng trong giả lập nhưng sau đó xuất hiện qua event TikTok thật được chuyển thành người thật, giữ nguyên điểm và hồ sơ.
+  - API `/api/characters`, socket snapshot, `state:request` và `characters:request` chỉ trả danh sách nhân vật thật.
+  - `socketServer.ts`: không phát `character:updated` của sự kiện SIMULATOR vào bảng Công Đức.
+  - `MeritLeaderboard.tsx`: luôn loại cờ giả lập ở frontend, không còn phụ thuộc cấu hình ẩn/hiện người giả lập của cảnh 3D.
+  - Bổ sung test xác nhận database vẫn có thể lưu nhân vật thử nghiệm nhưng danh sách bảng Công Đức chỉ trả người thật.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 31/31 unit test đạt; TypeScript web/server và Vite production build thành công.
+  - Vite vẫn cảnh báo chunk `TempleToolbar` khoảng 883 KB; đây là cảnh báo tối ưu hiệu năng, không làm build thất bại.
+
+## [v0.22.9] - 2026-11-02
+- **Yêu cầu**: Hiển thị đúng avatar TikTok trên tên, bình luận và nhân vật trong chánh điện.
+- **Chi tiết kỹ thuật**:
+  - `EulerCloudConnector.ts`: đọc avatar từ URL trực tiếp và các cấu trúc TikTok/Euler `profilePicture`, `avatarThumb`, `avatarMedium`, `avatarLarger`, hỗ trợ `urlList`, `url_list`, `urls` và `url`.
+  - `TikTokConnector.ts`: chuẩn hóa `profilePictureUrl` khi SDK trả chuỗi hoặc mảng URL.
+  - `socketServer.ts`: sau khi nhận diện đúng nhân vật, bổ sung username, nickname và avatar đã lưu trong SQLite vào event thiếu thông tin trước khi tạo action gửi xuống giao diện.
+  - Bổ sung test avatar lồng trong payload Euler và test COMMENT thiếu avatar vẫn giữ ảnh của nhân vật cũ.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 30/30 unit test đạt; TypeScript web/server và Vite production build thành công.
+  - Avatar cũ chỉ được bổ sung sau khi TikTok gửi ít nhất một event có URL ảnh hợp lệ cho nhân vật đó.
+
+## [v0.22.8] - 2026-11-02
+- **Yêu cầu**: Giữ âm thanh overlay-mobile khi thao tác ở tab Admin và ngăn COMMENT tạo nhân vật trùng.
+- **Chi tiết kỹ thuật**:
+  - `TempleAudioService.ts`: lắng nghe `storage` event để tab overlay nhận ngay thay đổi bài hát, âm lượng và trạng thái mute từ tab Admin; bỏ qua `blob:` URL vì URL file cục bộ không dùng được giữa hai tab.
+  - `CharacterStore.ts`: khi event có `userId` khác hoặc thiếu ID, tìm nhân vật hiện có theo username TikTok không phân biệt hoa thường trước khi tạo mới.
+  - `socketServer.ts`: chuẩn hóa `event.user.id` về ID bền vững trong SQLite trước khi lưu sự kiện và phát socket, để COMMENT tiếp tục đúng nhân vật trên giao diện.
+  - `CharacterStore.test.ts`: bổ sung test COMMENT có ID khác vẫn cộng điểm vào nhân vật cũ và không tạo bản ghi thứ hai.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 29/29 unit test đạt; TypeScript web/server và Vite production build thành công.
+  - Vite vẫn cảnh báo chunk `TempleToolbar` khoảng 883 KB; đây là cảnh báo tối ưu hiệu năng, không làm build thất bại.
+
+## [v0.22.7] - 2026-11-02
+- **Yêu cầu**: Sửa toàn bộ lỗi chọn và đổi bài nhạc nền trên trang chùa và trang Cài đặt âm thanh.
+- **Chi tiết kỹ thuật**:
+  - `TempleAudioService.ts`: đổi bài mặc định sang file MP3 thực tế đang có trong `public/audio`; tự chuyển cấu hình mặc định cũ đã lưu sang bài mới.
+  - Chuẩn hóa URL bài hát bằng `new URL()` để tên file tiếng Việt, dấu cách và URL đã encode không làm bài phát lại từ đầu.
+  - Khi file nhạc phát thành công, dừng ambient synth fallback; bỏ qua kết quả Promise của bài cũ sau khi người dùng đã chuyển bài.
+  - `AudioSettingsPanel.tsx`: khởi tạo nút Play/Pause theo trạng thái phát thật từ service và bỏ các lệnh phát trùng khi đổi preset hoặc URL.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 28/28 unit test đạt; TypeScript web và Vite production build thành công.
+  - Vite vẫn cảnh báo chunk `TempleToolbar` khoảng 883 KB; đây là cảnh báo tối ưu hiệu năng, không làm build thất bại.
+
+## [v0.22.6] - 2026-11-02
+- **Yêu cầu**: Thêm tính năng tự động phát nhạc nền trên các trang overlay OBS (`/overlay`, `/overlay-mobile`) và trang chùa 3D (`/temple`).
+- **Chi tiết kỹ thuật**:
+  - `TempleAudioService.ts`: Đặt mặc định `isMuted: false` khi khởi tạo (chỉ mute nếu người dùng chủ động tắt trong `localStorage`); bổ sung method `getIsBgmPlaying()`; tối ưu hàm `startBgm()` tự động resume `AudioContext` và khởi tạo lại đối tượng `Audio` khi đổi URL bài hát.
+  - `TemplePage.tsx`: Thêm hook `useEffect` tự động phát nhạc nền khi mount trang `/overlay`, `/overlay-mobile` hoặc `/temple`; hỗ trợ điều khiển qua URL query params `?sound=1` hoặc `?muted=1` (tiện ích cho OBS Studio Browser Source); thêm listener mở khóa chính sách Autoplay Policy của trình duyệt khi có tương tác đầu tiên; ngắt nhạc sạch sẽ khi unmount.
+  - `Character.tsx`: Khắc phục cảnh báo kiểu `CharacterState` trong `tsc -b`.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 28/28 unit test đạt; `tsc -b` và Vite production build thành công 100%.
+
+
 ## [v0.22.5] - 2026-11-02
 - **Yêu cầu**: Tắt tự động phát 3 âm thanh nghi lễ (Gõ Mõ, Đại Hồng Chung, Khánh Dâng Hoa), chuyển sang cơ chế admin chủ động gõ; load danh sách nhạc nền trực tiếp từ các file thực tế trong thư mục `apps/web/public/audio/`.
 - **Chi tiết kỹ thuật**:

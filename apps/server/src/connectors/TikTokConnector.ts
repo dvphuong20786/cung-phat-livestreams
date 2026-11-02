@@ -52,11 +52,14 @@ export class TikTokConnector extends EventEmitter {
     const on = (name: string, type: LiveEventType, mapper?: (d: any) => Partial<LiveEvent>) =>
       c.on(name as any, (d: any) => {
         if (type === 'GIFT' && d.giftType === 1 && !d.repeatEnd) return;
+        const profilePictureUrl = Array.isArray(d.profilePictureUrl)
+          ? d.profilePictureUrl[0]
+          : d.profilePictureUrl;
         const user = {
           id: String(d.userId ?? '') || undefined,
           username: String(d.uniqueId ?? 'không rõ'),
           nickname: String(d.nickname ?? d.uniqueId ?? 'Không rõ'),
-          avatarUrl: d.profilePictureUrl,
+          avatarUrl: typeof profilePictureUrl === 'string' ? profilePictureUrl : undefined,
         };
         this.emit('event', {
           id: randomUUID(),

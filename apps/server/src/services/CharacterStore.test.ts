@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { LiveEvent, LiveEventType } from '@live/shared';
 import { CharacterStore } from './CharacterStore';
 
-function createEvent(type: LiveEventType, username = 'old_username'): LiveEvent {
+function createEvent(
+  type: LiveEventType,
+  username = 'old_username',
+  source: LiveEvent['source'] = 'TIKTOK',
+): LiveEvent {
   return {
     id: `${type}-${username}`,
-    source: 'TIKTOK',
+    source,
     type,
     user: {
       id: 'user-1',
@@ -48,6 +52,37 @@ describe('CharacterStore', () => {
     characterStore.awardPointsForEvent(createEvent('COMMENT', 'new_username'));
 
     expect(characterStore.getCharacter('user-1')?.username).toBe('new_username');
+    characterStore.close();
+  });
+
+  it('uses the existing character when a comment has a different user id', () => {
+    const characterStore = new CharacterStore(':memory:');
+    const joinEvent = createEvent('JOIN');
+    joinEvent.user.avatarUrl = 'https://p16-sign.tiktokcdn.com/avatar.jpeg';
+    characterStore.awardPointsForEvent(joinEvent);
+
+    const commentEvent = createEvent('COMMENT');
+    commentEvent.user.id = 'comment-user-id';
+    const { character } = characterStore.awardPointsForEvent(commentEvent);
+
+    expect(character.userId).toBe('user-1');
+    expect(character.avatarUrl).toBe('https://p16-sign.tiktokcdn.com/avatar.jpeg');
+    expect(characterStore.getAllCharacters()).toHaveLength(1);
+    expect(characterStore.getCharacter('user-1')?.meritPoints).toBe(3);
+    characterStore.close();
+  });
+
+  it('returns only real TikTok characters for the merit leaderboard', () => {
+    const characterStore = new CharacterStore(':memory:');
+    characterStore.awardPointsForEvent(createEvent('GIFT', 'real_user'));
+
+    const simulatedEvent = createEvent('GIFT', 'test_user', 'SIMULATOR');
+    simulatedEvent.user.id = 'simulated-user-id';
+    characterStore.awardPointsForEvent(simulatedEvent);
+
+    expect(characterStore.getAllCharacters()).toHaveLength(2);
+    expect(characterStore.getRealCharacters()).toHaveLength(1);
+    expect(characterStore.getRealCharacters()[0]?.username).toBe('real_user');
     characterStore.close();
   });
 });

@@ -1,13 +1,17 @@
+const DEFAULT_BGM_FILE_NAME = 'Nhạc Thiền - Nhạc Phật Remix - By Lê Bảo - Nhạc Hót Tik Tok 2023.mp3';
+const DEFAULT_BGM_URL = `/audio/${encodeURIComponent(DEFAULT_BGM_FILE_NAME)}`;
+const REMOVED_DEFAULT_BGM_URL = '/audio/bgm-thien-tinh-tam.wav';
+
 class TempleAudioService {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private bgmGain: GainNode | null = null;
   private sfxGain: GainNode | null = null;
 
-  private isMuted: boolean = true;
+  private isMuted: boolean = false;
   private volume: number = 0.7;
   private bgmAudio: HTMLAudioElement | null = null;
-  private currentBgmUrl: string = '/audio/bgm-thien-tinh-tam.wav';
+  private currentBgmUrl: string = DEFAULT_BGM_URL;
   private isBgmPlaying: boolean = false;
   private ambientOscillators: OscillatorNode[] = [];
 
@@ -24,9 +28,35 @@ class TempleAudioService {
         if (!isNaN(v)) this.volume = Math.max(0, Math.min(1, v));
       }
       const savedBgm = localStorage.getItem('temple_bgm_url');
-      if (savedBgm) {
+      if (savedBgm && savedBgm !== REMOVED_DEFAULT_BGM_URL) {
         this.currentBgmUrl = savedBgm;
+      } else if (savedBgm === REMOVED_DEFAULT_BGM_URL) {
+        // Chuyển cấu hình mặc định cũ sang file đang tồn tại trong public/audio.
+        localStorage.setItem('temple_bgm_url', DEFAULT_BGM_URL);
       }
+
+      // Overlay và Admin chạy ở hai tab riêng. Storage event giúp overlay nhận ngay
+      // bài hát, âm lượng và trạng thái mute vừa thay đổi từ tab Admin.
+      window.addEventListener('storage', (event) => {
+        if (event.key === 'temple_audio_muted' && event.newValue !== null) {
+          this.setMuted(event.newValue === 'true');
+          return;
+        }
+
+        if (event.key === 'temple_audio_volume' && event.newValue !== null) {
+          const nextVolume = Number(event.newValue);
+          if (Number.isFinite(nextVolume)) this.setVolume(nextVolume);
+          return;
+        }
+
+        if (
+          event.key === 'temple_bgm_url' &&
+          event.newValue &&
+          !event.newValue.startsWith('blob:')
+        ) {
+          this.setBgmTrack(event.newValue);
+        }
+      });
     }
   }
 
@@ -65,6 +95,10 @@ class TempleAudioService {
 
   public getCurrentBgmUrl(): string {
     return this.currentBgmUrl;
+  }
+
+  public getIsBgmPlaying(): boolean {
+    return this.isBgmPlaying;
   }
 
   public toggleMute(): boolean {
@@ -249,19 +283,31 @@ class TempleAudioService {
       return;
     }
 
+    const expectedBgmUrl = new URL(this.currentBgmUrl, window.location.href).href;
+    if (this.bgmAudio && this.bgmAudio.src !== expectedBgmUrl) {
+      this.bgmAudio.pause();
+      this.bgmAudio = null;
+    }
+
     if (!this.bgmAudio) {
       this.bgmAudio = new Audio(this.currentBgmUrl);
       this.bgmAudio.loop = true;
       this.bgmAudio.volume = this.volume * 0.6;
     }
 
-    this.bgmAudio
+    const playingAudio = this.bgmAudio;
+    playingAudio
       .play()
       .then(() => {
+        if (this.bgmAudio !== playingAudio) return;
+        // File đã phát được thì tắt âm synth fallback để không nghe hai nguồn cùng lúc.
+        this.stopAmbientDrone();
         this.isBgmPlaying = true;
       })
-      .catch(() => {
-        // Fallback tự sinh âm thiền nếu không tải được file
+      .catch((err) => {
+        if (this.bgmAudio !== playingAudio) return;
+        // Fallback tự sinh âm thiền nếu không tải được file hoặc trình duyệt chặn
+        console.warn('Không thể tự động phát file audio, dùng âm thiền tự sinh:', err);
         this.startAmbientDrone();
         this.isBgmPlaying = true;
       });
