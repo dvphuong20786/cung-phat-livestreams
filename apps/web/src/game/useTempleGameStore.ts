@@ -35,6 +35,7 @@ export interface RecentDonor {
   giftName?: string;
   quantity?: number;
   timestamp: number;
+  isSimulated?: boolean;
 }
 interface GameStore {
   active: ActiveCharacter[];
@@ -45,6 +46,8 @@ interface GameStore {
   latest?: string;
   quality: Quality;
   allowSimulated: boolean;
+  fifoQueue: boolean;
+  mobilePriorityAdmission: boolean;
   userInteractions: Record<string, number>;
   userLikeCountsInSession: Record<string, number>;
   characterList: StoredCharacter[];
@@ -60,6 +63,8 @@ interface GameStore {
   setPaused: (paused: boolean) => void;
   setQuality: (quality: Quality) => void;
   setAllowSimulated: (allowed: boolean) => void;
+  setFifoQueue: (enabled: boolean) => void;
+  setMobilePriorityAdmission: (enabled: boolean) => void;
 }
 const isCeremony = (a: TempleGameAction) =>
   a.actionType === 'OFFER_FLOWERS' || a.actionType === 'OFFER_INCENSE';
@@ -70,12 +75,20 @@ const sortActionsByPriority = (actions: TempleGameAction[]) =>
     if (priorityDifference !== 0) return priorityDifference;
     return firstAction.createdAt - secondAction.createdAt;
   });
-const promote = (active: ActiveCharacter[], queue: TempleGameAction[]) => {
-  const next = sortActionsByPriority(queue).slice(0, 500);
+const promote = (
+  active: ActiveCharacter[],
+  queue: TempleGameAction[],
+  fifoQueue: boolean = false,
+  mobilePriorityAdmission: boolean = false,
+) => {
+  const next = fifoQueue
+    ? [...queue].sort((first, second) => first.createdAt - second.createdAt).slice(0, 500)
+    : sortActionsByPriority(queue).slice(0, 500);
   let runningCeremonies = active.filter((c) => isCeremony(c.action)).length;
-  while (active.length < 12 && next.length) {
+  const activeLimit = mobilePriorityAdmission ? 500 : 12;
+  while (active.length < activeLimit && next.length) {
     let index = 0;
-    if (runningCeremonies >= 2) {
+    if (!mobilePriorityAdmission && runningCeremonies >= 2) {
       const ordinary = next.findIndex((action) => !isCeremony(action));
       if (ordinary >= 0) index = ordinary;
       else break;
@@ -168,6 +181,8 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
   flowers: 0,
   quality: 'MEDIUM',
   allowSimulated: true,
+  fifoQueue: false,
+  mobilePriorityAdmission: false,
   userInteractions: {},
   userLikeCountsInSession: {},
   characterList: [],
@@ -235,7 +250,7 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
         action.actionType === 'OFFER_INCENSE';
 
       let updatedRecentDonors = state.recentDonors;
-      if (isDonation) {
+      if (isDonation && action.isSimulated !== true) {
         const newDonor: RecentDonor = {
           userId: action.userId,
           nickname: action.nickname,
@@ -244,6 +259,7 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
             action.giftName || (action.actionType === 'OFFER_FLOWERS' ? 'Hoa cúng Phật' : 'Lễ vật'),
           quantity: action.quantity || 1,
           timestamp: Date.now(),
+          isSimulated: false,
         };
         const filtered = state.recentDonors.filter((d) => d.userId !== action.userId);
         updatedRecentDonors = [newDonor, ...filtered].slice(0, 5);
@@ -265,7 +281,12 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       const queue = sortActionsByPriority([...state.queue, actionWithSeat]);
 
       return {
-        ...promote([...state.active], queue),
+        ...promote(
+          [...state.active],
+          queue,
+          state.fifoQueue,
+          state.mobilePriorityAdmission,
+        ),
         seatedVisitors,
         userInteractions,
         userLikeCountsInSession,
@@ -338,6 +359,8 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
         ...promote(
           state.active.filter((c) => c.action.actionId !== id),
           state.queue,
+          state.fifoQueue,
+          state.mobilePriorityAdmission,
         ),
         seatedVisitors: updatedSeated,
       };
@@ -355,4 +378,6 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
   setPaused: (paused) => set({ paused }),
   setQuality: (quality) => set({ quality }),
   setAllowSimulated: (allowSimulated) => set({ allowSimulated }),
+  setFifoQueue: (fifoQueue) => set({ fifoQueue }),
+  setMobilePriorityAdmission: (mobilePriorityAdmission) => set({ mobilePriorityAdmission }),
 }));

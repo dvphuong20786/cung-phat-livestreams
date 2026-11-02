@@ -1,4 +1,107 @@
-﻿# Lịch sử thay đổi
+# Lịch sử thay đổi
+
+## [v0.26.1] - 2026-11-02
+- **Yêu cầu**: Đồng bộ hàng chờ và điều phối ưu tiên từ `/overlay-mobile-2d` sang `/overlay-2d`.
+- **Chi tiết kỹ thuật**:
+  - Nội điện `/overlay-2d` tiếp tục có tối đa 24 người ngồi, bố trí 2 hàng × 12 chỗ.
+  - `Mobile2DOverlayPage.tsx`: mở bộ điều phối 24 ghế, thời gian ngồi khi đông, thay ghế theo ưu tiên Donate → Like/Share/Comment → Chỉ xem và cấu hình thời gian hành lễ cho cả hai route 2D.
+  - Hàng chờ `/overlay-2d` hiển thị tối đa 12 người trải ngang từ 5% đến 95% chiều rộng; bản mobile tiếp tục hiển thị tối đa 7 người để phù hợp màn hình dọc.
+  - `SettingsPanel.tsx`: đổi nhãn cài đặt từ Mobile 2D thành Nội điện 2D và ghi rõ áp dụng cho cả overlay ngang lẫn mobile.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 43/43 unit test và production build; Vite vẫn cảnh báo chunk `TempleToolbar` lớn hơn 500 kB như trước.
+
+## [v0.26.0] - 2026-11-02
+- **Yêu cầu**: Rút ngắn và cho phép cấu hình thời gian hành lễ Mobile 2D; ưu tiên người tương tác và người donate thay chỗ khách chỉ xem trong Nội điện.
+- **Chi tiết kỹ thuật**:
+  - `useMonitorStore.ts` và `SettingsPanel.tsx`: thêm năm cài đặt hoạt cảnh Mobile 2D, mặc định khách thường lễ 3 giây, tặng quà quỳ 5 giây, dâng hoa 3,5 giây, đi vào 2,6 giây và đi về ghế 2,4 giây; đồng bộ sang overlay qua cấu hình dùng chung.
+  - `Mobile2DOverlayPage.tsx`: áp dụng trực tiếp các thời gian Admin vào CSS transition và timer dự phòng; bổ sung ba tầng ưu tiên ghế Donate → Like/Share/Comment → Chỉ xem, giữ FIFO trong cùng tầng.
+  - Khi đủ 24 ghế, Like/Share/Comment thay khách chỉ xem; Donate thay khách chỉ xem trước rồi tiếp tục thay người Like/Share/Comment nếu cần. Người đã bắt đầu đi vào được giữ chu trình để tránh biến mất giữa hoạt cảnh.
+  - `useTempleGameStore.ts`: bật bộ đệm ưu tiên lớn riêng khi hàng chờ Nội điện Mobile 2D hoạt động để sự kiện donate mới không bị kẹt sau đám đông; hành vi mặc định của các overlay 3D và 2D desktop vẫn giữ giới hạn cũ.
+  - `useTempleGameStore.test.ts`: thêm kiểm thử chế độ điều phối đám đông Mobile 2D.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 43/43 unit test, `git diff --check` cho các file mã nguồn và production build; Vite vẫn cảnh báo chunk `TempleToolbar` lớn hơn 500 kB như trước.
+
+## [v0.25.9] - 2026-11-02
+- **Yêu cầu**: Dàn đều người đang chờ vào Nội điện Mobile 2D và chỉ hiển thị người thật trong “Cúng dường mới nhất” trên cả bốn overlay.
+- **Chi tiết kỹ thuật**:
+  - `Mobile2DOverlayPage.tsx`: trải tối đa 7 nhân vật đầu hàng chờ từ 7% đến 93% chiều ngang mép dưới, giảm nhẹ tỉ lệ nhân vật để tránh đứng co cụm hoặc chồng lên nhau; thứ tự FIFO và cơ chế vào theo số ghế trống được giữ nguyên.
+  - `useTempleGameStore.ts`: chỉ ghi người cúng dường thật (`isSimulated !== true`) vào `recentDonors`; bổ sung cờ nguồn cho dữ liệu người tặng.
+  - `RecentDonorsList.tsx`: lọc phòng vệ dữ liệu mô phỏng trước khi hiển thị, áp dụng chung cho `/overlay`, `/overlay-2d`, `/overlay-mobile` và `/overlay-mobile-2d`.
+  - `useTempleGameStore.test.ts`: thêm kiểm thử xác nhận quà mô phỏng không xuất hiện và quà TikTok thật vẫn được ghi nhận.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 42/42 unit test và production build; Vite vẫn cảnh báo chunk `TempleToolbar` lớn hơn 500 kB như trước.
+
+## [v0.25.8] - 2026-11-02
+- **Yêu cầu**: Bổ sung hàng chờ FIFO cho Nội điện Mobile 2D khi có hơn 24 khách; cho phép bật/tắt và cấu hình thời gian ngồi tối đa khi đông tại Admin.
+- **Chi tiết kỹ thuật**:
+  - `Mobile2DOverlayPage.tsx`: chỉ kích hoạt bộ điều phối tại `/overlay-mobile-2d` + Nội điện; giữ khách mới sát mép dưới, xếp theo thời gian đến và chỉ đưa đúng số khách tương ứng với số ghế vừa trống.
+  - `useTempleGameStore.ts`: bổ sung chế độ cấp lượt FIFO được màn hình Mobile 2D bật khi dùng hàng chờ và tự trả về chế độ ưu tiên cũ khi rời màn hình, không thay đổi hành vi mặc định của 3D.
+  - Khi tổng số khách hiện diện vượt 24, thời gian giữ ghế được giới hạn theo cấu hình (mặc định 20 giây); người đang hoạt cảnh hoặc đang chờ không còn xuất hiện sớm trên ghế.
+  - `SettingsPanel.tsx`: thêm công tắc “Hàng chờ Nội điện Mobile 2D” và thanh cấu hình thời gian ngồi khi đông từ 10–120 giây.
+  - `useMonitorStore.ts`: thêm hai tùy chọn `mobile2dQueueEnabled`, `mobile2dBusySeatSeconds` và đồng bộ thay đổi `localStorage` giữa cửa sổ Admin với tab/OBS overlay đang mở.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 41/41 unit test và production build; Vite vẫn cảnh báo chunk `TempleToolbar` lớn hơn 500 kB như trước.
+
+## [v0.25.7] - 2026-11-02
+- **Yêu cầu**: Màn hình 2D (nội điện):
+  1. Kiểm tra và giải quyết dứt điểm hiện tượng khách đi tới nơi rồi vẫn đi tiếp, chậm mất 3-4s sau mới đổi hoạt ảnh chắp tay.
+  2. Nâng 3 sư thầy và khách lên đứng lễ lên thêm 5~10px.
+- **Chi tiết kỹ thuật**:
+  - `Mobile2DOverlayPage.tsx`:
+    - Giải quyết dứt điểm độ trễ đổi hoạt ảnh: Thay vì phụ thuộc vào timer JS (dễ bị reset khi component re-render theo store event làm kéo dài thêm 3-4s), gắn sự kiện `onTransitionEnd` trực tiếp vào element nhân vật. Ngay khi CSS transition trục `top` vừa chạm đúng toạ độ đích, sự kiện phần cứng trình duyệt kích hoạt ngay lập tức chuyển trạng thái sang `PRAYING` (chắp tay niệm Phật) / `BOWING` (quỳ lạy) / `OFFERING_FLOWERS` (dâng hoa) không trễ 1 mili-giây.
+    - Nâng vị trí 3 Vị Sư Thầy lên thêm 5~10px: Sư Trụ Trì từ `top: 63%` lên `top: 61.8%`, Thầy Minh Đạo & Thầy Tâm Từ từ `63.5%` lên `top: 62.3%`.
+    - Nâng vị trí khách tới đứng lễ lên thêm 5~10px: `worshipTop` từ `64.5%` lên `top: 63.2%`, đứng ngay sau 3 Thầy trên thảm đỏ và cao hơn người ngồi hàng đầu (`top: 69%`).
+    - Cập nhật tiến độ chi tiết trong ghi chú mã nguồn.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 41/41 unit test (`pnpm test`), `tsc -b` không có lỗi và build Vite production thành công.
+
+## [v0.25.6] - 2026-11-02
+- **Yêu cầu**: 
+  1. Cả 2D và 3D: Comment giữ lâu quá bị rối mắt, cho tự động ẩn sau khoảng 20s và thêm tùy chỉnh cài đặt thời gian trong trang Admin.
+  2. Màn hình 2D: Khách tới lễ đứng cao lên chút, hiện tại đang đứng thấp hơn người ngồi hàng đầu.
+  3. Màn hình 2D: Khắc phục lệch tọa độ và đồng bộ lại thời gian đi lên lễ cho phù hợp.
+- **Chi tiết kỹ thuật**:
+  - `useMonitorStore.ts` & `SettingsPanel.tsx`:
+    - Bổ sung cài đặt `commentDurationSeconds` (mặc định 20 giây, hỗ trợ slider từ 5s - 120s và các nút gán nhanh 10s, 15s, 20s, 30s, 60s), lưu trữ đồng bộ qua `localStorage`.
+  - `Character.tsx` & `SeatedVisitors.tsx` (3D):
+    - `CharacterHeadOverlay` đọc `commentDurationSeconds` từ `useMonitorStore` và tự động tắt bong bóng comment khi quá thời hạn (`now - createdAt > duration`), quay về tag tên mờ hổ phách trang nghiêm.
+  - `Mobile2DOverlayPage.tsx` (2D):
+    - `DevoteeHeadBadge`: đồng bộ tự động ẩn bong bóng comment sau thời gian cài đặt ở Admin (mặc định 20s).
+    - Căn chỉnh toạ độ khách tới lễ: `worshipTop` dời lên `top: 64.5% - 66%`, trong khi 4 hàng ghế của Phật tử ngồi quỳ hai bên thảm đỏ được xếp ở `[69%, 77%, 85%, 93%]`. Nhờ đó khách tới lễ đứng chầu Phật hoàn toàn **CAO HƠN** người ngồi hàng đầu (69%) và đứng ngay sau lưng 3 Thầy (62% - 63%).
+    - Căn chỉnh toạ độ bước đi thẳng theo trục giữa thảm đỏ (`left: 50 + laneOffset * 0.15`), không bị lệch mép thảm đỏ.
+    - Chuẩn hóa thời gian bước đi từ cửa lên trước điện thành **3.0s** (`3000ms`), nhịp bước chân khoan thai khớp đúng thời điểm dừng chân hành lễ.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 41/41 unit test (`pnpm test`), `tsc -b` không có lỗi và build Vite production thành công.
+
+## [v0.25.5] - 2026-11-02
+- **Yêu cầu**: Tinh chỉnh màn hình 2D theo ảnh phản hồi thực tế:
+  1. 3 vị trí sư thầy ngồi cao quá, hạ xuống đúng khu vực khoanh màu xanh ở đầu thảm đỏ trên sàn.
+  2. Người chơi đi bộ đến điện dừng chân là lễ ngay, không còn tình trạng đứng im bước tại chỗ một lúc mới lễ.
+  3. Khách ngồi quỳ xa quá, cho ngồi dịch lên trên các hàng đệm sen phía trên.
+- **Chi tiết kỹ thuật**:
+  - `Mobile2DOverlayPage.tsx`:
+    - Đặt lại vị trí 3 Vị Sư Thầy: Sư Trụ Trì (`top: 63%`, `left: 50%`), Thầy Minh Đạo (`top: 63.5%`, `left: 36%`), Thầy Tâm Từ (`top: 63.5%`, `left: 64%`), nằm chuẩn xác trong khung chữ nhật màu xanh lá cây trên đầu thảm đỏ sát chân bàn thờ Tam Bảo.
+    - Dịch 24 chỗ ngồi của Phật tử lên trên: 4 hàng ghế chuyển từ `[80, 86, 92, 98]` lên `[67, 75, 83, 91]`, scale tương ứng `[0.96, 1.08, 1.22, 1.38]`, lấp đầy các hàng đệm sen hai bên thảm đỏ từ gần bàn thờ xuống dưới, không còn bị tụt tít ra xa ở đáy màn hình.
+    - Đồng bộ nhịp bước đi và hành lễ: Rút ngắn thời gian bước từ cửa vào còn đúng `2.6s` (khoảng cách thực tế từ cửa 106% đến điểm hành lễ 72%), ngay khi vừa chạm mốc 2.6s là lập tức dừng chân chuyển sang tư thế quỳ lạy / niệm Phật / dâng hoa, dứt điểm hiện tượng đứng dậm chân tại chỗ trước khi lễ.
+    - Thời gian bước về chỗ ngồi sau khi lễ xong đồng bộ còn `2.4s`, quay mặt về camera (`WALK_FRONT`).
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 41/41 unit test (`pnpm test`), `tsc -b` không có lỗi và build Vite production thành công.
+
+## [v0.25.4] - 2026-11-02
+- **Yêu cầu**: Đối với màn hình 2D (/overlay-2d, /overlay-mobile-2d):
+  1. Đưa 3 sư thầy ngồi lên vị trí cao ở khu vực khoanh màu xanh sát chân bàn thờ.
+  2. Tăng 50% kích thước các nhân vật và 3 sư thầy.
+  3. Sửa lỗi người không đi từ cửa vào.
+- **Chi tiết kỹ thuật**:
+  - `Mobile2DOverlayPage.tsx`:
+    - Đưa 3 Vị Thầy Chùa lên vị trí trang nghiêm đúng khu vực khoanh màu xanh (top: 42.5% - 43%), trên phần đầu thảm đỏ sát chân bàn thờ Tam Bảo: Sư Trụ Trì (`top: 42.5%`, `left: 50%`), Thầy Minh Đạo (`top: 43%`, `left: 38%`), Thầy Tâm Từ (`top: 43%`, `left: 62%`).
+    - Tăng 50% kích thước 3 Sư Thầy: scale tăng từ 0.72 / 0.68 lên 1.08 / 1.02.
+    - Tăng 50% kích thước Phật tử 24 chỗ ngồi: scale tăng từ 0.74 - 0.98 lên 1.11 - 1.47 (mobile) và từ 0.72 - 0.88 lên 1.08 - 1.32 (desktop).
+    - Tăng 50% kích thước nhân vật hành lễ: scale tăng từ 0.76 - 0.82 lên 1.14 - 1.23, điểm hành lễ điều chỉnh về `top: 56% - 60%` đứng/quỳ sau các Thầy chầu Phật.
+    - Sửa triệt để lỗi "người không đi từ cửa vào": Sử dụng state quản lý vị trí ban đầu tại cửa phòng (top: 106% dưới đáy màn hình) rồi kích hoạt chuyển động CSS transition 4.5s bước dọc theo thảm đỏ vào chánh điện hành lễ, sau đó bước về chỗ ngồi với hoạt ảnh quay mặt về trước (`WALK_FRONT`).
+    - Cập nhật ghi chú tiến độ chi tiết ở đầu file ("ĐÃ CÓ, ĐANG CÓ, SẮP CÓ").
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua toàn bộ 41/41 unit test (`pnpm test`), `tsc -b` không có lỗi và build Vite production thành công.
 
 ## [v0.25.3] - 2026-11-02
 - **Yêu cầu**: Sửa lỗi hiển thị nhân vật 2D bị cắt sai (lộ chân lên đầu), sửa hoạt ảnh đi lùi đằng lưng cả 2D và 3D, chỉnh lại vị trí 3 Thầy Chùa, bỏ hoa bay ngang tượng Phật và tinh gọn Danh sách Cúng Dường mới nhất.

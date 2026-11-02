@@ -19,6 +19,8 @@ describe('temple game queue', () => {
       userInteractions: {},
       userLikeCountsInSession: {},
       characterList: [],
+      fifoQueue: false,
+      mobilePriorityAdmission: false,
     });
   });
   it('bounds active characters and waiting queue during a burst', () => {
@@ -27,10 +29,35 @@ describe('temple game queue', () => {
     expect(useTempleGameStore.getState().queue).toHaveLength(500);
     expect(useTempleGameStore.getState().seatedVisitors).toHaveLength(80);
   });
+  it('allows the Mobile 2D priority controller to inspect a large waiting crowd', () => {
+    useTempleGameStore.getState().setMobilePriorityAdmission(true);
+    for (let index = 0; index < 30; index++) {
+      useTempleGameStore.getState().enqueue(action(index));
+    }
+
+    expect(useTempleGameStore.getState().active).toHaveLength(30);
+    expect(useTempleGameStore.getState().queue).toHaveLength(0);
+  });
   it('keeps one seat for repeated actions from the same viewer', () => {
     useTempleGameStore.getState().enqueue(action(1));
     useTempleGameStore.getState().enqueue({ ...action(2, 'OFFER_FLOWERS'), userId: 'u-1' });
     expect(useTempleGameStore.getState().seatedVisitors).toHaveLength(1);
+  });
+  it('keeps only real TikTok donors in the latest donation list', () => {
+    useTempleGameStore.getState().enqueue({
+      ...action(1, 'OFFER_FLOWERS'),
+      eventType: 'GIFT',
+      isSimulated: true,
+    });
+    useTempleGameStore.getState().enqueue({
+      ...action(2, 'OFFER_INCENSE'),
+      eventType: 'GIFT',
+      isSimulated: false,
+      nickname: 'Phật tử thật',
+    });
+
+    expect(useTempleGameStore.getState().recentDonors).toHaveLength(1);
+    expect(useTempleGameStore.getState().recentDonors[0]?.nickname).toBe('Phật tử thật');
   });
   it('keeps accumulating offline merit points for repeated likes', () => {
     useTempleGameStore.getState().enqueue({ ...action(1), eventType: 'LIKE', quantity: 6 });

@@ -5,11 +5,20 @@
  *
  * TIẾN ĐỘ PHÁT TRIỂN:
  * 1. ĐÃ CÓ:
- *    - Đưa 3 Vị Thầy Chùa lên vị trí cao trang nghiêm đúng khu vực khoanh xanh (top: 42.5% - 43%),
- *      ngay trên đầu thảm đỏ sát chân bàn thờ Tam Bảo.
+ *    - Nâng vị trí 3 Vị Thầy Chùa lên thêm 5~10px (top: 61.8% trên mobile, 51% trên desktop),
+ *      đặt trang nghiêm sát chân bàn thờ Tam Bảo theo đúng ảnh phản hồi thực tế.
+ *    - Nâng vị trí khách tới lễ lên thêm 5~10px (top: 63.2% trên mobile, 54% trên desktop),
+ *      đứng ngay sau 3 Thầy trên thảm đỏ và cao hơn người ngồi hàng đầu (top: 69%).
+ *    - Dùng sự kiện onTransitionEnd: Khắc phục triệt để lỗi khách đi tới nơi rồi vẫn tiếp tục đi
+ *      (chậm 3-4s mới chắp tay). Ngay khi chân nhân vật chạm đích đến, onTransitionEnd kích hoạt
+ *      lập tức chuyển sang chắp tay niệm Phật / quỳ lạy / dâng hoa không trễ 1 mili-giây.
+ *    - Tự động tắt bong bóng bình luận sau thời gian cài đặt ở Admin (mặc định 20 giây),
+ *      chuyển về tag tên mờ hổ phách trang nghiêm, không bị rối mắt khi có nhiều comment.
+ *    - Dịch 24 chỗ ngồi của Phật tử lên trên (top: 69% đến 93%), khớp với các đệm sen toạ trên sàn gỗ
+ *      hai bên thảm đỏ, không còn bị tụt tít ra xa ở đáy màn hình.
  *    - Tăng 50% kích thước cho tất cả nhân vật Phật tử và 3 Vị Sư Thầy.
  *    - Khắc phục triệt để lỗi người không đi từ cửa vào: Nhân vật xuất phát từ ngoài cửa (top: 106%),
- *      bước đi dọc theo thảm đỏ vào chánh điện hành lễ đầy đủ chu trình trong 4.5s.
+ *      bước đi dọc theo thảm đỏ vào chánh điện hành lễ đầy đủ chu trình.
  *    - Cắt ảnh Sprite Sheet 4x3 chính xác từng pixel bằng container overflow:hidden,
  *      loại bỏ hoàn toàn lỗi lộ chân của hàng trên (Row 1) lên đầu hàng dưới (Row 2).
  *    - Khắc phục lỗi "đi lùi đằng lưng": Khi Phật tử hành lễ xong bước từ trên chánh điện
@@ -37,7 +46,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import type { TempleGameAction } from '@live/shared';
+import { templeGameActionPriority, type TempleGameAction } from '@live/shared';
 import { MeritLeaderboard } from '../game/components/MeritLeaderboard';
 import { RecentDonorsList } from '../game/components/RecentDonorsList';
 import { TempleToolbar } from '../game/TempleToolbar';
@@ -77,6 +86,38 @@ const prayerPhrases = [
   'Xin thành kính tri ân Tam Bảo',
   'Nguyện phước lành đến muôn nơi',
 ];
+
+export function getMobileSeatPriority(action: TempleGameAction): number {
+  if (
+    action.eventType === 'GIFT' ||
+    action.actionType === 'OFFER_FLOWERS' ||
+    action.actionType === 'OFFER_INCENSE'
+  ) {
+    return 3;
+  }
+  if (
+    action.eventType === 'LIKE' ||
+    action.eventType === 'COMMENT' ||
+    action.eventType === 'SHARE'
+  ) {
+    return 2;
+  }
+  return 1;
+}
+
+function sortMobileAdmissionActions(
+  firstAction: TempleGameAction,
+  secondAction: TempleGameAction,
+): number {
+  const seatPriorityDifference =
+    getMobileSeatPriority(secondAction) - getMobileSeatPriority(firstAction);
+  if (seatPriorityDifference !== 0) return seatPriorityDifference;
+
+  const sourcePriorityDifference =
+    templeGameActionPriority(secondAction) - templeGameActionPriority(firstAction);
+  if (sourcePriorityDifference !== 0) return sourcePriorityDifference;
+  return firstAction.createdAt - secondAction.createdAt;
+}
 
 /**
  * Hàm băm chuỗi sang số nguyên dương để sinh dữ liệu ngẫu nhiên ổn định theo ID
@@ -121,14 +162,14 @@ export function get2DSeatCoordinates(
     const isRightSide = colInRow >= 3;
     const sideIndex = isRightSide ? colInRow - 3 : colInRow; // 0, 1, 2
 
-    // 4 hàng ghế trên mặt sàn gỗ (top: 80% đến 98%), không bị bay lên tượng Phật
-    const rowTops = [80, 86, 92, 98];
-    // Tăng 50% kích thước nhân vật (từ 0.74 - 0.98 lên 1.11 - 1.47)
-    const rowScales = [1.11, 1.23, 1.35, 1.47];
+    // 4 hàng ghế của Phật tử hai bên thảm đỏ (Row 0 ở 69%, thấp hơn khách hành lễ 64.5%)
+    const rowTops = [69, 77, 85, 93];
+    // Tỉ lệ scale nhân vật theo luật phối cảnh xa nhỏ gần to
+    const rowScales = [0.95, 1.08, 1.22, 1.38];
 
-    // 3 cột bên trái và 3 cột bên phải (chừa khoảng 34% - 66% cho thảm đỏ ở giữa)
-    const leftCols = [11, 21, 31];
-    const rightCols = [69, 79, 89];
+    // 3 cột bên trái và 3 cột bên phải (chừa khoảng 33% - 67% cho thảm đỏ ở giữa)
+    const leftCols = [12, 22, 31];
+    const rightCols = [69, 78, 88];
     const colX = isRightSide ? rightCols[sideIndex] : leftCols[sideIndex];
 
     return {
@@ -145,7 +186,7 @@ export function get2DSeatCoordinates(
   const isRightSide = colInRow >= 6;
   const sideIndex = isRightSide ? colInRow - 6 : colInRow;
 
-  const rowTops = [68, 82];
+  const rowTops = [62, 76];
   // Tăng 50% kích thước nhân vật (từ 0.72 - 0.88 lên 1.08 - 1.32)
   const rowScales = [1.08, 1.32];
   const leftCols = [8, 14, 20, 26, 32, 38];
@@ -317,7 +358,17 @@ function DevoteeHeadBadge({
 }) {
   const interactions = useTempleGameStore((s) => s.userInteractions[action.userId] || 0);
   const cultivation = getCultivationInfo(interactions, isFemale);
-  const message = getDisplayedMessage(action);
+  const commentDurationSeconds = useMonitorStore((s) => s.prefs.commentDurationSeconds ?? 20);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const eventTime = action.createdAt || (action as any).timestamp || 0;
+  const isExpired = Boolean(eventTime > 0 && now - eventTime > commentDurationSeconds * 1000);
+  const message = isExpired ? undefined : getDisplayedMessage(action);
   const hasComment = Boolean(message && message.trim().length > 0);
   const isGenericAudience = isGenericAudienceName(action.nickname);
   const shouldHideGenericName = action.isSimulated === true && isGenericAudience && !hasComment;
@@ -433,7 +484,7 @@ function WoodenFish2D({ isAbbot = false }: { isAbbot?: boolean }) {
 
 /**
  * 3 Vị Thầy Chùa quỳ tụng kinh trang nghiêm trước điện Phật:
- * Đặt chính xác trên mặt sàn gỗ trước bàn thờ Tam Bảo (top: 67%-68%):
+ * Đặt chính xác ở vị trí đầu thảm đỏ trên mặt sàn sát chân bàn thờ Tam Bảo (top: 63% trên mobile, 52% trên desktop):
  * - Sư Trụ Trì (Lv.100, nam6.png, hào quang Phật quang, đệm sen to, gõ mõ)
  * - Thầy Minh Đạo bên trái (Lv.61, nam5.png, đệm sen, gõ mõ)
  * - Thầy Tâm Từ bên phải (Lv.61, nam5.png, đệm sen, gõ mõ)
@@ -447,7 +498,7 @@ function ChantingMonks2D({ mobile }: { mobile: boolean }) {
         isAbbot: false,
         assetUrl: '/assets/nam5.png',
         left: mobile ? 36 : 44,
-        top: mobile ? 67.5 : 55,
+        top: mobile ? 62.3 : 51.5,
       },
       {
         title: 'Sư Trụ Trì',
@@ -455,7 +506,7 @@ function ChantingMonks2D({ mobile }: { mobile: boolean }) {
         isAbbot: true,
         assetUrl: '/assets/nam6.png',
         left: 50,
-        top: mobile ? 67 : 54,
+        top: mobile ? 61.8 : 51,
       },
       {
         title: 'Thầy Tâm Từ',
@@ -463,7 +514,7 @@ function ChantingMonks2D({ mobile }: { mobile: boolean }) {
         isAbbot: false,
         assetUrl: '/assets/nam5.png',
         left: mobile ? 64 : 56,
-        top: mobile ? 67.5 : 55,
+        top: mobile ? 62.3 : 51.5,
       },
     ],
     [mobile],
@@ -478,7 +529,8 @@ function ChantingMonks2D({ mobile }: { mobile: boolean }) {
           style={{
             left: `${monk.left}%`,
             top: `${monk.top}%`,
-            transform: `translate(-50%, -50%) scale(${monk.isAbbot ? 0.72 : 0.68})`,
+            // Tăng 50% kích thước 3 Sư Thầy (từ 0.72 / 0.68 lên 1.08 / 1.02)
+            transform: `translate(-50%, -50%) scale(${monk.isAbbot ? 1.08 : 1.02})`,
             zIndex: monk.isAbbot ? 18 : 16,
           }}
         >
@@ -603,9 +655,13 @@ function TempleEffects2D({ quality }: { quality: 'LOW' | 'MEDIUM' | 'HIGH' }) {
 function Mobile2DSeatedVisitors({
   hideSimulated,
   mobile,
+  excludedUserIds,
+  busySeatDurationMs,
 }: {
   hideSimulated: boolean;
   mobile: boolean;
+  excludedUserIds?: ReadonlySet<string>;
+  busySeatDurationMs?: number;
 }) {
   const seatedVisitors = useTempleGameStore((state) => state.seatedVisitors);
   const active = useTempleGameStore((state) => state.active);
@@ -625,11 +681,18 @@ function Mobile2DSeatedVisitors({
         .filter((visitor) => {
           if (hideSimulated && visitor.isSimulated) return false;
           if (activeUsers.has(visitor.userId)) return false;
-          const duration = calculateSeatingDuration(visitor, userInteractions[visitor.userId] || 0);
+          if (excludedUserIds?.has(visitor.userId)) return false;
+          const normalDuration = calculateSeatingDuration(
+            visitor,
+            userInteractions[visitor.userId] || 0,
+          );
+          const duration = busySeatDurationMs
+            ? Math.min(normalDuration, busySeatDurationMs)
+            : normalDuration;
           return now - (visitor.seatedAt ?? visitor.createdAt) <= duration;
         })
         .slice(0, 24),
-    [activeUsers, hideSimulated, now, seatedVisitors, userInteractions],
+    [activeUsers, busySeatDurationMs, excludedUserIds, hideSimulated, now, seatedVisitors, userInteractions],
   );
 
   return (
@@ -674,6 +737,51 @@ function Mobile2DSeatedVisitors({
   );
 }
 
+function Mobile2DWaitingLine({
+  actions,
+  mobile,
+}: {
+  actions: TempleGameAction[];
+  mobile: boolean;
+}) {
+  const visibleLimit = mobile ? 7 : 12;
+  const visibleActions = actions.slice(0, visibleLimit);
+  if (visibleActions.length === 0) return null;
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-40" aria-label="Hàng khách đang chờ">
+      {visibleActions.map((action, index) => {
+        const isFemale = hashText(action.userId) % 12 !== 0;
+        const cultivation = getCultivationInfo(0, isFemale);
+        const horizontalPosition =
+          visibleActions.length === 1
+            ? 50
+            : 5 + index * (90 / (visibleActions.length - 1));
+        return (
+          <div
+            key={action.actionId}
+            className="mobile-2d-figure"
+            style={{
+              left: `${horizontalPosition}%`,
+              top: '96%',
+              transform: `translate(-50%, -50%) scale(${mobile ? 0.82 : 0.9})`,
+              zIndex: 42 + index,
+            }}
+          >
+            <DevoteeHeadBadge action={action} isFemale={isFemale} />
+            <DevoteeSprite2D assetUrl={cultivation.assetUrl} pose="PRAYING" />
+          </div>
+        );
+      })}
+      {actions.length > visibleActions.length && (
+        <div className="absolute bottom-2 right-3 rounded-full bg-black/75 px-2 py-1 text-xs font-bold text-amber-100">
+          +{actions.length - visibleActions.length} người đang chờ
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Nhân vật đang trong chu trình hành lễ (Active Character)
  * Đi từ cuối thảm đỏ vào điện -> dâng hoa / quỳ lạy / niệm Phật -> bước sang mép thảm về chỗ ngồi
@@ -684,12 +792,20 @@ function Mobile2DCharacter({
   paused,
   mobile,
   worshipDistance,
+  timings,
 }: {
   character: ActiveCharacter;
   lane: number;
   paused: boolean;
   mobile: boolean;
   worshipDistance: WorshipDistance;
+  timings: {
+    prayerMs: number;
+    donationBowMs: number;
+    flowerOfferingMs: number;
+    walkInMs: number;
+    walkToSeatMs: number;
+  };
 }) {
   const { setState, complete, addFlower } = useTempleGameStore();
   const action = character.action;
@@ -724,25 +840,59 @@ function Mobile2DCharacter({
     [resolvedSeatIndex, mobile],
   );
 
-  // Toạ độ điểm hành lễ trước điện Phật (ngay trước bàn thờ, trên thảm đỏ)
+  // Khách tới lễ đứng trên thảm đỏ chầu Phật: nâng lên thêm 5~10px (top: 63.2% trên mobile, 54% trên desktop, đứng ngay sau 3 Thầy 61.8% và cao hơn người ngồi hàng đầu 69%)
   const isNearStatue = worshipDistance === 'NEAR';
-  const worshipTop = mobile ? (isNearStatue ? 72 : 76) : isNearStatue ? 59 : 63;
-  const worshipScale = mobile ? (isNearStatue ? 0.76 : 0.82) : isNearStatue ? 0.72 : 0.8;
-  const laneOffset = [-6, -2, 2, 6][lane % 4];
+  const worshipTop = mobile ? (isNearStatue ? 63.2 : 65) : isNearStatue ? 54 : 56;
+  const worshipScale = mobile ? (isNearStatue ? 1.05 : 1.12) : isNearStatue ? 1.02 : 1.1;
+  const laneOffset = [-4, -1.5, 1.5, 4][lane % 4];
 
-  // Vòng đời hành lễ của nhân vật (đồng bộ chuẩn 3D)
+  // Vị trí xuất phát ngoài cửa (top: 104% - dưới đáy màn hình)
+  const startLeft = 50 + laneOffset * 0.4;
+  const startTop = 104;
+  const startScale = 1.45;
+
+  // Quản lý toạ độ bước đi từ cửa vào bằng state để CSS Transition kích hoạt chuẩn xác
+  const [position, setPosition] = useState({
+    left: startLeft,
+    top: startTop,
+    scale: startScale,
+    duration: '0s',
+  });
+
+  // Vòng đời hành lễ của nhân vật (đồng bộ chuẩn 2D)
   useEffect(() => {
     if (paused) return;
 
     let timer: number | undefined;
     let offeringTimer: number | undefined;
+    let spawnFrame: number | undefined;
 
     if (state === 'SPAWNING') {
-      setState(action.actionId, 'WALKING_TO_ALTAR');
+      // Đảm bảo frame đầu tiên ở ngoài cửa (top: 104%) đã được trình duyệt paint xong
+      // rồi mới kích hoạt chuyển động bước vào thảm đỏ theo thời gian đã cài ở Admin.
+      spawnFrame = window.setTimeout(() => {
+        if (isJoinOnly) {
+          setPosition({
+            left: seatCoords.left,
+            top: seatCoords.top,
+            scale: seatCoords.scale,
+            duration: `${timings.walkToSeatMs / 1000}s`,
+          });
+        } else {
+          // Đi thẳng trục giữa thảm đỏ lên điểm hành lễ trước điện Phật
+          setPosition({
+            left: 50 + laneOffset * 0.15,
+            top: worshipTop,
+            scale: worshipScale,
+            duration: `${timings.walkInMs / 1000}s`,
+          });
+        }
+        setState(action.actionId, 'WALKING_TO_ALTAR');
+      }, 50);
     } else if (state === 'WALKING_TO_ALTAR' || state === 'WALKING_TO_GATE') {
+      // Fallback timer đề phòng trường hợp transition không trigger: đúng 2.7s lập tức đổi hoạt ảnh
       timer = window.setTimeout(
         () => {
-          // Người xem vừa JOIN: đi thẳng vào chỗ ngồi đệm sen đã cấp
           if (isJoinOnly) {
             complete(action.actionId);
             return;
@@ -755,107 +905,125 @@ function Mobile2DCharacter({
             setState(action.actionId, 'PRAYING');
           }
         },
-        isJoinOnly ? 3500 : 4500,
+        (isJoinOnly ? timings.walkToSeatMs : timings.walkInMs) + 100,
       );
     } else if (state === 'OFFERING_FLOWERS') {
       if (!offeredRef.current) {
         offeringTimer = window.setTimeout(() => {
           offeredRef.current = true;
           addFlower();
-        }, 1500);
+        }, Math.min(1500, timings.flowerOfferingMs / 2));
       }
       // Dâng hoa xong thì chuyển sang quỳ lạy 3 lạy
       timer = window.setTimeout(() => {
         setState(action.actionId, 'BOWING');
-      }, 3500);
+      }, timings.flowerOfferingMs);
     } else if (state === 'BOWING') {
       // Quỳ lạy 3 lạy trang nghiêm (10s) rồi bước về chỗ ngồi
       timer = window.setTimeout(() => {
         setState(action.actionId, 'EXITING');
-      }, 10_000);
+      }, timings.donationBowMs);
     } else if (state === 'PRAYING' || state === 'WAITING') {
       // Chắp tay niệm Phật (5s) rồi bước về chỗ ngồi
       timer = window.setTimeout(() => {
         setState(action.actionId, 'EXITING');
-      }, 5_000);
+      }, timings.prayerMs);
     } else if (state === 'EXITING') {
-      // Bước từ điện Phật dạt sang mép thảm rồi về chỗ ngồi
+      // Bước từ điện Phật dạt sang mép thảm rồi về chỗ ngồi theo thời gian đã cài ở Admin.
+      setPosition({
+        left: seatCoords.left,
+        top: seatCoords.top,
+        scale: seatCoords.scale,
+        duration: `${timings.walkToSeatMs / 1000}s`,
+      });
       timer = window.setTimeout(() => {
         complete(action.actionId);
-      }, 3500);
+      }, timings.walkToSeatMs);
     }
 
     return () => {
+      if (spawnFrame) window.clearTimeout(spawnFrame);
       if (timer) window.clearTimeout(timer);
       if (offeringTimer) window.clearTimeout(offeringTimer);
     };
-  }, [action.actionId, action.actionType, addFlower, complete, isDonation, isJoinOnly, paused, setState, state]);
+  }, [
+    action.actionId,
+    action.actionType,
+    addFlower,
+    complete,
+    isDonation,
+    isJoinOnly,
+    laneOffset,
+    paused,
+    seatCoords.left,
+    seatCoords.scale,
+    seatCoords.top,
+    setState,
+    state,
+    worshipScale,
+    worshipTop,
+    timings.donationBowMs,
+    timings.flowerOfferingMs,
+    timings.prayerMs,
+    timings.walkInMs,
+    timings.walkToSeatMs,
+  ]);
 
-  // Vị trí và tư thế tương ứng theo từng giai đoạn
-  let currentLeft = 50 + laneOffset;
-  let currentTop = 98;
-  let currentScale = 1.0;
-  let transitionDuration = '0s';
+  // Tư thế tương ứng theo từng giai đoạn
   let activePose: DevoteePose = 'WALK_BACK';
-
-  if (state === 'SPAWNING') {
-    currentLeft = 50 + laneOffset;
-    currentTop = 98;
-    currentScale = 1.0;
-    transitionDuration = '0s';
-    activePose = 'WALK_BACK';
-  } else if (state === 'WALKING_TO_ALTAR' || state === 'WALKING_TO_GATE') {
-    if (isJoinOnly) {
-      // Đi thẳng từ cửa vào chỗ ngồi
-      currentLeft = seatCoords.left;
-      currentTop = seatCoords.top;
-      currentScale = seatCoords.scale;
-      transitionDuration = '3.5s';
-      activePose = 'WALK_BACK';
-    } else {
-      // Đi dọc theo thảm đỏ vào trước điện Phật
-      currentLeft = 50 + laneOffset * 0.4;
-      currentTop = worshipTop;
-      currentScale = worshipScale;
-      transitionDuration = '4.5s';
-      activePose = 'WALK_BACK';
-    }
-  } else if (state === 'OFFERING_FLOWERS') {
-    currentLeft = 50 + laneOffset * 0.4;
-    currentTop = worshipTop;
-    currentScale = worshipScale;
+  if (state === 'OFFERING_FLOWERS') {
     activePose = 'OFFERING';
   } else if (state === 'BOWING') {
-    currentLeft = 50 + laneOffset * 0.4;
-    currentTop = worshipTop;
-    currentScale = worshipScale;
     activePose = 'BOWING';
   } else if (state === 'PRAYING' || state === 'WAITING') {
-    currentLeft = 50 + laneOffset * 0.4;
-    currentTop = worshipTop;
-    currentScale = worshipScale;
     activePose = 'PRAYING';
   } else if (state === 'EXITING') {
     // Bước từ trên chánh điện xuống chỗ ngồi:
-    // SỬ DỤNG HOÀNG ẢNH ĐI HƯỚNG VỀ PHÍA TRƯỚC (WALK_FRONT)
+    // SỬ DỤNG HOẠT ẢNH ĐI HƯỚNG VỀ PHÍA TRƯỚC (WALK_FRONT)
     // Khắc phục triệt để lỗi đi lùi đằng lưng!
-    currentLeft = seatCoords.left;
-    currentTop = seatCoords.top;
-    currentScale = seatCoords.scale;
-    transitionDuration = '3.5s';
     activePose = 'WALK_FRONT';
+  } else {
+    // Đi từ cửa vào chánh điện (WALK_BACK)
+    activePose = 'WALK_BACK';
   }
 
   const figureStyle: CSSProperties = {
-    left: `${currentLeft}%`,
-    top: `${currentTop}%`,
-    transform: `translate(-50%, -50%) scale(${currentScale})`,
-    transition: `top ${transitionDuration} linear, left ${transitionDuration} ease-out, transform ${transitionDuration} linear`,
+    left: `${position.left}%`,
+    top: `${position.top}%`,
+    transform: `translate(-50%, -50%) scale(${position.scale})`,
+    transition:
+      position.duration !== '0s'
+        ? `top ${position.duration} linear, left ${position.duration} ease-out, transform ${position.duration} linear`
+        : 'none',
     zIndex: state === 'EXITING' ? seatCoords.zIndex : 35,
   };
 
+  // Khi bước chân chạm đích: lập tức chuyển tư thế quỳ lạy / chắp tay niệm Phật / dâng hoa không trễ 1 mili-giây
+  const handleTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget || e.propertyName !== 'top') return;
+    if (state === 'WALKING_TO_ALTAR' || state === 'WALKING_TO_GATE') {
+      if (isJoinOnly) {
+        complete(action.actionId);
+        return;
+      }
+      if (action.actionType === 'OFFER_FLOWERS') {
+        setState(action.actionId, 'OFFERING_FLOWERS');
+      } else if (isDonation) {
+        setState(action.actionId, 'BOWING');
+      } else {
+        setState(action.actionId, 'PRAYING');
+      }
+    } else if (state === 'EXITING') {
+      complete(action.actionId);
+    }
+  };
+
   return (
-    <div className="mobile-2d-figure" style={figureStyle}>
+    <div
+      className="mobile-2d-figure"
+      style={figureStyle}
+      onTransitionEnd={handleTransitionEnd}
+    >
       {/* Huy hiệu Avatar + Level + Tên hoặc Bong bóng bình luận */}
       <DevoteeHeadBadge action={action} isFemale={isFemale} />
 
@@ -881,16 +1049,180 @@ function Mobile2DCharacter({
  * ============================================================================
  */
 export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
-  const { active, allowSimulated, paused } = useTempleGameStore();
+  const { active, queue, seatedVisitors, userInteractions, allowSimulated, paused } =
+    useTempleGameStore();
+  const setFifoQueue = useTempleGameStore((state) => state.setFifoQueue);
+  const setMobilePriorityAdmission = useTempleGameStore(
+    (state) => state.setMobilePriorityAdmission,
+  );
   const connection = useMonitorStore((state) => state.connection);
+  const mobile2dQueueEnabled = useMonitorStore(
+    (state) => state.prefs.mobile2dQueueEnabled ?? true,
+  );
+  const mobile2dBusySeatSeconds = useMonitorStore(
+    (state) => state.prefs.mobile2dBusySeatSeconds ?? 20,
+  );
+  const monitorPreferences = useMonitorStore((state) => state.prefs);
+  const ceremonyTimings = useMemo(
+    () => ({
+      prayerMs: (monitorPreferences.mobile2dPrayerSeconds ?? 3) * 1000,
+      donationBowMs: (monitorPreferences.mobile2dDonationBowSeconds ?? 5) * 1000,
+      flowerOfferingMs: (monitorPreferences.mobile2dFlowerOfferingSeconds ?? 3.5) * 1000,
+      walkInMs: (monitorPreferences.mobile2dWalkInSeconds ?? 2.6) * 1000,
+      walkToSeatMs: (monitorPreferences.mobile2dWalkToSeatSeconds ?? 2.4) * 1000,
+    }),
+    [monitorPreferences],
+  );
 
   const [preset, setPreset] = useState<CameraPreset>('OVERVIEW');
   const [theme, setTheme] = useState<TempleTheme>('INTERIOR');
   const [worshipDistance, setWorshipDistance] = useState<WorshipDistance>('NEAR');
   const [isOverlayToolbarVisible, setIsOverlayToolbarVisible] = useState(true);
+  const [admittedActionIds, setAdmittedActionIds] = useState<string[]>([]);
+  const [excludedSeatUserIds, setExcludedSeatUserIds] = useState<string[]>([]);
+  const [queueClock, setQueueClock] = useState(Date.now());
 
   const quality = useTempleGameStore((s) => s.quality);
   const hideSimulated = !allowSimulated;
+  const is2DInteriorQueueEnabled = theme === 'INTERIOR' && mobile2dQueueEnabled;
+
+  useEffect(() => {
+    setFifoQueue(false);
+    setMobilePriorityAdmission(is2DInteriorQueueEnabled);
+    return () => setMobilePriorityAdmission(false);
+  }, [is2DInteriorQueueEnabled, setFifoQueue, setMobilePriorityAdmission]);
+
+  useEffect(() => {
+    if (!is2DInteriorQueueEnabled || paused) return;
+    const interval = window.setInterval(() => setQueueClock(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [is2DInteriorQueueEnabled, paused]);
+
+  const activeUserIds = useMemo(
+    () => new Set(active.map((character) => character.action.userId)),
+    [active],
+  );
+  const queuedUserIds = useMemo(() => new Set(queue.map((action) => action.userId)), [queue]);
+  const waitingUserIds = useMemo(
+    () => new Set([...activeUserIds, ...queuedUserIds]),
+    [activeUserIds, queuedUserIds],
+  );
+
+  const normallyPresentUserIds = useMemo(() => {
+    const presentUserIds = new Set<string>();
+    for (const visitor of seatedVisitors) {
+      const normalDuration = calculateSeatingDuration(
+        visitor,
+        userInteractions[visitor.userId] || 0,
+      );
+      const seatStartedAt = visitor.seatedAt ?? visitor.createdAt;
+      if (queueClock - seatStartedAt <= normalDuration) presentUserIds.add(visitor.userId);
+    }
+    for (const character of active) presentUserIds.add(character.action.userId);
+    for (const action of queue) presentUserIds.add(action.userId);
+    return presentUserIds;
+  }, [active, queue, queueClock, seatedVisitors, userInteractions]);
+
+  const isMobileInteriorBusy =
+    is2DInteriorQueueEnabled && normallyPresentUserIds.size > 24;
+  const busySeatDurationMs = isMobileInteriorBusy
+    ? Math.max(10, mobile2dBusySeatSeconds) * 1000
+    : undefined;
+
+  useEffect(() => {
+    if (!is2DInteriorQueueEnabled) {
+      setAdmittedActionIds([]);
+      setExcludedSeatUserIds([]);
+      return;
+    }
+
+    const activeActionIds = new Set(active.map((character) => character.action.actionId));
+    const retainedIds = admittedActionIds.filter((actionId) => activeActionIds.has(actionId));
+    const retainedIdSet = new Set(retainedIds);
+    const validSeatedVisitors = seatedVisitors
+      .filter((visitor) => {
+        if (waitingUserIds.has(visitor.userId)) return false;
+        const normalDuration = calculateSeatingDuration(
+          visitor,
+          userInteractions[visitor.userId] || 0,
+        );
+        const duration = busySeatDurationMs
+          ? Math.min(normalDuration, busySeatDurationMs)
+          : normalDuration;
+        return queueClock - (visitor.seatedAt ?? visitor.createdAt) <= duration;
+      })
+      .sort(sortMobileAdmissionActions)
+      .slice(0, 24);
+
+    const retainedCharacters = active
+      .filter((character) => retainedIdSet.has(character.action.actionId))
+      .sort((first, second) => first.startedAt - second.startedAt);
+    const waitingCharacters = active
+      .filter((character) => !retainedIdSet.has(character.action.actionId))
+      .sort((first, second) =>
+        sortMobileAdmissionActions(first.action, second.action),
+      );
+    const admissionCandidates = [...retainedCharacters, ...waitingCharacters];
+    const reservedActionIds: string[] = [];
+    const keptSeatedVisitors = [...validSeatedVisitors];
+
+    for (const character of admissionCandidates) {
+      if (reservedActionIds.length >= 24) break;
+      if (keptSeatedVisitors.length + reservedActionIds.length < 24) {
+        reservedActionIds.push(character.action.actionId);
+        continue;
+      }
+
+      const lowestSeatedVisitor = keptSeatedVisitors[keptSeatedVisitors.length - 1];
+      if (!lowestSeatedVisitor) continue;
+      const isAlreadyWalking = retainedIdSet.has(character.action.actionId);
+      const canReplaceSeat =
+        isAlreadyWalking ||
+        getMobileSeatPriority(character.action) > getMobileSeatPriority(lowestSeatedVisitor);
+      if (!canReplaceSeat) continue;
+
+      keptSeatedVisitors.pop();
+      reservedActionIds.push(character.action.actionId);
+    }
+
+    const keptSeatedUserIds = new Set(keptSeatedVisitors.map((visitor) => visitor.userId));
+    const nextExcludedSeatUserIds = seatedVisitors
+      .filter((visitor) => !keptSeatedUserIds.has(visitor.userId))
+      .map((visitor) => visitor.userId);
+    const nextIds = reservedActionIds;
+
+    if (nextIds.join('|') !== admittedActionIds.join('|')) setAdmittedActionIds(nextIds);
+    if (nextExcludedSeatUserIds.join('|') !== excludedSeatUserIds.join('|')) {
+      setExcludedSeatUserIds(nextExcludedSeatUserIds);
+    }
+  }, [
+    active,
+    admittedActionIds,
+    busySeatDurationMs,
+    excludedSeatUserIds,
+    is2DInteriorQueueEnabled,
+    queueClock,
+    seatedVisitors,
+    userInteractions,
+    waitingUserIds,
+  ]);
+
+  const admittedIdSet = useMemo(() => new Set(admittedActionIds), [admittedActionIds]);
+  const hiddenSeatUserIds = useMemo(
+    () => new Set([...waitingUserIds, ...excludedSeatUserIds]),
+    [excludedSeatUserIds, waitingUserIds],
+  );
+  const displayedActiveCharacters = is2DInteriorQueueEnabled
+    ? active.filter((character) => admittedIdSet.has(character.action.actionId))
+    : active;
+  const waitingActions = is2DInteriorQueueEnabled
+    ? [
+        ...active
+          .filter((character) => !admittedIdSet.has(character.action.actionId))
+          .map((character) => character.action),
+        ...queue,
+      ].sort(sortMobileAdmissionActions)
+    : [];
 
   // Tự động phát nhạc nền chánh điện và mở khóa âm thanh khi tương tác
   useEffect(() => {
@@ -981,11 +1313,16 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
         {theme === 'INTERIOR' && <ChantingMonks2D mobile={mobile} />}
 
         {/* 24 Chỗ ngồi quỳ niệm Phật trên đệm sen toà thêu vàng */}
-        <Mobile2DSeatedVisitors hideSimulated={hideSimulated} mobile={mobile} />
+        <Mobile2DSeatedVisitors
+          hideSimulated={hideSimulated}
+          mobile={mobile}
+          excludedUserIds={is2DInteriorQueueEnabled ? hiddenSeatUserIds : undefined}
+          busySeatDurationMs={busySeatDurationMs}
+        />
 
         {/* Lớp hiển thị các Phật tử đang bước vào hành lễ */}
         <div className="pointer-events-none absolute inset-0 z-30" aria-hidden="true">
-          {active
+          {displayedActiveCharacters
             .filter((character) => !(hideSimulated && character.action.isSimulated))
             .map((character, index) => (
               <Mobile2DCharacter
@@ -995,9 +1332,17 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
                 paused={paused}
                 mobile={mobile}
                 worshipDistance={worshipDistance}
+                timings={ceremonyTimings}
               />
             ))}
         </div>
+
+        {is2DInteriorQueueEnabled && (
+          <Mobile2DWaitingLine
+            actions={waitingActions.filter((action) => !(hideSimulated && action.isSimulated))}
+            mobile={mobile}
+          />
+        )}
 
         {/* Các hạt bụi vàng lơ lửng huyền ảo */}
         <TempleEffects2D quality={quality} />

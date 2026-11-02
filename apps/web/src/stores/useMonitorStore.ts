@@ -24,6 +24,14 @@ type MonitorPreferences = {
   joinEvents: boolean;
   debug: boolean;
   display: 'ALL' | 'TIKTOK' | 'SIMULATOR';
+  commentDurationSeconds: number;
+  mobile2dQueueEnabled: boolean;
+  mobile2dBusySeatSeconds: number;
+  mobile2dPrayerSeconds: number;
+  mobile2dDonationBowSeconds: number;
+  mobile2dFlowerOfferingSeconds: number;
+  mobile2dWalkInSeconds: number;
+  mobile2dWalkToSeatSeconds: number;
 };
 const defaultPreferences: MonitorPreferences = {
   autoReconnect: true,
@@ -32,6 +40,14 @@ const defaultPreferences: MonitorPreferences = {
   joinEvents: true,
   debug: false,
   display: 'ALL',
+  commentDurationSeconds: 20,
+  mobile2dQueueEnabled: true,
+  mobile2dBusySeatSeconds: 20,
+  mobile2dPrayerSeconds: 3,
+  mobile2dDonationBowSeconds: 5,
+  mobile2dFlowerOfferingSeconds: 3.5,
+  mobile2dWalkInSeconds: 2.6,
+  mobile2dWalkToSeatSeconds: 2.4,
 };
 function loadStoredPreferences(): Partial<MonitorPreferences> {
   try {
@@ -86,3 +102,13 @@ export const useMonitorStore = create<MonitorStore>((set, get) => ({
     set({ prefs });
   },
 }));
+
+// Đồng bộ cài đặt giữa trang Admin và cửa sổ overlay/OBS đang mở ở tab khác.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key !== 'live-monitor-prefs') return;
+    useMonitorStore.setState({
+      prefs: { ...defaultPreferences, ...loadStoredPreferences() },
+    });
+  });
+}

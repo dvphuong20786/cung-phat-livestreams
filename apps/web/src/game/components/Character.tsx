@@ -1,4 +1,5 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMonitorStore } from '../../stores/useMonitorStore';
 import { Billboard, Html, useTexture } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, Group, MathUtils, Vector3 } from 'three';

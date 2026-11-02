@@ -2,7 +2,8 @@ import { Gift, Sparkles } from 'lucide-react';
 import { useTempleGameStore } from '../useTempleGameStore';
 
 export function RecentDonorsList({ mobile = false }: { mobile?: boolean }) {
-  const recentDonors = useTempleGameStore((state) => state.recentDonors) || [];
+  const storedDonors = useTempleGameStore((state) => state.recentDonors) || [];
+  const recentDonors = storedDonors.filter((donor) => donor.isSimulated !== true);
 
   if (recentDonors.length === 0) return null;
 
