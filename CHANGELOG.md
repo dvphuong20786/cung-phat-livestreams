@@ -1,5 +1,17 @@
 # Lịch sử thay đổi
 
+## [v0.17.0] - 2026-11-02
+- **Yêu cầu**: Triển khai trọn bộ 6 cải tiến chánh điện 3D (luồng lễ 10-20s, kích thước nhân vật, avatar TikTok & bong bóng bình luận, phân bổ khán giả JOIN ngồi 2 hàng, bảng xếp hạng Công Đức ✦ và 3 thầy chùa tụng kinh gõ mõ).
+- **Chi tiết kỹ thuật**:
+  - **Task 1 & 2 (`apps/web/src/game/components/Character.tsx`)**: Kéo dài thời gian quỳ lạy cúng Phật lên 14 giây (3 chu kỳ lạy sâu); thiết lập trạm cắm hương riêng `incenseStation` tại `z = 1.35`; điều chỉnh tỷ lệ chiều sâu `depthScale = 0.90 + 0.10 * depthProgress` và kích thước sprite `1.9m x 2.6m` giúp nhân vật tiến vào gần bàn thờ giữ lại ~90% kích thước ban đầu, không bị thu nhỏ quá mức.
+  - **Task 3 (`Character.tsx`)**: Tích hợp `CharacterHeadOverlay` hiển thị avatar tròn TikTok trên đỉnh đầu nhân vật. Khi người dùng bình luận (`message`), tự động ẩn nickname và bung khung thoại bong bóng vàng hổ phách hiển thị lời bình kèm avatar nổi bật.
+  - **Task 4 (`useTempleGameStore.ts`, `SeatedVisitors.tsx`)**: Chuyển hướng sự kiện `JOIN` (khán giả mới vào livestream chưa có tương tác sâu) trực tiếp vào danh sách người ngồi quỳ `seatedVisitors`, không xếp vào hàng diễu hành dâng hương. Xếp ngay ngắn thành 2 hàng toà sen ở 2 bên thảm đỏ (`z = 4.8` và `z = 7.2`), tránh che khuất bàn thờ và lư hương.
+  - **Task 5 (`apps/web/src/game/components/MeritLeaderboard.tsx`, `TemplePage.tsx`)**: Thêm bảng xếp hạng nổi "✦ Công Đức ✦" bằng gỗ viền vàng ở góc trên bên phải, vinh danh Top 5 thí chủ đóng góp với các cấp bậc danh hiệu: Đại Hộ Pháp (Top 1), Hộ Pháp (Top 2-3), Thí Chủ (Top 4-5) kèm cập nhật điểm số công đức thời gian thực.
+  - **Task 6 (`apps/web/src/game/components/ChantingMonks.tsx`, `TempleScene.tsx`)**: Thêm 3 vị sư tụng kinh trước bàn thờ chính trong Nội điện: Sư Trụ Trì ở giữa có vòng hào quang xoay sáng, Thầy Minh Đạo bên trái và Thầy Tâm Từ bên phải, kèm mô hình mõ gỗ và dùi gõ chuyển động nhịp nhàng theo chu kỳ tụng kinh 1.2s.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Toàn bộ 23/23 unit tests đều passed. Đã kiểm tra typecheck TypeScript hoàn tất không có lỗi. Các task đã hoàn thành về mặt kỹ thuật và đang chờ người dùng kiểm tra thực tế trên trình duyệt để xác nhận đóng task.
+
+
 ## [v0.16.1] - 2026-11-02
 - **Yêu cầu**: Sửa lỗi cú pháp Babel unexpected token ở cuối file `SeatedVisitors.tsx`.
 - **Chi tiết kỹ thuật**:

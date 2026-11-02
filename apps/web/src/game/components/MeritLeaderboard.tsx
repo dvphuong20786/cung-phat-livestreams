@@ -129,3 +129,4 @@ export function MeritLeaderboard({ mobile = false }: { mobile?: boolean }) {
     </aside>
   );
 }
+

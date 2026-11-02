@@ -7,7 +7,6 @@ import {
   type WorshipDistance,
 } from '../game/TempleScene';
 import { TempleToolbar } from '../game/TempleToolbar';
-import { MeritLeaderboard } from '../game/components/MeritLeaderboard';
 import { useTempleGameStore } from '../game/useTempleGameStore';
 import { useMonitorStore } from '../stores/useMonitorStore';
 export function TemplePage({
@@ -83,11 +82,6 @@ export function TemplePage({
           <Eye size={16} />
         </button>
       )}
-      {/* Bảng Top Donate / Công Đức */}
-      <div className={`absolute z-20 ${mobile ? 'right-2.5 top-2.5' : 'right-4 top-4'}`}>
-        <MeritLeaderboard mobile={mobile} />
-      </div>
-
       {!overlay && (
         <>
           <div className="absolute left-4 top-4 max-w-sm rounded-2xl border border-amber-100/20 bg-[#25170d]/70 p-4 shadow-2xl backdrop-blur-xl">
@@ -99,14 +93,14 @@ export function TemplePage({
             </div>
             {latest && <div className="mt-3 text-sm text-amber-100">{latest}</div>}
           </div>
-          <div className="absolute left-4 bottom-4 z-20 rounded-2xl border border-white/15 bg-slate-950/70 p-3 text-xs backdrop-blur">
+          <div className="absolute right-4 top-4 rounded-2xl border border-white/15 bg-slate-950/70 p-3 text-xs backdrop-blur">
             <div className="flex items-center gap-2">
               <span
                 className={`h-2 w-2 rounded-full ${connection.state === 'CONNECTED' ? 'bg-emerald-400' : 'bg-slate-500'}`}
               />
               {connection.state === 'CONNECTED' ? 'TikTok LIVE đã kết nối' : 'Chế độ mô phỏng'}
             </div>
-            <div className="mt-1 text-slate-300">
+            <div className="mt-2 text-slate-300">
               Đang hoạt động: <b>{active.length}</b> · Chờ: <b>{queue.length}</b>
             </div>
           </div>
