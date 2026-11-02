@@ -1,5 +1,17 @@
 # Lịch sử thay đổi
 
+## [v0.22.5] - 2026-11-02
+- **Yêu cầu**: Tắt tự động phát 3 âm thanh nghi lễ (Gõ Mõ, Đại Hồng Chung, Khánh Dâng Hoa), chuyển sang cơ chế admin chủ động gõ; load danh sách nhạc nền trực tiếp từ các file thực tế trong thư mục `apps/web/public/audio/`.
+- **Chi tiết kỹ thuật**:
+  - `ChantingMonks.tsx`: Gỡ bỏ lệnh tự động phát `templeAudio.playWoodenFish(0)` theo nhịp frame của Sư Trụ Trì; giữ chuyển động 3D của dùi mõ mà không phát âm thanh ngoài ý muốn.
+  - `useTempleGameStore.ts`: Gỡ bỏ tự động phát chuông và khánh khi nhận sự kiện dâng hoa (`OFFER_FLOWERS`) và tặng quà (`GIFT`).
+  - `TempleToolbar.tsx`: Bổ sung 3 nút chủ động `[🪵 Mõ]`, `[🔔 Chuông]`, `[✨ Khánh]` trên thanh công cụ chánh điện 3D để admin chủ động gõ theo ý muốn.
+  - `AudioSettingsPanel.tsx`: Thêm nút chủ động gõ mõ, đánh chuông, đánh khánh với nhãn rõ ràng; cập nhật Combobox tự động fetch danh sách file audio thực tế từ thư mục `apps/web/public/audio/` kèm nút "Làm mới danh sách" (Refresh) để cập nhật ngay khi copy file mới vào folder Windows Explorer.
+  - `apps/server/src/index.ts` & `apps/web/vite.config.ts`: Thêm API endpoint `/api/audio-files` quét thư mục `public/audio` và trả về danh sách file nhạc (`.mp3`, `.wav`, `.ogg`, `.m4a`, `.aac`, `.flac`).
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 28/28 unit test đạt; TypeScript web/server compile không có lỗi.
+
+
 ## [v0.22.4] - 2026-11-02
 - **Yêu cầu**: Sửa rò rỉ bộ nhớ khi người dùng tải và đổi nhiều file nhạc nền từ máy tính.
 - **Chi tiết kỹ thuật**:

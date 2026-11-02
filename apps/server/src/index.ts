@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import fs from 'node:fs';
+import path from 'node:path';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { EventService } from './services/EventService.js';
@@ -47,6 +49,38 @@ app.get('/api/characters/:userId', (q, r) => {
   const char = characterStore.getCharacter(q.params.userId);
   if (!char) return r.status(404).json({ ok: false, error: 'Character not found' });
   r.json({ ok: true, data: char });
+});
+
+// Quét danh sách file nhạc từ thư mục apps/web/public/audio
+app.get('/api/audio-files', (_q, r) => {
+  try {
+    const possibleDirs = [
+      path.resolve(process.cwd(), 'apps/web/public/audio'),
+      path.resolve(process.cwd(), '../web/public/audio'),
+      path.resolve(process.cwd(), 'public/audio'),
+    ];
+    const audioDir = possibleDirs.find((dir) => fs.existsSync(dir));
+    if (!audioDir) {
+      return r.json({ ok: true, files: [] });
+    }
+
+    const allowedExts = new Set(['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac']);
+    const entries = fs.readdirSync(audioDir, { withFileTypes: true });
+    const files = entries
+      .filter((entry) => entry.isFile() && allowedExts.has(path.extname(entry.name).toLowerCase()))
+      .map((entry) => {
+        const stats = fs.statSync(path.join(audioDir, entry.name));
+        return {
+          name: entry.name,
+          url: `/audio/${encodeURIComponent(entry.name)}`,
+          size: stats.size,
+        };
+      });
+
+    r.json({ ok: true, files });
+  } catch (err) {
+    r.status(500).json({ ok: false, error: String(err) });
+  }
 });
 
 const http = createServer(app);

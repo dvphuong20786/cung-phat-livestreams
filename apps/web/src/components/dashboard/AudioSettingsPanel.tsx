@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Music,
   Volume2,
@@ -8,62 +8,54 @@ import {
   Pause,
   Disc3,
   Upload,
-  ExternalLink,
   HelpCircle,
   FileAudio,
+  RefreshCw,
+  FolderOpen,
 } from 'lucide-react';
 import { templeAudio } from '../../game/services/TempleAudioService';
 
-interface PresetTrack {
-  id: string;
-  label: string;
+interface FolderAudioFile {
+  name: string;
   url: string;
-  description: string;
+  size: number;
 }
-
-const PRESET_TRACKS: PresetTrack[] = [
-  {
-    id: 'thien-tinh-tam',
-    label: 'Nhạc chuông thiền tĩnh tâm (Có sẵn)',
-    url: '/audio/bgm-thien-tinh-tam.wav',
-    description: 'Hòa âm chuông thiền Tây Tạng êm dịu, tạo không gian trang nghiêm',
-  },
-  {
-    id: 'bgm-default',
-    label: 'Nhạc chánh điện mặc định (Có sẵn)',
-    url: '/audio/bgm.wav',
-    description: 'Bản nhạc nền chánh điện tiêu chuẩn trong thư mục public/audio/',
-  },
-  {
-    id: 'synth-drone',
-    label: 'Nhạc thiền Singing Bowl (Tự sinh trực tiếp)',
-    url: 'synth',
-    description: 'Tự động tạo âm thiền thanh tịnh liên tục không phụ thuộc file ngoài',
-  },
-  {
-    id: 'custom-input',
-    label: 'Đường dẫn nhạc tùy chỉnh (URL)',
-    url: '',
-    description: 'Nhập link file nhạc online hoặc đường dẫn file tùy ý',
-  },
-];
 
 export function AudioSettingsPanel() {
   const [isMuted, setIsMuted] = useState(() => templeAudio.getMuted());
   const [volume, setVolume] = useState(() => templeAudio.getVolume());
   const [isPlayingTestBgm, setIsPlayingTestBgm] = useState(false);
 
-  const initialUrl = templeAudio.getCurrentBgmUrl();
-  const matchedPreset = PRESET_TRACKS.find((t) => t.url === initialUrl);
-  const [selectedTrackId, setSelectedTrackId] = useState<string>(
-    matchedPreset ? matchedPreset.id : 'custom-input',
-  );
-  const [customBgmUrl, setCustomBgmUrl] = useState(() =>
-    matchedPreset && matchedPreset.id !== 'custom-input' ? '' : initialUrl,
-  );
+  const [folderFiles, setFolderFiles] = useState<FolderAudioFile[]>([]);
+  const [isLoadingFolder, setIsLoadingFolder] = useState(false);
+
+  const [currentUrl, setCurrentUrl] = useState(() => templeAudio.getCurrentBgmUrl());
+  const [customBgmUrl, setCustomBgmUrl] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Quét danh sách file từ API backend hoặc Vite server
+  const fetchAudioFiles = useCallback(async () => {
+    setIsLoadingFolder(true);
+    try {
+      const res = await fetch('/api/audio-files');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.files)) {
+          setFolderFiles(data.files);
+        }
+      }
+    } catch (err) {
+      console.warn('Không thể tải danh sách file audio:', err);
+    } finally {
+      setIsLoadingFolder(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAudioFiles();
+  }, [fetchAudioFiles]);
 
   const handleToggleMute = () => {
     const next = templeAudio.toggleMute();
@@ -79,25 +71,26 @@ export function AudioSettingsPanel() {
     }
   };
 
-  const handleSelectTrack = (trackId: string) => {
-    setSelectedTrackId(trackId);
-    const track = PRESET_TRACKS.find((t) => t.id === trackId);
-    if (track && track.id !== 'custom-input') {
-      templeAudio.setBgmTrack(track.url);
-      if (isPlayingTestBgm) {
-        templeAudio.startBgm();
+  const handleSelectTrack = (url: string) => {
+    if (url === 'custom') {
+      setCurrentUrl('custom');
+      if (customBgmUrl.trim()) {
+        templeAudio.setBgmTrack(customBgmUrl.trim());
+        if (isPlayingTestBgm) templeAudio.startBgm();
       }
-    } else if (customBgmUrl.trim()) {
-      templeAudio.setBgmTrack(customBgmUrl.trim());
-      if (isPlayingTestBgm) {
-        templeAudio.startBgm();
-      }
+      return;
+    }
+
+    setCurrentUrl(url);
+    templeAudio.setBgmTrack(url);
+    if (isPlayingTestBgm) {
+      templeAudio.startBgm();
     }
   };
 
   const handleCustomUrlChange = (url: string) => {
     setCustomBgmUrl(url);
-    if (selectedTrackId === 'custom-input' && url.trim()) {
+    if (url.trim()) {
       templeAudio.setBgmTrack(url.trim());
       if (isPlayingTestBgm) {
         templeAudio.startBgm();
@@ -112,8 +105,7 @@ export function AudioSettingsPanel() {
 
     const objectUrl = URL.createObjectURL(file);
     setUploadedFileName(file.name);
-    setSelectedTrackId('custom-input');
-    setCustomBgmUrl(objectUrl);
+    setCurrentUrl(objectUrl);
     templeAudio.setBgmTrack(objectUrl);
 
     if (isMuted) {
@@ -124,6 +116,7 @@ export function AudioSettingsPanel() {
     setIsPlayingTestBgm(true);
   };
 
+  // Chủ động gõ các âm thanh nghi lễ
   const handleTestWoodenFish = () => {
     if (isMuted) {
       templeAudio.setMuted(false);
@@ -161,6 +154,14 @@ export function AudioSettingsPanel() {
       setIsPlayingTestBgm(true);
     }
   };
+
+  // Kiểm tra xem currentUrl có nằm trong danh sách folderFiles hay không
+  const isKnownTrack =
+    currentUrl === 'synth' ||
+    currentUrl === 'custom' ||
+    folderFiles.some((f) => f.url === currentUrl);
+
+  const selectedValue = isKnownTrack ? currentUrl : 'custom';
 
   return (
     <div className="space-y-6">
@@ -234,25 +235,63 @@ export function AudioSettingsPanel() {
         </div>
 
         <div className="mt-4 space-y-4 text-xs">
-          {/* Combobox chọn bài nhạc */}
+          {/* Combobox chọn bài nhạc từ thư mục */}
           <div>
-            <label className="block font-medium text-slate-300 mb-1.5">
-              Danh sách bài nhạc nền có sẵn:
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="font-medium text-slate-300 flex items-center gap-1.5">
+                <FolderOpen size={14} className="text-amber-400" />
+                <span>Danh sách file nhạc trong thư mục apps/web/public/audio:</span>
+              </label>
+              <button
+                type="button"
+                onClick={fetchAudioFiles}
+                disabled={isLoadingFolder}
+                className="flex items-center gap-1 text-[11px] text-amber-300 hover:text-amber-200 transition"
+                title="Bấm để quét lại các file vừa copy vào thư mục"
+              >
+                <RefreshCw size={12} className={isLoadingFolder ? 'animate-spin' : ''} />
+                <span>Làm mới danh sách</span>
+              </button>
+            </div>
+
             <select
-              value={selectedTrackId}
+              value={selectedValue}
               onChange={(e) => handleSelectTrack(e.target.value)}
-              className="field w-full text-xs font-medium bg-slate-900 border-white/15 text-amber-100 py-2"
+              className="field w-full text-xs font-medium bg-slate-900 border-white/15 text-amber-100 py-2.5"
             >
-              {PRESET_TRACKS.map((track) => (
-                <option key={track.id} value={track.id}>
-                  {track.label}
+              <optgroup label="🎵 File nhạc trong thư mục apps/web/public/audio/">
+                {folderFiles.length === 0 ? (
+                  <option disabled value="">
+                    (Thư mục public/audio đang trống, hãy copy file vào đây)
+                  </option>
+                ) : (
+                  folderFiles.map((file) => (
+                    <option key={file.url} value={file.url}>
+                      {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)
+                    </option>
+                  ))
+                )}
+              </optgroup>
+
+              <optgroup label="✨ Âm thanh tự sinh & Tùy chọn khác">
+                <option value="synth">
+                  Nhạc thiền Singing Bowl (Tự sinh trực tiếp qua Web Audio)
                 </option>
-              ))}
+                <option value="custom">Đường dẫn file nhạc tùy chỉnh / URL khác</option>
+              </optgroup>
             </select>
-            <p className="mt-1.5 text-[11px] text-slate-400">
-              {PRESET_TRACKS.find((t) => t.id === selectedTrackId)?.description}
-            </p>
+
+            <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-400">
+              <span>
+                📁 Đã tìm thấy: <strong className="text-amber-300">{folderFiles.length}</strong> file
+                trong thư mục <code>apps/web/public/audio/</code>
+              </span>
+              {currentUrl && currentUrl !== 'synth' && currentUrl !== 'custom' && (
+                <span className="text-emerald-400 truncate max-w-xs font-mono">
+                  Đang chọn: {decodeURIComponent(currentUrl.replace('/audio/', ''))}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Nút tải file nhạc trực tiếp từ máy tính */}
@@ -282,20 +321,97 @@ export function AudioSettingsPanel() {
           </div>
 
           {/* Ô nhập link tùy chỉnh nếu chọn Tùy chỉnh */}
-          {selectedTrackId === 'custom-input' && (
+          {selectedValue === 'custom' && (
             <div className="space-y-1">
               <label className="block font-medium text-slate-300">
                 Hoặc nhập đường dẫn / URL file nhạc:
               </label>
               <input
                 type="text"
-                value={customBgmUrl}
+                value={customBgmUrl || (currentUrl !== 'custom' ? currentUrl : '')}
                 onChange={(e) => handleCustomUrlChange(e.target.value)}
                 placeholder="/audio/ten-file.mp3 hoặc https://..."
                 className="field w-full text-xs font-mono"
               />
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Khối thử nghiệm tiếng Chuông & Mõ SFX - CHỦ ĐỘNG GÕ BẰNG TAY */}
+      <section className="card p-6 border-white/10 bg-[#0d111e]/90 text-slate-200">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2">
+            <Bell size={18} className="text-amber-400" />
+            <h3 className="font-bold text-sm text-slate-100">
+              Âm thanh nghi lễ Phật giáo (SFX) - Chủ động gõ
+            </h3>
+          </div>
+          <span className="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2.5 py-0.5 font-medium">
+            ✓ Đã tắt tự động kêu
+          </span>
+        </div>
+
+        <p className="mt-2 text-xs text-slate-400 leading-relaxed">
+          Các âm thanh nghi lễ này <strong>không tự động kêu</strong> trong livestream để giữ chánh
+          điện thanh tịnh. Chỉ khi nào Admin bấm các nút bên dưới (hoặc trên thanh công cụ chánh
+          điện) thì mới phát ra tiếng.
+        </p>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {/* Nút chủ động gõ mõ */}
+          <button
+            type="button"
+            onClick={handleTestWoodenFish}
+            className="group flex flex-col items-center justify-center gap-2.5 rounded-xl border border-amber-500/25 bg-amber-950/20 p-4 text-center transition hover:border-amber-400 hover:bg-amber-950/40 active:scale-95"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-900/50 text-xl text-amber-300 shadow-md transition group-hover:scale-110">
+              🪵
+            </div>
+            <div>
+              <div className="font-bold text-xs text-amber-200">Tiếng Gõ Mõ</div>
+              <div className="text-[10px] text-slate-400">Âm sắc mộc 540Hz thanh tịnh</div>
+            </div>
+            <span className="rounded-lg border border-amber-400/30 bg-amber-500/20 px-3 py-1 font-bold text-[11px] text-amber-200 group-hover:bg-amber-500/30">
+              🪵 Bấm Gõ Mõ
+            </span>
+          </button>
+
+          {/* Nút chủ động đánh chuông đại hồng chung */}
+          <button
+            type="button"
+            onClick={handleTestBell}
+            className="group flex flex-col items-center justify-center gap-2.5 rounded-xl border border-amber-500/25 bg-amber-950/20 p-4 text-center transition hover:border-amber-400 hover:bg-amber-950/40 active:scale-95"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-900/50 text-xl text-amber-300 shadow-md transition group-hover:scale-110">
+              🔔
+            </div>
+            <div>
+              <div className="font-bold text-xs text-amber-200">Đại Hồng Chung</div>
+              <div className="text-[10px] text-slate-400">Chuông chùa ngân vang 5.5s</div>
+            </div>
+            <span className="rounded-lg border border-amber-400/30 bg-amber-500/20 px-3 py-1 font-bold text-[11px] text-amber-200 group-hover:bg-amber-500/30">
+              🔔 Bấm Đánh Chuông
+            </span>
+          </button>
+
+          {/* Nút chủ động đánh tiếng khánh dâng hoa */}
+          <button
+            type="button"
+            onClick={handleTestChime}
+            className="group flex flex-col items-center justify-center gap-2.5 rounded-xl border border-amber-500/25 bg-amber-950/20 p-4 text-center transition hover:border-amber-400 hover:bg-amber-950/40 active:scale-95"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-900/50 text-xl text-amber-300 shadow-md transition group-hover:scale-110">
+              ✨
+            </div>
+            <div>
+              <div className="font-bold text-xs text-amber-200">Tiếng Khánh Dâng Hoa</div>
+              <div className="text-[10px] text-slate-400">Ngân nga trong trẻo khi cúng dường</div>
+            </div>
+            <span className="rounded-lg border border-amber-400/30 bg-amber-500/20 px-3 py-1 font-bold text-[11px] text-amber-200 group-hover:bg-amber-500/30">
+              ✨ Bấm Đánh Khánh
+            </span>
+          </button>
         </div>
       </section>
 
@@ -348,62 +464,13 @@ export function AudioSettingsPanel() {
             👉 <strong>Cách sử dụng:</strong> Sau khi tải file <code>.mp3</code> hoặc <code>.wav</code> về máy tính:
             <ol className="list-decimal pl-4 mt-1 space-y-0.5">
               <li>
-                <strong>Cách 1 (Nhanh nhất):</strong> Bấm nút <code>[Tải file nhạc từ máy tính]</code> ở trên, chọn file và hệ thống sẽ phát ngay lập tức.
+                <strong>Cách 1 (Tốt nhất):</strong> Copy file vào thư mục dự án <code>apps/web/public/audio/</code>, sau đó bấm nút <strong>"Làm mới danh sách"</strong> ở trên, tên file sẽ tự động xuất hiện trong danh sách chọn.
               </li>
               <li>
-                <strong>Cách 2 (Cố định):</strong> Copy file vào thư mục dự án <code>apps/web/public/audio/</code> (ví dụ: đổi tên thành <code>bgm.mp3</code> hoặc <code>bgm.wav</code>).
+                <strong>Cách 2 (Nhanh tức thì):</strong> Bấm nút <code>[Tải file nhạc từ máy tính]</code> ở trên, chọn file và hệ thống sẽ phát ngay lập tức.
               </li>
             </ol>
           </div>
-        </div>
-      </section>
-
-      {/* Khối thử nghiệm tiếng Chuông & Mõ SFX */}
-      <section className="card p-6 border-white/10 bg-[#0d111e]/90 text-slate-200">
-        <div className="flex items-center gap-2 border-b border-white/10 pb-3">
-          <Bell size={18} className="text-amber-400" />
-          <h3 className="font-bold text-sm text-slate-100">Âm thanh nghi lễ Phật giáo (SFX)</h3>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {/* Nút thử gõ mõ */}
-          <button
-            type="button"
-            onClick={handleTestWoodenFish}
-            className="flex flex-col items-center justify-center gap-2 rounded-xl border border-amber-500/20 bg-amber-950/20 p-4 text-center transition hover:border-amber-400 hover:bg-amber-950/40"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-900/40 text-amber-300">
-              🪵
-            </div>
-            <div className="font-bold text-xs text-amber-200">Tiếng Gõ Mõ</div>
-            <div className="text-[10px] text-slate-400">Âm sắc mộc 540Hz thanh tịnh</div>
-          </button>
-
-          {/* Nút thử chuông đại hồng chung */}
-          <button
-            type="button"
-            onClick={handleTestBell}
-            className="flex flex-col items-center justify-center gap-2 rounded-xl border border-amber-500/20 bg-amber-950/20 p-4 text-center transition hover:border-amber-400 hover:bg-amber-950/40"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-900/40 text-amber-300">
-              🔔
-            </div>
-            <div className="font-bold text-xs text-amber-200">Đại Hồng Chung</div>
-            <div className="text-[10px] text-slate-400">Chuông chùa ngân vang 5.5s</div>
-          </button>
-
-          {/* Nút thử tiếng khánh dâng hoa */}
-          <button
-            type="button"
-            onClick={handleTestChime}
-            className="flex flex-col items-center justify-center gap-2 rounded-xl border border-amber-500/20 bg-amber-950/20 p-4 text-center transition hover:border-amber-400 hover:bg-amber-950/40"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-900/40 text-amber-300">
-              ✨
-            </div>
-            <div className="font-bold text-xs text-amber-200">Tiếng Khánh Dâng Hoa</div>
-            <div className="text-[10px] text-slate-400">Ngân nga trong trẻo khi cúng dường</div>
-          </button>
         </div>
       </section>
     </div>

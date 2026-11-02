@@ -98,6 +98,52 @@ export function TempleToolbar({
           />
         )}
       </div>
+
+      {/* 3 Nút Chủ Động Gõ Âm Thanh Nghi Lễ */}
+      <div className="flex items-center gap-1 rounded-lg border border-amber-500/20 bg-amber-950/30 px-1.5 py-1">
+        <button
+          type="button"
+          onClick={() => {
+            if (isMuted) {
+              templeAudio.setMuted(false);
+              setIsMuted(false);
+            }
+            templeAudio.playWoodenFish(0);
+          }}
+          className="rounded px-1.5 py-0.5 text-[11px] font-bold text-amber-200 transition hover:bg-amber-500/30 active:scale-90"
+          title="Bấm để gõ mõ"
+        >
+          🪵 Mõ
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (isMuted) {
+              templeAudio.setMuted(false);
+              setIsMuted(false);
+            }
+            templeAudio.playTempleBell(1.0);
+          }}
+          className="rounded px-1.5 py-0.5 text-[11px] font-bold text-amber-200 transition hover:bg-amber-500/30 active:scale-90"
+          title="Bấm để đánh chuông"
+        >
+          🔔 Chuông
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (isMuted) {
+              templeAudio.setMuted(false);
+              setIsMuted(false);
+            }
+            templeAudio.playOfferingChime();
+          }}
+          className="rounded px-1.5 py-0.5 text-[11px] font-bold text-amber-200 transition hover:bg-amber-500/30 active:scale-90"
+          title="Bấm để đánh khánh"
+        >
+          ✨ Khánh
+        </button>
+      </div>
       <select
         aria-label="Giao diện chùa"
         className="rounded-lg border border-amber-300/30 bg-amber-950/80 px-3 py-1.5 text-amber-100"

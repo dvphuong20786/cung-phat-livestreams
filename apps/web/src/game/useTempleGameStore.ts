@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { templeGameActionPriority, type TempleGameAction } from '@live/shared';
 import { calculateActionMeritPoints } from './cultivationLevel';
-import { templeAudio } from './services/TempleAudioService';
 export type CharacterState =
   | 'SPAWNING'
   | 'WALKING_TO_GATE'
@@ -131,13 +130,6 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       }
 
       const queue = sortActionsByPriority([...state.queue, action]);
-
-      // Phát hiệu ứng âm thanh tương ứng sự kiện
-      if (action.actionType === 'OFFER_FLOWERS') {
-        templeAudio.playOfferingChime();
-      } else if (action.actionType === 'BELL_EFFECT' || action.eventType === 'GIFT') {
-        templeAudio.playTempleBell();
-      }
 
       return {
         ...promote([...state.active], queue),

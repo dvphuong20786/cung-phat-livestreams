@@ -2,7 +2,6 @@ import { useMemo, useRef } from 'react';
 import { Billboard, Cylinder, Html, Sphere, useTexture } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, Group, MathUtils, Mesh, MeshBasicMaterial } from 'three';
-import { templeAudio } from '../services/TempleAudioService';
 
 interface MonkConfig {
   title: string;
@@ -26,12 +25,9 @@ function WoodenFish({ isAbbot = false }: { isAbbot?: boolean }) {
       const beat = Math.sin(state.clock.elapsedTime * 3.8);
       strikerRef.current.rotation.x = -0.4 + Math.max(0, beat) * 0.45;
 
-      // Khi dùi mõ chạm vào mặt mõ: phát âm thanh tiếng gõ mõ thanh tịnh
+      // Khi dùi mõ chạm vào mặt mõ: chỉ xoay chuyển động dùi, không tự động phát âm thanh
       if (beat > 0.88 && !struckRef.current) {
         struckRef.current = true;
-        if (isAbbot) {
-          templeAudio.playWoodenFish(0);
-        }
       } else if (beat < 0.2) {
         struckRef.current = false;
       }
