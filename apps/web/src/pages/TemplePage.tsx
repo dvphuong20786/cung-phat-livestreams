@@ -8,9 +8,11 @@ import {
 } from '../game/TempleScene';
 import { TempleToolbar } from '../game/TempleToolbar';
 import { MeritLeaderboard } from '../game/components/MeritLeaderboard';
+import { RecentDonorsList } from '../game/components/RecentDonorsList';
 import { useTempleGameStore } from '../game/useTempleGameStore';
 import { useMonitorStore } from '../stores/useMonitorStore';
 import { templeAudio } from '../game/services/TempleAudioService';
+import { sendSimulatedBatch } from '../services/simulatorService';
 
 export function TemplePage({
   overlay = false,
@@ -59,6 +61,30 @@ export function TemplePage({
     };
   }, []);
 
+  // Giả lập ngẫu nhiên 1, 2 người đi vào 1 lần, 5 giây sau lại vào 1, 2 người; không tràn vào
+  useEffect(() => {
+    if (!allowSimulated) return;
+    if (connection.state === 'CONNECTED') return;
+
+    let timer: number | null = null;
+    let cancelled = false;
+
+    const runSimCycle = async () => {
+      if (cancelled) return;
+      await sendSimulatedBatch();
+      if (!cancelled) {
+        timer = window.setTimeout(runSimCycle, 5000);
+      }
+    };
+
+    timer = window.setTimeout(runSimCycle, 2500);
+
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [allowSimulated, connection.state]);
+
   return (
     <div
       className="relative h-screen w-screen overflow-hidden bg-slate-950"
@@ -85,6 +111,14 @@ export function TemplePage({
       {/* Bảng Top Donate / Công Đức ✦ */}
       <div className={`absolute z-30 ${mobile ? 'right-2 top-14' : 'right-4 top-20'}`}>
         <MeritLeaderboard mobile={mobile} />
+      </div>
+      {/* Danh sách 5 người Donate mới nhất bên trái, từ trên xuống */}
+      <div
+        className={`absolute z-30 ${
+          mobile ? 'left-2 top-14' : !overlay ? 'left-4 top-40' : 'left-4 top-20'
+        }`}
+      >
+        <RecentDonorsList mobile={mobile} />
       </div>
       {overlay && isOverlayToolbarVisible && (
         <div

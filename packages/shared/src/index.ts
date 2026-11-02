@@ -21,6 +21,7 @@ export interface TempleGameAction {
   eventType?: LiveEventType;
   avatarUrl?: string;
   seatedAt?: number;
+  seatIndex?: number;
   meritPoints?: number;
   level?: number;
   rankName?: string;

@@ -34,16 +34,18 @@ export function getSeatPosition(index: number): [number, number, number] {
 }
 
 export function getMobileSeatPosition(index: number): [number, number, number] {
-  const safeIndex = Math.max(0, index) % 16;
-  const isRow1 = safeIndex >= 8;
-  const colInRow = safeIndex % 8;
-  const isRightSide = colInRow >= 4;
-  const sideIndex = isRightSide ? colInRow - 4 : colInRow;
+  // Mobile: Hàng ngang ngồi 3 người bên trái, 3 người bên phải (6 người/hàng), tổng cộng 4 hàng (Hàng đầu + 3 hàng ở dưới)
+  const safeIndex = Math.max(0, index) % 24;
+  const rowIndex = Math.floor(safeIndex / 6); // 0, 1, 2, 3
+  const colInRow = safeIndex % 6; // 0..2 bên trái, 3..5 bên phải
+  const isRightSide = colInRow >= 3;
+  const sideIndex = isRightSide ? colInRow - 3 : colInRow; // 0, 1, 2
 
-  const z = isRow1 ? 8.8 : 6.8;
-  const baseSpacing = isRow1 ? 1.3 : 1.1;
-  const startX = isRow1 ? 1.6 : 1.3;
-  const xOffset = startX + sideIndex * baseSpacing;
+  // Độ sâu Z của 4 hàng từ gần đến xa: Hàng đầu (6.2), Hàng 1 (7.5), Hàng 2 (8.8), Hàng 3 (10.1)
+  const z = 6.2 + rowIndex * 1.3;
+  const startX = 1.35 + rowIndex * 0.12;
+  const spacing = 1.05 + rowIndex * 0.08;
+  const xOffset = startX + sideIndex * spacing;
   const x = isRightSide ? xOffset : -xOffset;
 
   return [x, 0, z];
@@ -191,16 +193,14 @@ export function SeatedVisitors({
     const seatStartTime = visitor.seatedAt ?? visitor.createdAt;
     return currentTime - seatStartTime <= seatingDuration;
   });
-  const visibleVisitors = mobile
-    ? visitorsStillSeated.slice(0, 16)
-    : visitorsStillSeated.slice(0, 24);
+  const visibleVisitors = visitorsStillSeated.slice(0, 24);
   return (
     <group>
       {visibleVisitors.map((visitor, index) =>
         activeUsers.has(visitor.userId) ? null : (
           <SeatedFigure
             key={visitor.userId}
-            index={index}
+            index={visitor.seatIndex !== undefined ? visitor.seatIndex : index}
             nickname={visitor.nickname}
             userId={visitor.userId}
             mobile={mobile}

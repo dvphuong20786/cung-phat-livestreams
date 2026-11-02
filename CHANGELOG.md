@@ -1,5 +1,52 @@
 # Lịch sử thay đổi
 
+## [v0.22.13] - 2026-11-02
+- **Yêu cầu**: Hoàn thành toàn bộ các task còn lại (Task 3, Task 4, Task 5, Task 6):
+  - Task 3: Bổ sung danh sách Avatar Donate bên trái màn hình (5 người cúng dường mới nhất).
+  - Task 4: Phóng to Bảng Công Đức và kích cỡ chữ thêm 20%.
+  - Task 5: Cấu hình riêng cho Overlay-Mobile hàng ngang ngồi 3 người bên trái, 3 người bên phải và thêm 3 hàng ngồi ở dưới (tổng cộng 4 hàng x 6 chỗ = 24 chỗ).
+  - Task 6: Bỏ giới hạn thời gian (cooldown) và hạn mức trần khi người dùng tương tác nhanh nhiều cùng lúc.
+- **Chi tiết kỹ thuật**:
+  - `RecentDonorsList.tsx`: Tạo component hiển thị danh sách 5 người cúng dường mới nhất ở góc bên trái màn hình với avatar tròn viền vàng, tên nickname, tên món quà cúng Phật và số lượng.
+  - `useTempleGameStore.ts`: Thêm mảng `recentDonors` cập nhật tự động khi có sự kiện tặng quà (`GIFT`) hoặc dâng hoa (`OFFER_FLOWERS`).
+  - `MeritLeaderboard.tsx`: Mở rộng kích thước bảng từ `w-56`/`w-44` lên `w-[270px]`/`w-[210px]`, tăng cỡ chữ tiêu đề, tên thí chủ, điểm số và cấp bậc thêm ~20%.
+  - `SeatedVisitors.tsx`: Cập nhật hàm `getMobileSeatPosition` phân bổ 4 hàng ngồi dọc (Hàng đầu + 3 hàng dưới), mỗi hàng gồm 3 người bên trái và 3 người bên phải.
+  - `CharacterStore.ts`: Bỏ giới hạn 30 giây trong COMMENT (`now - character.lastCommentAt >= 30_000`), bỏ trần 50 điểm LIKE, bỏ giới hạn 3 lần SHARE; toàn bộ tương tác dồn dập được ghi nhận điểm số realtime không bị ngắt quãng.
+  - `CharacterStore.test.ts`: Thêm test xác nhận comment gửi dồn dập liên tiếp vẫn được tính điểm đầy đủ.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 34/34 unit test đạt; TypeScript và Vite production build thành công 100%.
+
+
+## [v0.22.12] - 2026-11-02
+- **Yêu cầu**: Điều chỉnh tần suất giả lập ngẫu nhiên 1, 2 người đi vào 1 lần, 5 giây sau lại vào 1, 2 người; không tràn vào ồ ạt (Task 2).
+- **Chi tiết kỹ thuật**:
+  - `simulatorService.ts`: Xây dựng module phát sinh người giả lập nhịp nhàng:
+    - Danh sách tên Phật tử và bình luận cầu an thanh tịnh.
+    - Hàm `sendSimulatedBatch()`: mỗi lượt gửi ngẫu nhiên 1 hoặc 2 người (`count = Math.random() < 0.5 ? 1 : 2`), giữa 2 người có giãn cách 600ms tránh đè hoạt ảnh.
+  - `TemplePage.tsx`: Tự động kích hoạt luồng giả lập khi bật `allowSimulated` (hoặc bật trên thanh Toolbar chùa); mỗi đợt vào 1-2 người, hẹn giờ đúng 5 giây sau mới vào tiếp 1-2 người tiếp theo, tạm dừng khi có kết nối TikTok thật.
+  - `SimulatorPanel.tsx`: Cải tiến giao diện bảng giả lập Admin/Test:
+    - Bổ sung nút "Tự động giả lập (1-2 người / 5s)" có thể bật/tắt linh hoạt.
+    - Nút "Vào ngay 1-2 người".
+    - Nút chạy số lượng (ví dụ 20 người) tuân thủ đúng nhịp 1-2 người mỗi 5 giây, có nút dừng đợt chạy bất cứ lúc nào.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 33/33 unit test đạt; TypeScript và Vite build thành công 100%.
+
+
+## [v0.22.11] - 2026-11-02
+- **Yêu cầu**: Sửa lỗi nhân vật đi về chỗ ngồi bên phải nhưng lại ngồi bên trái; đảm bảo nhân vật đi về đâu thì ngồi đúng vị trí đó; người chơi ngồi ngẫu nhiên theo hàng, hàng đầu full mới đến hàng 2, rồi đến hàng cuối (Task 1).
+- **Chi tiết kỹ thuật**:
+  - `packages/shared/src/index.ts`: bổ sung trường `seatIndex?: number` trong interface `TempleGameAction`.
+  - `useTempleGameStore.ts`:
+    - Xây dựng hàm `allocateSeatIndex(seatedVisitors, active, userId, totalSeats)`: kiểm tra ghế trống trong thời hạn, ưu tiên lấp đầy toàn bộ các ghế trống của Hàng đầu (Row 0, 0..11) bằng cách chọn ngẫu nhiên vị trí trống; khi Hàng đầu đầy mới chuyển sang chọn ngẫu nhiên ở Hàng 2 (Row 1, 12..23).
+    - Giữ nguyên `seatIndex` cố định cho cùng một người khi họ gửi thêm lượt tương tác mới.
+    - Cấp phát `seatIndex` ngay khi đưa action vào hàng đợi/active.
+  - `Character.tsx`: tính toạ độ đích đệm sen `[seatX, seatY, seatZ]` trực tiếp từ `action.seatIndex` thay vì tính động theo index mảng; nhân vật đi về bên nào thì về đúng tọa độ của ghế đó.
+  - `SeatedVisitors.tsx`: `SeatedFigure` đọc toạ độ theo `visitor.seatIndex`, không còn phụ thuộc vào số thứ tự `index` trong mảng `map()`; khi có người mới vào hoặc có người rời đi, các vị trí ngồi cũ không còn bị đảo lộn.
+  - `useTempleGameStore.test.ts`: bổ sung 2 unit test xác nhận hàng đầu được ưu tiên lấp đầy trước khi chuyển sang hàng 2 và giữ nguyên ghế khi tương tác lặp lại.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - 33/33 unit test đạt; TypeScript web/server và Vite production build thành công 100%.
+
+
 ## [v0.22.10] - 2026-11-02
 - **Yêu cầu**: Bảng Công Đức chỉ được hiển thị người xem TikTok thật, không nhận nhân vật từ trình giả lập.
 - **Chi tiết kỹ thuật**:

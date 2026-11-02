@@ -85,4 +85,15 @@ describe('CharacterStore', () => {
     expect(characterStore.getRealCharacters()[0]?.username).toBe('real_user');
     characterStore.close();
   });
+
+  it('awards points for rapid consecutive interactions without cooldown limits', () => {
+    const characterStore = new CharacterStore(':memory:');
+    // 2 comment gửi liên tiếp nhanh cùng lúc
+    characterStore.awardPointsForEvent(createEvent('COMMENT', 'rapid_user'));
+    const { character } = characterStore.awardPointsForEvent(createEvent('COMMENT', 'rapid_user'));
+
+    // Cả 2 comment đều được tính điểm (+2 x 2 = 4 điểm), không bị chặn 30s
+    expect(character.meritPoints).toBe(4);
+    characterStore.close();
+  });
 });

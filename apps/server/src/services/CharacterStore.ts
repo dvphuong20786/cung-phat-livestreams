@@ -261,30 +261,24 @@ export class CharacterStore {
 
     switch (event.type) {
       case 'LIKE': {
-        // 10 lượt like = +1 điểm (tối đa 50 điểm/buổi)
+        // 10 lượt like = +1 điểm (không giới hạn thời gian và hạn mức khi tương tác nhanh)
         const likes = Math.max(1, event.likeCount ?? 1);
-        const calculatedPoints = Math.max(1, Math.floor(likes / 10));
-        const remainingQuota = Math.max(0, 50 - character.likePointsToday);
-        pointsAwarded = Math.min(calculatedPoints, remainingQuota);
+        pointsAwarded = Math.max(1, Math.floor(likes / 10));
         character.likePointsToday += pointsAwarded;
         break;
       }
 
       case 'COMMENT': {
-        // Comment hợp lệ: +2 điểm (30s mới tính tiếp)
-        if (now - character.lastCommentAt >= 30_000) {
-          pointsAwarded = 2;
-          character.lastCommentAt = now;
-        }
+        // Comment hợp lệ: +2 điểm (không giới hạn thời gian khi người dùng tương tác nhanh nhiều cùng lúc)
+        pointsAwarded = 2;
+        character.lastCommentAt = now;
         break;
       }
 
       case 'SHARE': {
-        // Share livestream: +10 điểm (tối đa 3 lần/buổi)
-        if (character.shareCountToday < 3) {
-          pointsAwarded = 10;
-          character.shareCountToday += 1;
-        }
+        // Share livestream: +10 điểm
+        pointsAwarded = 10;
+        character.shareCountToday += 1;
         break;
       }
 

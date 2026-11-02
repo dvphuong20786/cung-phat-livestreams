@@ -27,6 +27,14 @@ export interface StoredCharacter {
   rankName?: string;
 }
 type Quality = 'LOW' | 'MEDIUM' | 'HIGH';
+export interface RecentDonor {
+  userId: string;
+  nickname: string;
+  avatarUrl?: string;
+  giftName?: string;
+  quantity?: number;
+  timestamp: number;
+}
 interface GameStore {
   active: ActiveCharacter[];
   queue: TempleGameAction[];
@@ -38,6 +46,7 @@ interface GameStore {
   allowSimulated: boolean;
   userInteractions: Record<string, number>;
   characterList: StoredCharacter[];
+  recentDonors: RecentDonor[];
   enqueue: (action: TempleGameAction) => void;
   syncCharacters: (
     characters: Array<Partial<StoredCharacter> & { userId: string; meritPoints: number }>,
@@ -75,6 +84,84 @@ const promote = (active: ActiveCharacter[], queue: TempleGameAction[]) => {
   }
   return { active: [...active], queue: next };
 };
+export function allocateSeatIndex(
+  seatedVisitors: TempleGameAction[],
+  activeCharacters: ActiveCharacter[],
+  userId: string,
+  totalSeats: number = 24,
+): number {
+  // 1. Tái sử dụng ghế cũ nếu user này đã được cấp ghế trước đó
+  const existingSeated = seatedVisitors.find(
+    (v) => v.userId === userId && v.seatIndex !== undefined,
+  );
+  if (existingSeated && existingSeated.seatIndex !== undefined) {
+    return existingSeated.seatIndex;
+  }
+  const existingActive = activeCharacters.find(
+    (c) => c.action.userId === userId && c.action.seatIndex !== undefined,
+  );
+  if (existingActive && existingActive.action.seatIndex !== undefined) {
+    return existingActive.action.seatIndex;
+  }
+
+  // 2. Gom các ghế đang bị chiếm còn trong thời hạn
+  const now = Date.now();
+  const occupiedSeats = new Set<number>();
+  for (const visitor of seatedVisitors) {
+    if (visitor.seatIndex !== undefined && visitor.userId !== userId) {
+      const isDonation =
+        visitor.eventType === 'GIFT' ||
+        visitor.actionType === 'OFFER_FLOWERS' ||
+        visitor.actionType === 'OFFER_INCENSE';
+      const duration = isDonation ? 4 * 60_000 : 2 * 60_000;
+      const startTime = visitor.seatedAt ?? visitor.createdAt;
+      if (now - startTime <= duration) {
+        occupiedSeats.add(visitor.seatIndex);
+      }
+    }
+  }
+  for (const activeChar of activeCharacters) {
+    if (activeChar.action.seatIndex !== undefined && activeChar.action.userId !== userId) {
+      occupiedSeats.add(activeChar.action.seatIndex);
+    }
+  }
+
+  // 3. Phân bổ theo hàng: Hàng đầu full mới đến Hàng 2
+  // Với 24 ghế: Hàng 0 = 0..11, Hàng 1 = 12..23
+  const halfSeats = Math.floor(totalSeats / 2);
+  const row0Seats: number[] = [];
+  const row1Seats: number[] = [];
+
+  for (let i = 0; i < halfSeats; i++) {
+    if (!occupiedSeats.has(i)) {
+      row0Seats.push(i);
+    }
+  }
+  for (let i = halfSeats; i < totalSeats; i++) {
+    if (!occupiedSeats.has(i)) {
+      row1Seats.push(i);
+    }
+  }
+
+  // Ưu tiên hàng đầu (Row 0): nếu còn chỗ, chọn ngẫu nhiên 1 ghế trong hàng đầu
+  if (row0Seats.length > 0) {
+    const randomIndex = Math.floor(Math.random() * row0Seats.length);
+    return row0Seats[randomIndex];
+  }
+
+  // Hàng đầu đã full -> chọn ngẫu nhiên 1 ghế trong hàng 2 (Row 1)
+  if (row1Seats.length > 0) {
+    const randomIndex = Math.floor(Math.random() * row1Seats.length);
+    return row1Seats[randomIndex];
+  }
+
+  // Nếu cả 2 hàng đều full, fallback chọn ngẫu nhiên theo user hash
+  const userHash = Math.abs(
+    [...userId].reduce((total, c) => total + c.charCodeAt(0), 0),
+  );
+  return userHash % totalSeats;
+}
+
 export const useTempleGameStore = create<GameStore>((set, get) => ({
   active: [],
   queue: [],
@@ -85,6 +172,7 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
   allowSimulated: true,
   userInteractions: {},
   characterList: [],
+  recentDonors: [],
   enqueue: (action) =>
     set((state) => {
       // Chế độ không thêm người giả lập
@@ -102,15 +190,26 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
         [action.userId]: points,
       };
 
+      // Gán ghế ngồi cố định cho người chơi (hàng đầu full sang hàng 2, trong hàng chọn ngẫu nhiên)
+      const seatIndex =
+        action.seatIndex !== undefined
+          ? action.seatIndex
+          : allocateSeatIndex(state.seatedVisitors, state.active, action.userId);
+
+      const actionWithSeat: TempleGameAction = {
+        ...action,
+        seatIndex,
+      };
+
       const previousSeat = state.seatedVisitors.findIndex(
         (visitor) => visitor.userId === action.userId,
       );
       const updatedSeatedVisitors =
         previousSeat >= 0
           ? state.seatedVisitors.map((visitor, index) =>
-              index === previousSeat ? action : visitor,
+              index === previousSeat ? { ...visitor, ...actionWithSeat } : visitor,
             )
-          : [...state.seatedVisitors, action];
+          : [...state.seatedVisitors, actionWithSeat];
       const seatedVisitors = [...updatedSeatedVisitors]
         .sort((firstVisitor, secondVisitor) => {
           const priorityDifference =
@@ -119,6 +218,26 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
           return secondVisitor.createdAt - firstVisitor.createdAt;
         })
         .slice(0, 80);
+      // Cập nhật danh sách 5 người donate mới nhất
+      const isDonation =
+        action.eventType === 'GIFT' ||
+        action.actionType === 'OFFER_FLOWERS' ||
+        action.actionType === 'OFFER_INCENSE';
+
+      let updatedRecentDonors = state.recentDonors;
+      if (isDonation) {
+        const newDonor: RecentDonor = {
+          userId: action.userId,
+          nickname: action.nickname,
+          avatarUrl: action.avatarUrl,
+          giftName: action.giftName || (action.actionType === 'OFFER_FLOWERS' ? 'Hoa cúng Phật' : 'Lễ vật'),
+          quantity: action.quantity || 1,
+          timestamp: Date.now(),
+        };
+        const filtered = state.recentDonors.filter((d) => d.userId !== action.userId);
+        updatedRecentDonors = [newDonor, ...filtered].slice(0, 5);
+      }
+
       const existing =
         state.active.some((c) => c.action.userId === action.userId) ||
         state.queue.some((a) => a.userId === action.userId && a.actionType === action.actionType);
@@ -126,16 +245,18 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
         return {
           seatedVisitors,
           userInteractions,
+          recentDonors: updatedRecentDonors,
           latest: `${action.nickname} đã gửi thêm lượt thích`,
         };
       }
 
-      const queue = sortActionsByPriority([...state.queue, action]);
+      const queue = sortActionsByPriority([...state.queue, actionWithSeat]);
 
       return {
         ...promote([...state.active], queue),
         seatedVisitors,
         userInteractions,
+        recentDonors: updatedRecentDonors,
         latest:
           action.actionType === 'OFFER_FLOWERS'
             ? `${action.nickname} đang chuẩn bị dâng hoa`
@@ -194,7 +315,7 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
         const exists = state.seatedVisitors.some((v) => v.userId === completedChar.action.userId);
         if (exists) {
           updatedSeated = state.seatedVisitors.map((v) =>
-            v.userId === completedChar.action.userId ? { ...v, seatedAt: now } : v,
+            v.userId === completedChar.action.userId ? { ...v, ...completedChar.action, seatedAt: now } : v,
           );
         } else {
           updatedSeated = [{ ...completedChar.action, seatedAt: now }, ...state.seatedVisitors];
@@ -214,6 +335,7 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       active: [],
       queue: [],
       seatedVisitors: [],
+      recentDonors: [],
       flowers: 0,
       latest: undefined,
     }),

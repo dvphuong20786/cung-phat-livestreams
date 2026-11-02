@@ -381,13 +381,14 @@ export function Character({
     [action.userId],
   );
 
-  // Tính trước toạ độ đệm sen ghế ngồi của nhân vật
-  const visibleVisitors = mobile ? seatedVisitors.slice(0, 16) : seatedVisitors.slice(0, 24);
-  const seatIndex = visibleVisitors.findIndex((visitor) => visitor.userId === action.userId);
+  // Tính toạ độ đệm sen ghế ngồi cố định của nhân vật
   const userHash = Math.abs(
     [...action.userId].reduce((total, c) => total + c.charCodeAt(0), 0),
   );
-  const resolvedSeatIndex = seatIndex >= 0 ? seatIndex : userHash % (mobile ? 16 : 24);
+  const resolvedSeatIndex =
+    action.seatIndex !== undefined
+      ? action.seatIndex
+      : userHash % 24;
   const [seatX, seatY, seatZ] = mobile
     ? getMobileSeatPosition(resolvedSeatIndex)
     : getSeatPosition(resolvedSeatIndex);

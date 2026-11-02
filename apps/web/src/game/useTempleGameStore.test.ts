@@ -66,4 +66,35 @@ describe('temple game queue', () => {
     expect(useTempleGameStore.getState().userInteractions['u-1']).toBe(1250);
     expect(useTempleGameStore.getState().characterList[0]?.meritPoints).toBe(1250);
   });
+  it('allocates front row seats first until full, then allocates second row seats', () => {
+    // 12 người đầu tiên phải được xếp vào hàng đầu (seatIndex 0..11)
+    for (let i = 0; i < 12; i++) {
+      useTempleGameStore.getState().enqueue(action(i));
+    }
+    const seated = useTempleGameStore.getState().seatedVisitors;
+    for (let i = 0; i < 12; i++) {
+      const visitor = seated.find((v) => v.userId === `u-${i}`);
+      expect(visitor?.seatIndex).toBeDefined();
+      expect(visitor!.seatIndex!).toBeGreaterThanOrEqual(0);
+      expect(visitor!.seatIndex!).toBeLessThan(12);
+    }
+
+    // Người thứ 13 phải được xếp vào hàng 2 (seatIndex 12..23) vì hàng đầu đã đầy
+    useTempleGameStore.getState().enqueue(action(12));
+    const visitor13 = useTempleGameStore.getState().seatedVisitors.find((v) => v.userId === 'u-12');
+    expect(visitor13?.seatIndex).toBeDefined();
+    expect(visitor13!.seatIndex!).toBeGreaterThanOrEqual(12);
+    expect(visitor13!.seatIndex!).toBeLessThan(24);
+  });
+
+  it('preserves assigned seat for the same user on repeated interactions', () => {
+    useTempleGameStore.getState().enqueue(action(1));
+    const initialSeat = useTempleGameStore.getState().seatedVisitors.find((v) => v.userId === 'u-1')?.seatIndex;
+    expect(initialSeat).toBeDefined();
+
+    // Người đó tương tác tiếp
+    useTempleGameStore.getState().enqueue({ ...action(1), eventType: 'LIKE' });
+    const updatedSeat = useTempleGameStore.getState().seatedVisitors.find((v) => v.userId === 'u-1')?.seatIndex;
+    expect(updatedSeat).toBe(initialSeat);
+  });
 });
