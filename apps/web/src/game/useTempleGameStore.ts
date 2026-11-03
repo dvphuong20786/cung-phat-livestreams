@@ -106,7 +106,7 @@ export function allocateSeatIndex(
   seatedVisitors: TempleGameAction[],
   activeCharacters: ActiveCharacter[],
   userId: string,
-  totalSeats: number = 24,
+  totalSeats: number = 36,
 ): number {
   // 1. Tái sử dụng ghế cũ nếu user này đã được cấp ghế trước đó
   const existingSeated = seatedVisitors.find(
@@ -142,36 +142,26 @@ export function allocateSeatIndex(
     }
   }
 
-  // 3. Phân bổ theo hàng: Hàng đầu full mới đến Hàng 2
-  // Với 24 ghế: Hàng 0 = 0..11, Hàng 1 = 12..23
-  const halfSeats = Math.floor(totalSeats / 2);
-  const row0Seats: number[] = [];
-  const row1Seats: number[] = [];
+  // 3. Phân bổ tuần tự theo từng hàng (Row 0 -> Row 1 -> Row 2): mỗi hàng 12 chỗ
+  const seatsPerRow = 12;
+  const numRows = Math.ceil(totalSeats / seatsPerRow);
 
-  for (let i = 0; i < halfSeats; i++) {
-    if (!occupiedSeats.has(i)) {
-      row0Seats.push(i);
+  for (let r = 0; r < numRows; r++) {
+    const availableSeatsInRow: number[] = [];
+    const start = r * seatsPerRow;
+    const end = Math.min(totalSeats, (r + 1) * seatsPerRow);
+    for (let i = start; i < end; i++) {
+      if (!occupiedSeats.has(i)) {
+        availableSeatsInRow.push(i);
+      }
+    }
+    if (availableSeatsInRow.length > 0) {
+      const randomIndex = Math.floor(Math.random() * availableSeatsInRow.length);
+      return availableSeatsInRow[randomIndex];
     }
   }
-  for (let i = halfSeats; i < totalSeats; i++) {
-    if (!occupiedSeats.has(i)) {
-      row1Seats.push(i);
-    }
-  }
 
-  // Ưu tiên hàng đầu (Row 0): nếu còn chỗ, chọn ngẫu nhiên 1 ghế trong hàng đầu
-  if (row0Seats.length > 0) {
-    const randomIndex = Math.floor(Math.random() * row0Seats.length);
-    return row0Seats[randomIndex];
-  }
-
-  // Hàng đầu đã full -> chọn ngẫu nhiên 1 ghế trong hàng 2 (Row 1)
-  if (row1Seats.length > 0) {
-    const randomIndex = Math.floor(Math.random() * row1Seats.length);
-    return row1Seats[randomIndex];
-  }
-
-  // Nếu cả 2 hàng đều full, fallback chọn ngẫu nhiên theo user hash
+  // Nếu tất cả các hàng đều full, fallback chọn ngẫu nhiên theo user hash
   const userHash = Math.abs([...userId].reduce((total, c) => total + c.charCodeAt(0), 0));
   return userHash % totalSeats;
 }

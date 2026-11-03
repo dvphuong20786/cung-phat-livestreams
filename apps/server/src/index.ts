@@ -9,6 +9,7 @@ import { Server } from 'socket.io';
 import { EventService } from './services/EventService.js';
 import { EventStore, getDefaultEventDatabasePath } from './services/EventStore.js';
 import { CharacterStore } from './services/CharacterStore.js';
+import { SettingsStore } from './services/SettingsStore.js';
 import { TikTokConnector } from './connectors/TikTokConnector.js';
 import { EulerCloudConnector, getEulerApiKey } from './connectors/EulerCloudConnector.js';
 import { YouTubeConnector } from './connectors/YouTubeConnector.js';
@@ -30,6 +31,7 @@ const retentionDays = Number(process.env.EVENT_RETENTION_DAYS || 30);
 
 const eventStore = new EventStore(databasePath, retentionDays);
 const characterStore = new CharacterStore(databasePath);
+const settingsStore = new SettingsStore(databasePath);
 
 const app = express();
 app.use(cors({ origin }));
@@ -103,7 +105,7 @@ const tiktok = connectionMode === 'direct' ? new TikTokConnector() : new EulerCl
 const youtube = new YouTubeConnector();
 const facebook = new FacebookConnector();
 
-setupSockets(io, events, tiktok, youtube, facebook, characterStore);
+setupSockets(io, events, tiktok, youtube, facebook, characterStore, settingsStore);
 
 http.listen(port, '127.0.0.1', () =>
   console.log(`API + Socket.IO: http://localhost:${port} (${connectionMode}, SQLite)`),
@@ -115,6 +117,7 @@ async function shutdown() {
   await facebook.disconnect();
   eventStore.close();
   characterStore.close();
+  settingsStore.close();
   io.close();
   http.close(() => process.exit(0));
 }

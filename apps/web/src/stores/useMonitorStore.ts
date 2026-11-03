@@ -39,6 +39,7 @@ type MonitorPreferences = {
   mobile2dFlowerOfferingSeconds: number;
   mobile2dWalkInSeconds: number;
   mobile2dWalkToSeatSeconds: number;
+  simulatedVisitorIntervalSeconds: number;
 };
 const defaultPreferences: MonitorPreferences = {
   autoReconnect: true,
@@ -55,6 +56,7 @@ const defaultPreferences: MonitorPreferences = {
   mobile2dFlowerOfferingSeconds: 3.5,
   mobile2dWalkInSeconds: 2.6,
   mobile2dWalkToSeatSeconds: 2.4,
+  simulatedVisitorIntervalSeconds: 5,
 };
 function loadStoredPreferences(): Partial<MonitorPreferences> {
   try {
@@ -95,7 +97,12 @@ export const useMonitorStore = create<MonitorStore>((set, get) => ({
   socketConnected: false,
   autoSimulationEnabled: false,
   prefs: { ...defaultPreferences, ...loadStoredPreferences() },
-  hydrate: (snapshot) =>
+  hydrate: (snapshot) => {
+    const serverSettings = (snapshot.settings as Partial<MonitorPreferences>) || {};
+    const mergedPrefs = { ...get().prefs, ...serverSettings };
+    try {
+      localStorage.setItem('live-monitor-prefs', JSON.stringify(mergedPrefs));
+    } catch {}
     set({
       events: snapshot.events,
       stats: snapshot.stats,
@@ -106,7 +113,9 @@ export const useMonitorStore = create<MonitorStore>((set, get) => ({
         FACEBOOK: { state: 'DISCONNECTED', reconnectAttempt: 0 },
       },
       autoSimulationEnabled: snapshot.simulation?.autoEnabled ?? false,
-    }),
+      prefs: mergedPrefs,
+    });
+  },
   addEvent: (event) => set({ events: [event, ...get().events].slice(0, get().prefs.maxEvents) }),
   setStats: (stats) => set({ stats }),
   setConnection: (connection) =>
@@ -123,8 +132,11 @@ export const useMonitorStore = create<MonitorStore>((set, get) => ({
     set({ events: source ? get().events.filter((event) => event.source !== source) : [] }),
   setPrefs: (preferences) => {
     const prefs = { ...get().prefs, ...preferences };
-    localStorage.setItem('live-monitor-prefs', JSON.stringify(prefs));
+    try {
+      localStorage.setItem('live-monitor-prefs', JSON.stringify(prefs));
+    } catch {}
     set({ prefs });
+    import('../services/socket').then(({ command: cmd }) => cmd('settings:update', preferences)).catch(() => {});
   },
 }));
 

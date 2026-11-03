@@ -12,6 +12,7 @@ import type { LiveConnector as TikTokConnector } from '../connectors/LiveConnect
 import type { CharacterStore } from '../services/CharacterStore.js';
 import { WatchTimeTracker } from '../services/WatchTimeTracker.js';
 import { LiveSessionListsStore } from '../services/LiveSessionListsStore.js';
+import type { SettingsStore } from '../services/SettingsStore.js';
 
 const autoSimulationNames = [
   'Thiện Tâm',
@@ -62,11 +63,17 @@ export function setupSockets(
   youtube: TikTokConnector,
   facebook: TikTokConnector,
   characterStore?: CharacterStore,
+  settingsStore?: SettingsStore,
 ) {
   let gamePaused = false;
   let autoSimulationEnabled = false;
   let autoSimulationTimer: ReturnType<typeof setTimeout> | null = null;
   let autoSimulationRunId = 0;
+  let autoSimulationIntervalMs = 5000;
+  const savedSimInterval = settingsStore?.get<number>('simulatedVisitorIntervalSeconds');
+  if (typeof savedSimInterval === 'number' && savedSimInterval >= 1) {
+    autoSimulationIntervalMs = savedSimInterval * 1000;
+  }
   const watchTimeTracker = new WatchTimeTracker();
   const liveSessionLists = new LiveSessionListsStore();
 
@@ -123,7 +130,7 @@ export function setupSockets(
       }
     }
     if (!autoSimulationEnabled || runId !== autoSimulationRunId) return;
-    autoSimulationTimer = setTimeout(() => void runAutoSimulationBatch(runId), 5000);
+    autoSimulationTimer = setTimeout(() => void runAutoSimulationBatch(runId), autoSimulationIntervalMs);
     autoSimulationTimer.unref();
   };
 
@@ -178,6 +185,7 @@ export function setupSockets(
       simulation: { autoEnabled: autoSimulationEnabled },
       sessionLists: liveSessionLists.snapshot(),
       characters,
+      settings: settingsStore?.getAll() ?? {},
     });
 
     socket.on('state:request', (_v, ack) => {
@@ -198,6 +206,7 @@ export function setupSockets(
           simulation: { autoEnabled: autoSimulationEnabled },
           sessionLists: liveSessionLists.snapshot(),
           characters: currentCharacters,
+          settings: settingsStore?.getAll() ?? {},
         },
       });
     });
@@ -271,12 +280,33 @@ export function setupSockets(
       ack?.({ success: true, data: event });
     });
 
+    socket.on('settings:update', (input, ack) => {
+      if (input && typeof input === 'object') {
+        settingsStore?.setAll(input as Record<string, unknown>);
+        const allSettings = settingsStore?.getAll() ?? (input as Record<string, unknown>);
+        if (typeof (input as Record<string, unknown>).simulatedVisitorIntervalSeconds === 'number') {
+          autoSimulationIntervalMs = Math.max(1, (input as Record<string, unknown>).simulatedVisitorIntervalSeconds as number) * 1000;
+        }
+        io.emit('settings:updated', allSettings);
+        ack?.({ success: true, data: allSettings });
+      } else {
+        ack?.({ success: false, error: 'Dữ liệu cài đặt không hợp lệ' });
+      }
+    });
+
+    socket.on('settings:get', (_input, ack) => {
+      ack?.({ success: true, data: settingsStore?.getAll() ?? {} });
+    });
+
     socket.on('simulator:auto-control', (input, ack) => {
       if (typeof input?.enabled !== 'boolean') {
         return ack?.({ success: false, error: 'Trạng thái giả lập tự động không hợp lệ' });
       }
+      if (typeof input?.intervalMs === 'number' && input.intervalMs >= 500) {
+        autoSimulationIntervalMs = input.intervalMs;
+      }
       setAutoSimulationEnabled(input.enabled);
-      ack?.({ success: true, data: { enabled: autoSimulationEnabled } });
+      ack?.({ success: true, data: { enabled: autoSimulationEnabled, intervalMs: autoSimulationIntervalMs } });
     });
 
     socket.on('game:control', (input, ack) => {

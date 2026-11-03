@@ -56,6 +56,15 @@ export function useSocket() {
       s().setAutoSimulationEnabled(value.enabled);
       g().setAllowSimulated(value.enabled);
     };
+    const onSettingsUpdated = (updatedSettings: Record<string, unknown>) => {
+      if (updatedSettings && typeof updatedSettings === 'object') {
+        const nextPrefs = { ...useMonitorStore.getState().prefs, ...updatedSettings };
+        try {
+          localStorage.setItem('live-monitor-prefs', JSON.stringify(nextPrefs));
+        } catch {}
+        useMonitorStore.setState({ prefs: nextPrefs as any });
+      }
+    };
     const sessionLists = (value: LiveSessionLists) => g().syncSessionLists(value);
     const characterUpdated = (
       c: Partial<StoredCharacter> & {
@@ -91,6 +100,7 @@ export function useSocket() {
     socket.on('game:clear', gameClear);
     socket.on('game:paused', gamePaused);
     socket.on('simulation:auto-status', autoSimulationStatus);
+    socket.on('settings:updated', onSettingsUpdated);
     socket.on('session:lists', sessionLists);
     socket.on('character:updated', characterUpdated);
 
@@ -111,6 +121,7 @@ export function useSocket() {
       socket.off('game:clear', gameClear);
       socket.off('game:paused', gamePaused);
       socket.off('simulation:auto-status', autoSimulationStatus);
+      socket.off('settings:updated', onSettingsUpdated);
       socket.off('session:lists', sessionLists);
       socket.off('character:updated', characterUpdated);
     };

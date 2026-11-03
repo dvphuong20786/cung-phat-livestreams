@@ -15,6 +15,9 @@ export function SimulatorPanel() {
   const [giftQty, setGiftQty] = useState(1);
 
   const isAutoSimulating = useMonitorStore((state) => state.autoSimulationEnabled);
+  const prefs = useMonitorStore((state) => state.prefs);
+  const setPrefs = useMonitorStore((state) => state.setPrefs);
+  const simulatedIntervalSeconds = prefs.simulatedVisitorIntervalSeconds ?? 5;
   const [busyBatch, setBusyBatch] = useState(false);
   const [batchStatus, setBatchStatus] = useState<string>('');
 
@@ -22,10 +25,13 @@ export function SimulatorPanel() {
 
   const toggleAutoSimulation = async () => {
     const enabled = !isAutoSimulating;
-    await command('simulator:auto-control', { enabled });
+    await command('simulator:auto-control', {
+      enabled,
+      intervalMs: simulatedIntervalSeconds * 1000,
+    });
     setBatchStatus(
       enabled
-        ? 'Đã bật giả lập tự động trên server: 1-2 người mỗi 5 giây.'
+        ? `Đã bật giả lập tự động trên server: 1-2 người mỗi ${simulatedIntervalSeconds} giây.`
         : 'Đã dừng giả lập tự động trên toàn bộ overlay.',
     );
   };
@@ -72,8 +78,8 @@ export function SimulatorPanel() {
       setBatchStatus(`Tiến độ: đã vào ${completed}/${totalTarget} người...`);
 
       if (completed < totalTarget && !stopBatchRef.current) {
-        // Đúng 5 giây sau mới vào tiếp 1, 2 người tiếp theo
-        await new Promise((r) => setTimeout(r, 5000));
+        // Đúng số giây cài đặt sau mới vào tiếp 1, 2 người tiếp theo
+        await new Promise((r) => setTimeout(r, simulatedIntervalSeconds * 1000));
       }
     }
 
@@ -97,12 +103,12 @@ export function SimulatorPanel() {
         <Zap className="text-amber-300" size={20} />
       </div>
 
-      {/* Điều khiển Giả Lập Tự Động (1-2 người / 5s) */}
+      {/* Điều khiển Giả Lập Tự Động (1-2 người / nhịp cài đặt) */}
       <div className="mb-4 rounded-xl border border-violet-500/30 bg-violet-950/20 p-3.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="font-bold text-xs text-violet-200">
-              Chế độ giả lập nhịp nhàng (1-2 người / 5 giây)
+              Chế độ giả lập nhịp nhàng (1-2 người / {simulatedIntervalSeconds} giây)
             </div>
             <div className="text-[11px] text-slate-400">
               Ngẫu nhiên vào vãng cảnh, thả tim, bình luận cầu an hoặc dâng hoa
@@ -127,8 +133,28 @@ export function SimulatorPanel() {
               onClick={() => void toggleAutoSimulation()}
             >
               {isAutoSimulating ? <Square size={14} /> : <Play size={14} />}
-              <span>{isAutoSimulating ? 'Dừng tự động' : 'Bật tự động (1-2 người / 5s)'}</span>
+              <span>{isAutoSimulating ? 'Dừng tự động' : `Bật tự động (mỗi ${simulatedIntervalSeconds}s)`}</span>
             </button>
+          </div>
+        </div>
+        {/* Nút chọn nhanh nhịp giây */}
+        <div className="mt-2.5 flex items-center justify-between border-t border-violet-500/20 pt-2 text-[11px] text-slate-400">
+          <span>Nhịp xuất hiện:</span>
+          <div className="flex items-center gap-1">
+            {[1, 2, 3, 5, 8, 10, 15, 30].map((sec) => (
+              <button
+                key={sec}
+                type="button"
+                className={`rounded px-1.5 py-0.5 text-[10px] font-semibold transition ${
+                  simulatedIntervalSeconds === sec
+                    ? 'bg-violet-400 text-slate-950 font-bold'
+                    : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                }`}
+                onClick={() => setPrefs({ simulatedVisitorIntervalSeconds: sec })}
+              >
+                {sec}s
+              </button>
+            ))}
           </div>
         </div>
         {batchStatus && (

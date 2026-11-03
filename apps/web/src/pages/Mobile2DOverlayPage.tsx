@@ -195,16 +195,20 @@ export function get2DSeatCoordinates(
     };
   }
 
-  // Khung hình Desktop màn hình ngang (16:9)
-  const rowIndex = Math.floor(safeIndex / 12); // 0, 1
-  const colInRow = safeIndex % 12; // 0..5 bên trái, 6..11 bên phải
+  // Khung hình Desktop màn hình ngang (16:9): 3 hàng x 12 chỗ = 36 chỗ ngồi
+  const desktopIndex = Math.max(0, index) % 36;
+  const rowIndex = Math.floor(desktopIndex / 12); // 0, 1, 2
+  const colInRow = desktopIndex % 12; // 0..5 bên trái, 6..11 bên phải
   const isRightSide = colInRow >= 6;
   const sideIndex = isRightSide ? colInRow - 6 : colInRow;
 
-  // 2 hàng ghế trên sàn gỗ hai bên thảm đỏ (Row 0 ở 67%, Row 1 ở 79% khớp phối cảnh chánh điện)
-  const rowTops = [67, 79];
+  // 3 hàng ghế trên sàn gỗ hai bên thảm đỏ chuẩn phối cảnh:
+  // - Row 0: top 66% (dưới điểm quỳ hành lễ 61.5% - 63.5%)
+  // - Row 1: top 75% (hàng giữa)
+  // - Row 2: top 84% (hàng dưới, cách trên hàng chờ mép đáy 96%)
+  const rowTops = [66, 75, 84];
   // Tỉ lệ scale nhân vật theo luật phối cảnh xa nhỏ gần to
-  const rowScales = [1.08, 1.3];
+  const rowScales = [0.98, 1.14, 1.3];
   const leftCols = [8, 14, 20, 26, 32, 38];
   const rightCols = [62, 68, 74, 80, 86, 92];
   const colX = isRightSide ? rightCols[sideIndex] : leftCols[sideIndex];
@@ -213,7 +217,7 @@ export function get2DSeatCoordinates(
     left: colX,
     top: rowTops[rowIndex],
     scale: rowScales[rowIndex],
-    zIndex: 20 + rowIndex * 2,
+    zIndex: 20 + rowIndex * 3,
   };
 }
 
@@ -729,7 +733,7 @@ function Mobile2DSeatedVisitors({
             : normalDuration;
           return now - (visitor.seatedAt ?? visitor.createdAt) <= duration;
         })
-        .slice(0, 24),
+        .slice(0, mobile ? 24 : 36),
     [
       activeUsers,
       busySeatDurationMs,
@@ -865,6 +869,12 @@ function Mobile2DCharacter({
   const offeredRef = useRef(false);
   const [animTick, setAnimTick] = useState(0);
 
+  // Refs ổn định để effect chính không bị re-run khi store/props thay đổi reference
+  const completeRef = useRef(complete);
+  completeRef.current = complete;
+  const setStateRef = useRef(setState);
+  setStateRef.current = setState;
+
   // Bộ đếm nhịp hoạt ảnh bước đi và quỳ lạy
   useEffect(() => {
     if (paused) return;
@@ -886,7 +896,7 @@ function Mobile2DCharacter({
   const cultivation = getCultivationInfo(interactions, isFemale);
 
   // Ghế ngồi cố định đã phân bổ trong chánh điện
-  const resolvedSeatIndex = action.seatIndex !== undefined ? action.seatIndex : userHash % 24;
+  const resolvedSeatIndex = action.seatIndex !== undefined ? action.seatIndex : userHash % (mobile ? 24 : 36);
   const seatCoords = useMemo(
     () => get2DSeatCoordinates(resolvedSeatIndex, mobile),
     [resolvedSeatIndex, mobile],
@@ -898,7 +908,9 @@ function Mobile2DCharacter({
   const isNearStatue = worshipDistance === 'NEAR';
   const worshipTop = mobile ? (isNearStatue ? 63.2 : 65) : isNearStatue ? 61.5 : 63.5;
   const worshipScale = mobile ? (isNearStatue ? 1.05 : 1.12) : isNearStatue ? 1.02 : 1.1;
-  const laneOffset = [-4, -1.5, 1.5, 4][lane % 4];
+  // Cố định lane offset lúc mount — tránh re-run effect khi index thay đổi do character khác complete
+  const laneOffsetRef = useRef([-4, -1.5, 1.5, 4][lane % 4]);
+  const laneOffset = laneOffsetRef.current;
 
   // Vị trí xuất phát ngoài cửa (top: 104% - dưới đáy màn hình)
   const startLeft = 50 + laneOffset * 0.4;
@@ -941,22 +953,22 @@ function Mobile2DCharacter({
             duration: `${timings.walkInMs / 1000}s`,
           });
         }
-        setState(action.actionId, 'WALKING_TO_ALTAR');
+        setStateRef.current(action.actionId, 'WALKING_TO_ALTAR');
       }, 50);
     } else if (state === 'WALKING_TO_ALTAR' || state === 'WALKING_TO_GATE') {
       // Fallback timer đề phòng trường hợp transition không trigger: đúng 2.7s lập tức đổi hoạt ảnh
       timer = window.setTimeout(
         () => {
           if (isJoinOnly) {
-            complete(action.actionId);
+            completeRef.current(action.actionId);
             return;
           }
           if (action.actionType === 'OFFER_FLOWERS') {
-            setState(action.actionId, 'OFFERING_FLOWERS');
+            setStateRef.current(action.actionId, 'OFFERING_FLOWERS');
           } else if (isDonation) {
-            setState(action.actionId, 'BOWING');
+            setStateRef.current(action.actionId, 'BOWING');
           } else {
-            setState(action.actionId, 'PRAYING');
+            setStateRef.current(action.actionId, 'PRAYING');
           }
         },
         (isJoinOnly ? timings.walkToSeatMs : timings.walkInMs) + 100,
@@ -973,17 +985,17 @@ function Mobile2DCharacter({
       }
       // Dâng hoa xong thì chuyển sang quỳ lạy 3 lạy
       timer = window.setTimeout(() => {
-        setState(action.actionId, 'BOWING');
+        setStateRef.current(action.actionId, 'BOWING');
       }, timings.flowerOfferingMs);
     } else if (state === 'BOWING') {
       // Quỳ lạy 3 lạy trang nghiêm (10s) rồi bước về chỗ ngồi
       timer = window.setTimeout(() => {
-        setState(action.actionId, 'EXITING');
+        setStateRef.current(action.actionId, 'EXITING');
       }, timings.donationBowMs);
     } else if (state === 'PRAYING' || state === 'WAITING') {
       // Chắp tay niệm Phật (5s) rồi bước về chỗ ngồi
       timer = window.setTimeout(() => {
-        setState(action.actionId, 'EXITING');
+        setStateRef.current(action.actionId, 'EXITING');
       }, timings.prayerMs);
     } else if (state === 'EXITING') {
       // Bước từ điện Phật dạt sang mép thảm rồi về chỗ ngồi theo thời gian đã cài ở Admin.
@@ -994,7 +1006,7 @@ function Mobile2DCharacter({
         duration: `${timings.walkToSeatMs / 1000}s`,
       });
       timer = window.setTimeout(() => {
-        complete(action.actionId);
+        completeRef.current(action.actionId);
       }, timings.walkToSeatMs);
     }
 
@@ -1003,28 +1015,40 @@ function Mobile2DCharacter({
       if (timer) window.clearTimeout(timer);
       if (offeringTimer) window.clearTimeout(offeringTimer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     action.actionId,
     action.actionType,
     addFlower,
-    complete,
     isDonation,
     isJoinOnly,
-    laneOffset,
     paused,
     seatCoords.left,
     seatCoords.scale,
     seatCoords.top,
-    setState,
     state,
-    worshipScale,
-    worshipTop,
     timings.donationBowMs,
     timings.flowerOfferingMs,
     timings.prayerMs,
     timings.walkInMs,
     timings.walkToSeatMs,
   ]);
+  // Safety timeout: force-complete nhân vật bị treo ở trạng thái chuyển tiếp quá lâu
+  useEffect(() => {
+    if (paused) return;
+    // Tổng thời gian tối đa cho toàn bộ lifecycle: walk in + prayer/bow + walk to seat + buffer
+    const maxLifecycleMs =
+      timings.walkInMs +
+      Math.max(timings.prayerMs, timings.donationBowMs + timings.flowerOfferingMs) +
+      timings.walkToSeatMs +
+      5000;
+    const safetyTimer = window.setTimeout(() => {
+      // Nếu character vẫn chưa complete sau maxLifecycleMs, force-complete
+      completeRef.current(action.actionId);
+    }, maxLifecycleMs);
+    return () => window.clearTimeout(safetyTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [action.actionId, paused]);
 
   // Tư thế tương ứng theo từng giai đoạn
   let activePose: DevoteePose = 'WALK_BACK';
@@ -1064,18 +1088,18 @@ function Mobile2DCharacter({
     if (e.target !== e.currentTarget || e.propertyName !== 'top') return;
     if (state === 'WALKING_TO_ALTAR' || state === 'WALKING_TO_GATE') {
       if (isJoinOnly) {
-        complete(action.actionId);
+        completeRef.current(action.actionId);
         return;
       }
       if (action.actionType === 'OFFER_FLOWERS') {
-        setState(action.actionId, 'OFFERING_FLOWERS');
+        setStateRef.current(action.actionId, 'OFFERING_FLOWERS');
       } else if (isDonation) {
-        setState(action.actionId, 'BOWING');
+        setStateRef.current(action.actionId, 'BOWING');
       } else {
-        setState(action.actionId, 'PRAYING');
+        setStateRef.current(action.actionId, 'PRAYING');
       }
     } else if (state === 'EXITING') {
-      complete(action.actionId);
+      completeRef.current(action.actionId);
     }
   };
 
@@ -1192,7 +1216,8 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
     return presentUserIds;
   }, [active, queue, queueClock, seatedVisitors, userInteractions]);
 
-  const isMobileInteriorBusy = is2DInteriorQueueEnabled && normallyPresentUserIds.size > 24;
+  const maxSeats = mobile ? 24 : 36;
+  const isMobileInteriorBusy = is2DInteriorQueueEnabled && normallyPresentUserIds.size > maxSeats;
   const busySeatDurationMs = isMobileInteriorBusy
     ? Math.max(10, mobile2dBusySeatSeconds) * 1000
     : undefined;
@@ -1220,7 +1245,7 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
         return queueClock - (visitor.seatedAt ?? visitor.createdAt) <= duration;
       })
       .sort(sortMobileAdmissionActions)
-      .slice(0, 24);
+      .slice(0, maxSeats);
 
     const retainedCharacters = active
       .filter((character) => retainedIdSet.has(character.action.actionId))
@@ -1233,8 +1258,8 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
     const keptSeatedVisitors = [...validSeatedVisitors];
 
     for (const character of admissionCandidates) {
-      if (reservedActionIds.length >= 24) break;
-      if (keptSeatedVisitors.length + reservedActionIds.length < 24) {
+      if (reservedActionIds.length >= maxSeats) break;
+      if (keptSeatedVisitors.length + reservedActionIds.length < maxSeats) {
         reservedActionIds.push(character.action.actionId);
         continue;
       }
@@ -1321,7 +1346,10 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
     };
   }, []);
 
-  // Giả lập ngẫu nhiên 1, 2 người đi vào 1 lần, 5 giây sau lại vào; không tràn vào (chuẩn 3D)
+  // Giả lập ngẫu nhiên 1, 2 người đi vào 1 lần theo chu kỳ cài đặt; không tràn vào (chuẩn 3D)
+  const simulatedIntervalSeconds = monitorPreferences.simulatedVisitorIntervalSeconds ?? 5;
+  const simulatedIntervalMs = Math.max(1, simulatedIntervalSeconds) * 1000;
+
   useEffect(() => {
     const hasRealPlatformConnected = Object.values(connections).some(
       (platformConnection) => platformConnection.state === 'CONNECTED',
@@ -1335,17 +1363,17 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
       if (cancelled) return;
       await sendSimulatedBatch();
       if (!cancelled) {
-        timer = window.setTimeout(runSimCycle, 5000);
+        timer = window.setTimeout(runSimCycle, simulatedIntervalMs);
       }
     };
 
-    timer = window.setTimeout(runSimCycle, 2500);
+    timer = window.setTimeout(runSimCycle, Math.min(2500, simulatedIntervalMs));
 
     return () => {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
     };
-  }, [allowSimulated, connections]);
+  }, [allowSimulated, connections, simulatedIntervalMs]);
 
   // Ảnh nền không gian chùa (Nội điện hoặc Ngoại cảnh)
   const backdropUrl =

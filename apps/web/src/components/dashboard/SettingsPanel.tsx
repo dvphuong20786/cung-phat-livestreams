@@ -9,7 +9,12 @@ export function SettingsPanel() {
       <div className="flex items-center justify-between border-b border-white/10 pb-3">
         <div className="flex items-center gap-2">
           <Settings size={19} className="text-slate-400" />
-          <h2 className="font-bold">Cài đặt hệ thống</h2>
+          <h2 className="font-bold flex items-center gap-2">
+            Cài đặt hệ thống
+            <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300 border border-emerald-500/30">
+              Lưu Database
+            </span>
+          </h2>
         </div>
         <a
           href="/admin/audio"
@@ -67,7 +72,7 @@ export function SettingsPanel() {
           <div className="flex items-center justify-between text-slate-300">
             <span className="flex items-center gap-1.5 font-medium">
               <MessageSquare size={15} className="text-amber-400" />
-              Thời gian giữ bình luận (2D & 3D):
+              Thời gian giữ bình luận (2D & 3D) <span className="text-[11px] font-normal text-amber-300/80">(gợi ý: 20s)</span>:
             </span>
             <span className="font-bold text-amber-300">
               {prefs.commentDurationSeconds ?? 20} giây
@@ -103,6 +108,50 @@ export function SettingsPanel() {
             <span>120s</span>
           </div>
         </div>
+        {/* Cài đặt thời gian xuất hiện nhân vật giả lập */}
+        <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 space-y-2">
+          <div className="flex items-center justify-between text-slate-300">
+            <span className="flex items-center gap-1.5 font-medium">
+              <Users size={15} className="text-violet-400" />
+              Nhịp xuất hiện nhân vật giả lập <span className="text-[11px] font-normal text-violet-300/80">(gợi ý: 5s)</span>:
+            </span>
+            <span className="font-bold text-violet-300">
+              {prefs.simulatedVisitorIntervalSeconds ?? 5} giây / đợt
+            </span>
+          </div>
+          <p className="text-[11px] leading-4 text-slate-400">
+            Mỗi đợt ngẫu nhiên 1-2 người bước vào chánh điện (chuẩn 2D & 3D) khi chưa kết nối kênh LIVE thật.
+          </p>
+          <input
+            className="w-full accent-violet-500"
+            type="range"
+            min="1"
+            max="60"
+            step="1"
+            value={prefs.simulatedVisitorIntervalSeconds ?? 5}
+            onChange={(e) => setPrefs({ simulatedVisitorIntervalSeconds: Math.max(1, +e.target.value) })}
+          />
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>1s</span>
+            <div className="flex flex-wrap gap-1.5">
+              {[1, 2, 3, 5, 8, 10, 15, 30].map((sec) => (
+                <button
+                  key={sec}
+                  type="button"
+                  className={`rounded px-2 py-0.5 text-[11px] font-semibold transition ${
+                    (prefs.simulatedVisitorIntervalSeconds ?? 5) === sec
+                      ? 'bg-violet-500 text-slate-950 font-bold'
+                      : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                  }`}
+                  onClick={() => setPrefs({ simulatedVisitorIntervalSeconds: sec })}
+                >
+                  {sec}s
+                </button>
+              ))}
+            </div>
+            <span>60s</span>
+          </div>
+        </div>
         <div className="space-y-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
           <label className="flex cursor-pointer items-center justify-between gap-4">
             <span className="flex items-center gap-1.5 font-medium text-slate-300">
@@ -122,7 +171,7 @@ export function SettingsPanel() {
           </p>
           <label className="block">
             <span className="mb-1 flex items-center justify-between text-slate-400">
-              <span>Thời gian ngồi tối đa khi đông</span>
+              <span className="flex items-center gap-1.5"><span>Thời gian ngồi tối đa khi đông</span><span className="text-[11px] font-normal text-cyan-400/80">(gợi ý: 20s)</span></span>
               <strong className="text-cyan-300">{prefs.mobile2dBusySeatSeconds ?? 20} giây</strong>
             </span>
             <input
@@ -142,14 +191,27 @@ export function SettingsPanel() {
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               {[
-                ['Khách thường đứng lễ', 'mobile2dPrayerSeconds', 3],
+                ['Khách đứng lễ', 'mobile2dPrayerSeconds', 3],
                 ['Tặng quà quỳ lễ', 'mobile2dDonationBowSeconds', 5],
                 ['Dâng hoa', 'mobile2dFlowerOfferingSeconds', 3.5],
                 ['Đi vào', 'mobile2dWalkInSeconds', 2.6],
                 ['Đi về ghế', 'mobile2dWalkToSeatSeconds', 2.4],
               ].map(([label, key, fallback]) => (
                 <label key={String(key)} className="rounded-lg bg-black/15 p-2 text-slate-400">
-                  <span className="mb-1 block">{label}</span>
+                  <span className="mb-1 flex items-center justify-between">
+                    <span className="truncate">{label}</span>
+                    <button
+                      type="button"
+                      className="text-[10px] text-cyan-400/80 hover:text-cyan-300 hover:underline"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPrefs({ [key]: fallback });
+                      }}
+                      title={`Bấm để đặt lại gợi ý: ${fallback}s`}
+                    >
+                      (gợi ý: {fallback}s)
+                    </button>
+                  </span>
                   <span className="flex items-center gap-1">
                     <input
                       className="field min-w-0 flex-1 px-2 py-1 text-sm"

@@ -1,5 +1,67 @@
 # Lịch sử thay đổi
 
+## [v0.28.10] - 2026-11-03
+- **Yêu cầu**: Màn hình `/overlay-2d` (Desktop 2D ngang 16:9) dồn thành 3 hàng ngồi quỳ niệm Phật để tăng số lượng người trong điện lên mà không phá vỡ layout UI lối đi vào điện.
+- **Chi tiết kỹ thuật**:
+  - `Mobile2DOverlayPage.tsx`:
+    - Bố trí 3 hàng ghế trên sàn gỗ hai bên thảm đỏ (mỗi hàng 12 chỗ: 6 bên trái, 6 bên phải, tổng **36 chỗ ngồi**, tăng 50% sức chứa từ 24 lên 36 người):
+      - **Row 0** (hàng trên cùng): `top: 66%`, `scale: 0.98` (ngay dưới điểm hành lễ dâng hoa 61.5% - 63.5%).
+      - **Row 1** (hàng giữa): `top: 75%`, `scale: 1.14`.
+      - **Row 2** (hàng dưới cùng): `top: 84%`, `scale: 1.30` (cách mép dưới đáy màn hình và hàng chờ 96%).
+    - Giữ nguyên dải thảm đỏ ở giữa (từ 38% đến 62%) để khách hành lễ đi vào thông thoáng và trang nghiêm, không bị che khuất hay đè lên ghế ngồi.
+    - Cập nhật bộ điều phối hàng chờ ưu tiên (`admissionCandidates`, `reservedActionIds`, `normallyPresentUserIds`) hỗ trợ dung lượng 36 chỗ cho Desktop và 24 chỗ cho Mobile.
+  - `useTempleGameStore.ts`:
+    - Cập nhật thuật toán phân bổ ghế (`allocateSeatIndex`) tự động lấp đầy theo thứ tự từng hàng: Hàng 0 (0..11) → Hàng 1 (12..23) → Hàng 2 (24..35).
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đạt 52/52 unit test và production bundle web thành công 100%.
+
+## [v0.28.9] - 2026-11-03
+- **Yêu cầu**: Khắc phục lỗi đen màn hình (màn hình trắng/đen do lỗi runtime khi khởi động).
+- **Chi tiết kỹ thuật**:
+  - `useSocket.ts`: Bổ sung định nghĩa hàm xử lý sự kiện `onSettingsUpdated` bị thiếu trong hook `useSocket` (gây lỗi runtime `ReferenceError: onSettingsUpdated is not defined` làm crash toàn bộ ứng dụng).
+  - `useMonitorStore.ts`: Chuyển lời gọi `command('settings:update')` sang lazy dynamic import để tránh hiện tượng circular dependency (import vòng) giữa `useMonitorStore` và `socket.ts`.
+  - Đã chạy kiểm tra `vite build` (production bundle) và `tsc` thành công không còn lỗi.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đạt 52/52 unit test và production build web/server thành công 100%.
+
+## [v0.28.8] - 2026-11-03
+- **Yêu cầu**: Lưu trữ toàn bộ thông tin cài đặt vào SQLite Database và hiển thị thông số gợi ý cạnh tiêu đề trên form cài đặt để giao diện gọn gàng hơn.
+- **Chi tiết kỹ thuật**:
+  - **Lưu Database SQLite**:
+    - `SettingsStore.ts`: Tạo bảng `system_settings` trong cơ sở dữ liệu SQLite (`data/tiktok-live.db`) với các phương thức `get`, `set`, `getAll`, `setAll` và chế độ WAL.
+    - `socketServer.ts` & `index.ts`: Tích hợp `SettingsStore` vào server, gửi kèm `settings` trong `snapshot`, cung cấp sự kiện `settings:update` và broadcast `settings:updated` tới toàn bộ clients.
+    - `useMonitorStore.ts` & `useSocket.ts`: Tự động đồng bộ 2 chiều giữa client và server — khi admin thay đổi, cài đặt được lưu ngay vào SQLite server; khi tab OBS hoặc trình duyệt khác mở lên, cài đặt tự động được nạp từ database.
+  - **Giao diện form `SettingsPanel.tsx`**:
+    - Hiển thị thông số gợi ý `(gợi ý: Xs)` ngay cạnh tiêu đề của từng mục (thời gian bình luận, nhịp giả lập, thời gian ngồi khi đông, các hoạt cảnh đứng lễ, dâng hoa, đi vào, đi về ghế).
+    - Hỗ trợ click trực tiếp vào thông số gợi ý để đặt lại nhanh giá trị mặc định.
+    - Bổ sung huy hiệu **Lưu Database** tại tiêu đề Cài đặt hệ thống.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đạt 52/52 unit test (bổ sung `SettingsStore.test.ts`) và 0 lỗi TypeScript trên toàn bộ monorepo.
+
+## [v0.28.7] - 2026-11-03
+- **Yêu cầu**: Kiểm tra chu kỳ xuất hiện nhân vật giả lập và bổ sung cài đặt thời gian xuất hiện nhân vật giả lập đi vào chánh điện.
+- **Chi tiết kỹ thuật**:
+  - **Kiểm tra hiện trạng**: Chu kỳ mặc định hiện nay là **5 giây** mỗi đợt, mỗi đợt có ngẫu nhiên **1 hoặc 2 người** đi vào chánh điện (nếu 2 người thì cách nhau 600ms).
+  - `useMonitorStore.ts`: Thêm cấu hình `simulatedVisitorIntervalSeconds` vào `MonitorPreferences` với giá trị mặc định là 5 giây, tự động đồng bộ qua `localStorage` giữa trang Quản trị và các cửa sổ Overlay / OBS.
+  - `SettingsPanel.tsx`: Bổ sung khối cài đặt "Nhịp xuất hiện nhân vật giả lập" tại trang Quản trị hệ thống (`/admin`), hỗ trợ thanh kéo từ 1 đến 60 giây và các nút bấm nhanh (1s, 2s, 3s, 5s, 8s, 10s, 15s, 30s).
+  - `SimulatorPanel.tsx`: Tích hợp nhịp xuất hiện giả lập vào bảng mô phỏng, cập nhật nhịp chạy tự động và chu kỳ chạy có nhịp (`handlePacedRun`), cho phép chọn nhanh thời gian ngay trên thanh công cụ giả lập.
+  - `Mobile2DOverlayPage.tsx`: Thay thế thời gian hardcode 5000ms bằng giá trị cài đặt `simulatedVisitorIntervalSeconds`, phản ứng tức thì khi người quản trị điều chỉnh.
+  - `socketServer.ts`: Cho phép lệnh socket `simulator:auto-control` nhận tham số `intervalMs` để điều phối nhịp chạy tự động từ server theo đúng cấu hình.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã đạt 50/50 unit test và 0 lỗi TypeScript trên cả hai workspace web và server.
+
+## [v0.28.6] - 2026-11-03
+- **Yêu cầu**: Fix lỗi nhân vật bị treo (stuck) giữa chừng trên màn hình `/overlay-2d` và `/overlay-mobile-2d`.
+- **Chi tiết kỹ thuật**:
+  - `Mobile2DOverlayPage.tsx` — `Mobile2DCharacter`:
+    - Cố định `laneOffset` bằng `useRef` tại thời điểm mount — tránh effect lifecycle bị re-run khi index trong danh sách `displayedActiveCharacters` thay đổi do character khác complete.
+    - Chuyển `setState` và `complete` sang `useRef` (`setStateRef`, `completeRef`) — loại bỏ 2 dependency không ổn định khỏi effect chính, ngăn timer bị clear rồi đặt lại liên tục.
+    - Thêm safety timeout: nếu nhân vật ở bất kỳ trạng thái chuyển tiếp nào quá lâu (tổng walkIn + prayer/bow + walkToSeat + 5s buffer), force-complete để giải phóng slot.
+    - `handleTransitionEnd` cũng sử dụng ref version để đồng bộ với effect chính.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã đạt 50/50 unit test và TypeScript typecheck đạt 0 lỗi.
+  - Cần kiểm thử trực quan trên cả hai route `/overlay-2d` và `/overlay-mobile-2d` với nhiều người vào liên tục.
+
 ## [v0.28.5] - 2026-11-03
 - **Yêu cầu**: Tích hợp trọn bộ hiệu ứng hoa sen nở `hoa2` cho màn hình `/overlay-2d` (Desktop 2D Overlay), hỗ trợ cả khi Phật tử dâng hoa trước điện Phật, sự kiện tặng hoa/combo hoa và các đại cảnh tương tác theo đúng tỉ lệ 16:9.
 - **Chi tiết kỹ thuật**:

@@ -80,6 +80,7 @@ export interface Snapshot {
   stats: Statistics;
   simulation?: { autoEnabled: boolean };
   sessionLists?: LiveSessionLists;
+  settings?: Record<string, unknown>;
 }
 
 export interface SessionMeritEntry {
