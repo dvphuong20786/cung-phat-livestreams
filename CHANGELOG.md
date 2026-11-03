@@ -1,5 +1,18 @@
 # Lịch sử thay đổi
 
+## [v0.28.5] - 2026-11-03
+- **Yêu cầu**: Tích hợp trọn bộ hiệu ứng hoa sen nở `hoa2` cho màn hình `/overlay-2d` (Desktop 2D Overlay), hỗ trợ cả khi Phật tử dâng hoa trước điện Phật, sự kiện tặng hoa/combo hoa và các đại cảnh tương tác theo đúng tỉ lệ 16:9.
+- **Chi tiết kỹ thuật**:
+  - `Mobile2DOverlayPage.tsx`:
+    - Truyền tham số `mobile={mobile}` xuống component `<InteractionEffectsOverlay mobile={mobile} />`.
+    - `Mobile2DCharacter`: Khi nhân vật thực hiện hành lễ dâng hoa (`state === 'OFFERING_FLOWERS'`), hiển thị trực tiếp đóa sen vàng hồng phát sáng `hoa2` (12 frame chuyển động, trong suốt) nở bừng sáng trên hai bàn tay dâng hoa trước điện Phật.
+  - `InteractionEffectsOverlay.tsx`:
+    - Nhận prop `mobile?: boolean` để tự động căn chỉnh tọa độ và kích thước đóa sen cho màn hình Desktop 16:9 (`/overlay-2d`) và Mobile 9:16 (`/overlay-mobile-2d`).
+    - Bổ sung sự kiện tặng hoa (`PETAL_FLY_TO_ALTAR`) và Combo 10 đóa hoa (`COMBO_10_FLOWERS`) tự động kích hoạt đóa sen `hoa2` nở rộ trước điện Phật trên thảm đỏ chánh điện.
+    - `GrandLotusCeremony`: Tối ưu số lượng cánh hoa rơi (`count: 45`) và kích thước đóa sen khổng lồ (`size: 340px`) trên màn hình desktop.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã đạt 50/50 unit test và TypeScript typecheck đạt 0 lỗi.
+
 ## [v0.28.4] - 2026-11-03
 - **Yêu cầu**: Không lưu Bảng Công Đức và danh sách Cúng dường phiên LIVE vào cơ sở dữ liệu; hai danh sách chỉ hiển thị dữ liệu người thật trong phiên hiện tại.
 - **Chi tiết kỹ thuật**:

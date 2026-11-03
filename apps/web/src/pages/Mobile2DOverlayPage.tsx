@@ -1087,6 +1087,23 @@ function Mobile2DCharacter({
       {/* Huy hiệu lễ vật hoặc hoa cúng dường */}
       <OfferingBadge2D action={action} state={state} />
 
+      {/* Đóa sen phát sáng hoa2 nở rộ lộng lẫy khi nhân vật dâng hoa cúng Phật */}
+      {state === 'OFFERING_FLOWERS' && (
+        <div
+          className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 z-40 select-none flex items-center justify-center"
+          aria-hidden="true"
+        >
+          <div
+            className="lotus-glow-sprite"
+            style={{
+              width: mobile ? '110px' : '140px',
+              height: mobile ? '110px' : '140px',
+              animation: `lotus-spritesheet-play ${timings.flowerOfferingMs / 1000}s steps(1) forwards, lotus-bloom-fade ${timings.flowerOfferingMs / 1000}s ease-out forwards`,
+            }}
+          />
+        </div>
+      )}
+
       {/* Vòng hào quang Phật quang nếu đạt cấp cao */}
       {cultivation.hasHalo && <DevoteeHalo2D color={cultivation.haloColor} />}
 
@@ -1465,7 +1482,7 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
       )}
 
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      <InteractionEffectsOverlay />
+      <InteractionEffectsOverlay mobile={mobile} />
     </div>
   );
 }

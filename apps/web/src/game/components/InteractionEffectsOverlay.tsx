@@ -115,15 +115,26 @@ function LotusBloom({ size = 180, durationSec = 3.6 }: { size?: number; duration
  * Đại cảnh Hoa Sen Kim Quang dành cho Gift từ 500 Coin & Chuyển cấp nhân vật
  * Xuất hiện trang nghiêm ngay phía trước điện Phật trên thảm đỏ chánh điện (top: 58%)
  */
-function GrandLotusCeremony({ rankName, gender = 'female' }: { rankName?: string; gender?: string }) {
+function GrandLotusCeremony({
+  rankName,
+  gender = 'female',
+  mobile = false,
+}: {
+  rankName?: string;
+  gender?: string;
+  mobile?: boolean;
+}) {
   return (
     <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden" aria-hidden="true">
       {/* 1. Mưa cánh hoa sen vàng rực rơi toàn màn hình */}
-      <PetalRain count={35} durationSec={5.0} />
+      <PetalRain count={mobile ? 25 : 45} durationSec={5.0} />
 
       {/* 2. Đóa hoa sen phát sáng nở đúng vị trí trang nghiêm trước điện Phật */}
-      <div className="absolute left-1/2 top-[58%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-        <LotusBloom size={300} durationSec={5.0} />
+      <div
+        className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
+        style={{ top: mobile ? '58%' : '58%' }}
+      >
+        <LotusBloom size={mobile ? 260 : 340} durationSec={5.0} />
 
         {/* Nếu là Chuyển Cấp: Hiển thị danh hiệu đắc vị */}
         {rankName && (
@@ -186,7 +197,7 @@ function EffectNoticeBanner({ effect }: { effect: QueuedEffect }) {
  * Đặt component này vào bất kỳ màn hình nào (2D hoặc 3D) để hiển thị trọn bộ hiệu ứng.
  * ============================================================================
  */
-export function InteractionEffectsOverlay() {
+export function InteractionEffectsOverlay({ mobile = false }: { mobile?: boolean }) {
   const {
     concurrentEffects,
     currentQueuedEffect,
@@ -204,20 +215,26 @@ export function InteractionEffectsOverlay() {
   // Kiểm tra các hiệu ứng nhỏ đang hoạt động
   const hasPetalRain = concurrentEffects.some((e) => e.type === 'PETALS_RAIN_SMALL');
   const hasPetalsOrbit = concurrentEffects.some((e) => e.type === 'PETALS_ORBIT');
-  const hasLotusFootBloom = concurrentEffects.some((e) => e.type === 'LOTUS_FOOT_BLOOM');
+  // Kích hoạt hoa sen nở hoa2 cho cả comment Nam mô A Di Đà Phật, Follow và sự kiện tặng hoa dâng Phật
+  const hasLotusFootBloom = concurrentEffects.some(
+    (e) => e.type === 'LOTUS_FOOT_BLOOM' || e.type === 'PETAL_FLY_TO_ALTAR',
+  );
 
   return (
     <div className="effects-overlay-container">
       {/* 1. Mưa hoa nhỏ từ các sự kiện Like 100, Combo hoa, Gift */}
-      {hasPetalRain && <PetalRain count={20} durationSec={2.5} />}
+      {hasPetalRain && <PetalRain count={mobile ? 20 : 30} durationSec={2.5} />}
 
       {/* 2. Cánh hoa bay quanh nhân vật từ Like 10, Xem live */}
       {hasPetalsOrbit && <PetalsOrbit count={3} />}
 
-      {/* 3. Hoa sen nở tại chỗ từ comment "Nam mô A Di Đà Phật" hoặc Follow */}
+      {/* 3. Hoa sen nở tại chỗ từ comment "Nam mô A Di Đà Phật", Follow hoặc Tặng hoa */}
       {hasLotusFootBloom && (
-        <div className="absolute left-1/2 top-[61.5%] -translate-x-1/2 -translate-y-1/2">
-          <LotusBloom size={180} durationSec={3.2} />
+        <div
+          className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{ top: mobile ? '63.2%' : '61.5%' }}
+        >
+          <LotusBloom size={mobile ? 180 : 220} durationSec={3.2} />
         </div>
       )}
 
@@ -232,17 +249,28 @@ export function InteractionEffectsOverlay() {
             <GrandLotusCeremony
               rankName={currentQueuedEffect.rankName}
               gender={currentQueuedEffect.gender}
+              mobile={mobile}
             />
+          )}
+
+          {/* Combo 10 hoa: Đóa hoa sen nở rộ cùng mưa hoa */}
+          {currentQueuedEffect.type === 'COMBO_10_FLOWERS' && (
+            <div
+              className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
+              style={{ top: mobile ? '63.2%' : '61.5%' }}
+            >
+              <LotusBloom size={mobile ? 200 : 250} durationSec={4.0} />
+            </div>
           )}
 
           {/* Mưa hoa toàn màn hình cho Gift 100-499 Coin */}
           {currentQueuedEffect.type === 'MAJOR_GIFT' && (
-            <PetalRain count={35} durationSec={4.5} />
+            <PetalRain count={mobile ? 35 : 50} durationSec={4.5} />
           )}
 
           {/* Hiệu ứng lên level */}
           {currentQueuedEffect.type === 'LEVEL_UP' && (
-            <PetalRain count={25} durationSec={3.5} />
+            <PetalRain count={mobile ? 25 : 35} durationSec={3.5} />
           )}
         </>
       )}
