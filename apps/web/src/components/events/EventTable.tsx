@@ -95,7 +95,7 @@ export function EventTable() {
           <thead className="sticky top-0 z-10 bg-[#101425] text-[11px] uppercase tracking-wider text-slate-500">
             <tr>
               <th className="p-4">Thời gian</th>
-              <th className="p-4">Người dùng TikTok</th>
+              <th className="p-4">Tài khoản nền tảng</th>
               <th className="p-4">Biệt danh</th>
               <th className="p-4">Loại</th>
               <th className="p-4">Chi tiết</th>
@@ -125,9 +125,17 @@ export function EventTable() {
                   </td>
                   <td className="p-4">
                     <span
-                      className={`rounded-full px-2 py-1 text-[10px] font-bold ${e.source === 'TIKTOK' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-violet-500/10 text-violet-300'}`}
+                      className={`rounded-full px-2 py-1 text-[10px] font-bold ${
+                        e.source === 'SIMULATOR'
+                          ? 'bg-violet-500/10 text-violet-300'
+                          : e.source === 'YOUTUBE'
+                            ? 'bg-red-500/10 text-red-300'
+                            : e.source === 'FACEBOOK'
+                              ? 'bg-blue-500/10 text-blue-300'
+                              : 'bg-emerald-500/10 text-emerald-300'
+                      }`}
                     >
-                      {e.source === 'TIKTOK' ? 'THẬT' : 'MÔ PHỎNG'}
+                      {e.source === 'SIMULATOR' ? 'MÔ PHỎNG' : e.source}
                     </span>
                   </td>
                   <td className="p-4">

@@ -2,7 +2,9 @@ import { z } from 'zod';
 
 export const liveEventTypes = ['LIKE', 'COMMENT', 'GIFT', 'FOLLOW', 'SHARE', 'JOIN'] as const;
 export type LiveEventType = (typeof liveEventTypes)[number];
-export type EventSource = 'TIKTOK' | 'SIMULATOR';
+export const realEventSources = ['TIKTOK', 'YOUTUBE', 'FACEBOOK'] as const;
+export type RealEventSource = (typeof realEventSources)[number];
+export type EventSource = RealEventSource | 'SIMULATOR';
 export type ConnectionState =
   'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'ERROR';
 export type TempleAction =
@@ -19,6 +21,7 @@ export interface TempleGameAction {
   giftCoinValue?: number;
   message?: string;
   isSimulated?: boolean;
+  source?: EventSource;
   eventType?: LiveEventType;
   avatarUrl?: string;
   seatedAt?: number;
@@ -72,9 +75,35 @@ export interface ConnectionStatus {
 }
 export interface Snapshot {
   connection: ConnectionStatus;
+  connections?: Record<RealEventSource, ConnectionStatus>;
   events: LiveEvent[];
   stats: Statistics;
   simulation?: { autoEnabled: boolean };
+  sessionLists?: LiveSessionLists;
+}
+
+export interface SessionMeritEntry {
+  userId: string;
+  nickname: string;
+  avatarUrl?: string;
+  meritPoints: number;
+  rankName?: string;
+  source: RealEventSource;
+}
+
+export interface SessionDonorEntry {
+  userId: string;
+  nickname: string;
+  avatarUrl?: string;
+  giftName: string;
+  quantity: number;
+  timestamp: number;
+  source: RealEventSource;
+}
+
+export interface LiveSessionLists {
+  merit: SessionMeritEntry[];
+  donors: SessionDonorEntry[];
 }
 
 const clean = (max: number) =>
@@ -114,6 +143,9 @@ const tiktokUsernameSchema = z
 export const connectSchema = z.object({
   username: tiktokUsernameSchema,
   autoReconnect: z.boolean().default(true),
+});
+export const liveUrlSchema = z.object({
+  url: z.string().trim().url({ message: 'Hãy nhập URL LIVE hợp lệ' }).max(500),
 });
 export const simulatorSchema = z.object({
   type: z.enum(liveEventTypes),
@@ -167,6 +199,7 @@ export function templeGameActionFor(event: LiveEvent): TempleGameAction | null {
     giftCoinValue: event.gift?.coinValue,
     message: event.comment,
     isSimulated: event.source === 'SIMULATOR',
+    source: event.source,
     eventType: event.type,
     avatarUrl: event.user.avatarUrl,
     createdAt: event.timestamp,
@@ -201,12 +234,14 @@ export function eventMatches(
   event: LiveEvent,
   search: string,
   type: 'ALL' | LiveEventType,
-  source: 'ALL' | EventSource = 'ALL',
+  source: 'ALL' | 'REAL' | EventSource = 'ALL',
 ) {
   const q = search.trim().toLocaleLowerCase();
   return (
     (type === 'ALL' || event.type === type) &&
-    (source === 'ALL' || event.source === source) &&
+    (source === 'ALL' ||
+      (source === 'REAL' && event.source !== 'SIMULATOR') ||
+      event.source === source) &&
     (!q ||
       event.user.username.toLocaleLowerCase().includes(q) ||
       event.user.nickname.toLocaleLowerCase().includes(q))

@@ -1,5 +1,71 @@
 # Lịch sử thay đổi
 
+## [v0.28.4] - 2026-11-03
+- **Yêu cầu**: Không lưu Bảng Công Đức và danh sách Cúng dường phiên LIVE vào cơ sở dữ liệu; hai danh sách chỉ hiển thị dữ liệu người thật trong phiên hiện tại.
+- **Chi tiết kỹ thuật**:
+  - Thêm `LiveSessionListsStore` để giữ điểm công đức phiên và người cúng dường gần nhất hoàn toàn trong RAM của server, chỉ nhận nguồn thật TikTok, YouTube và Facebook, đồng thời loại bỏ dữ liệu giả lập.
+  - `socketServer.ts` đồng bộ hai danh sách qua snapshot và sự kiện `session:lists`; danh sách được xóa khi bắt đầu phiên TikTok mới, khi reset thống kê hoặc khi server khởi động lại.
+  - `MeritLeaderboard.tsx` và `RecentDonorsList.tsx` chỉ đọc danh sách phiên do server gửi, không còn lấy lịch sử nhân vật từ `/api/characters` hoặc tự dựng danh sách cúng dường phía trình duyệt.
+  - `CharacterStore.ts` không còn đọc, ghi hoặc migrate `merit_points_in_session`; tổng điểm công đức và level của nhân vật vẫn được lưu vĩnh viễn như trước.
+  - Bổ sung test cho việc đồng bộ, cộng điểm và reset hai danh sách chỉ tồn tại trong bộ nhớ.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã đạt 50/50 unit test, TypeScript typecheck cho server/shared/web và production build web.
+  - Vite vẫn cảnh báo chunk `TempleToolbar` khoảng 844 kB; cảnh báo hiệu năng này không làm lỗi build.
+
+## [v0.28.3] - 2026-11-03
+- **Yêu cầu**: Cập nhật lại ảnh `hoa2.png` (1024x768, 4x3 frame) với kênh Alpha trong suốt hoàn toàn, loại bỏ toàn bộ background đệm khi chạy hiệu ứng hoa sen, và chuyển đổi hoa sen nở thành hoạt ảnh 12 khung hình liên hoàn tại đúng vị trí trang nghiêm trước điện Phật.
+- **Chi tiết kỹ thuật**:
+  - `hoa2.png`: Chuyển đổi toàn bộ nền đen của ảnh hoa sen sang True Transparent Alpha PNG (Format32bppArgb, 1024x768, 12 frame vuông 256x256), giữ trọn vẹn sắc hồng cánh sen và ánh sáng kim quang phát sáng rực rỡ.
+  - `interaction-effects.css`:
+    - Loại bỏ hoàn toàn background-color và các lớp nền phụ; thiết lập `background-color: transparent !important`.
+    - Thêm hoạt ảnh keyframes `@keyframes lotus-spritesheet-play` tuần tự 12 bước (`steps(1)`) qua từng frame (4 cột x 3 hàng) từ nụ hoa hé nở -> bung cánh -> Phật quang tỏa sáng -> cánh hoa và bụi vàng xoay tròn tan biến.
+  - `InteractionEffectsOverlay.tsx`:
+    - `LotusBloom`: Loại bỏ lớp nền `radial-gradient` vòng tròn vàng phía sau; hoa sen nở trong suốt thanh tịnh 100%.
+    - `GrandLotusCeremony`: Loại bỏ lớp phủ `radial-gradient` toàn màn hình; đưa vị trí đóa sen nở từ giữa màn hình (`50%`) xuống vị trí trang nghiêm trên thảm đỏ chánh điện (`top: 58%`), tránh che khuất tượng Phật và bàn thờ Tam Bảo.
+    - `hasLotusFootBloom`: Căn chỉnh vị trí nở hoa tại chỗ về đúng đầu thảm đỏ nơi Phật tử hành lễ (`top: 61.5%`).
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã đạt 50/50 unit test và TypeScript typecheck đạt 0 lỗi.
+
+## [v0.28.2] - 2026-11-03
+- **Yêu cầu**: Sửa Bảng Công Đức và danh sách Cúng dường phiên live còn hiển thị dữ liệu giả.
+- **Chi tiết kỹ thuật**:
+  - `TempleGameAction`: truyền rõ `source` từ sự kiện gốc xuống toàn bộ luồng game.
+  - `useTempleGameStore.ts`: chỉ thêm người cúng dường khi nguồn được xác nhận là `TIKTOK`, `YOUTUBE` hoặc `FACEBOOK` và `isSimulated === false`; sự kiện `SIMULATOR` không thể lọt vào danh sách dù cờ giả lập bị thiếu hoặc sai.
+  - `RecentDonorsList.tsx`: áp dụng lại kiểm tra nguồn thật ngay trước khi gom nhóm và hiển thị danh sách.
+  - `MeritLeaderboard.tsx`: đổi sang nguyên tắc chỉ nhận nhân vật có `isSimulated === false`, không còn coi dữ liệu thiếu cờ là người thật.
+  - `useTempleGameStore.test.ts`: bổ sung trường hợp sự kiện mang nguồn `SIMULATOR` nhưng cờ `isSimulated` sai vẫn phải bị loại; donor YouTube thật vẫn được nhận.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã đạt 49/49 unit test, TypeScript typecheck và production build cho server, shared package và web.
+  - Vite vẫn cảnh báo chunk `TempleToolbar` khoảng 844 kB; cảnh báo hiệu năng này không làm lỗi build.
+
+## [v0.28.1] - 2026-11-03
+- **Yêu cầu**: Sửa lỗi trên màn hình /overlay-2d (Desktop 2D Overlay): Sư Thầy ngồi quá cao đè lên bàn thờ và tượng Phật; khách tới hành lễ cùng đệ tử, Phật tử ngồi quỳ bị lơ lửng, tách rời khỏi toà sen đệm ngồi.
+- **Chi tiết kỹ thuật**:
+  - `Mobile2DOverlayPage.tsx`:
+    - `ChantingMonks2D`: Hạ toạ độ Y của 3 Sư Thầy trên Desktop từ `51% / 51.5%` xuống `58.2% / 58.8%` (đúng mặt sàn trước bệ thờ Tam Bảo); đóng gói đệm sen (`lotus-cushion.svg`) ở lớp nền (`z-0`) ôm khít dưới đáy thân người quỳ và mõ gỗ (`z-2`) ở phía trước, xoá bỏ hoàn toàn khoảng trống bị lơ lửng.
+    - `Mobile2DSeatedVisitors`: Tích hợp đệm toà sen trực tiếp ôm chân nhân vật quỳ (`bottom-[-4px] z-0`), loại bỏ class không hợp lệ `-mt-4.5`; người ngồi và toà sen gắn kết thành khối liền mạch vững chãi.
+    - `get2DSeatCoordinates`: Điều chỉnh toạ độ 2 hàng ghế Phật tử trên Desktop (`rowTops`) từ `[62, 76]` xuống `[67, 79]` với scale `[1.08, 1.3]`, khớp chuẩn xác với phối cảnh sàn gỗ 2 bên thảm đỏ chánh điện.
+    - `Mobile2DCharacter`: Điều chỉnh điểm đứng hành lễ của khách dâng hoa / quỳ lạy cúng Phật (`worshipTop`) trên Desktop từ `54% / 56%` xuống `61.5% / 63.5%`, đưa nhân vật đứng trang nghiêm trên thảm đỏ trước bàn thờ Tam Bảo thay vì bay lơ lửng giữa không trung.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã vượt qua 49/49 unit test và hoàn thành TypeScript typecheck cho `apps/web` (0 errors).
+
+## [v0.28.0] - 2026-11-03
+- **Yêu cầu**: Thêm kết nối đồng thời YouTube LIVE và Facebook LIVE bên cạnh TikTok, chỉ nhận tương tác người thật và không tạo dữ liệu giả cho hai nền tảng mới.
+- **Chi tiết kỹ thuật**:
+  - `ConnectionPanel.tsx`: bổ sung hai ô dán URL YouTube LIVE và Facebook LIVE theo cùng bố cục TikTok; mỗi nền tảng có trạng thái, lỗi, nút kết nối và ngắt kết nối độc lập.
+  - `YouTubeConnector.ts`: dùng YouTube Data API để tìm `activeLiveChatId`, nhận chat, Super Chat, Super Sticker và sự kiện membership; giữ avatar cùng ID kênh thật của người tương tác.
+  - `FacebookConnector.ts`: dùng Facebook Graph API và Page access token để đọc bình luận mới của video LIVE; bỏ qua dữ liệu không có danh tính người dùng thay vì tạo nhân vật giả.
+  - `socketServer.ts`: cho phép TikTok, YouTube và Facebook phát sự kiện đồng thời vào cùng hàng đợi nhân vật, điểm công đức, hiệu ứng và bảng thống kê; tự tắt giả lập tự động khi bất kỳ nền tảng thật nào kết nối.
+  - `StatisticsService.ts`, `EventService.ts` và `useMonitorStore.ts`: mở rộng nguồn sự kiện thật đa nền tảng, cộng thống kê người thật từ cả ba nguồn và hỗ trợ lọc riêng từng nền tảng.
+  - `CharacterStore.ts`: dùng ID có tiền tố nền tảng cho YouTube/Facebook để không gộp nhầm hai tài khoản trùng tên giữa các nền tảng.
+  - `.env.example`: bổ sung `YOUTUBE_API_KEY`, `FACEBOOK_PAGE_ACCESS_TOKEN` và cấu hình tùy chọn `FACEBOOK_GRAPH_VERSION`.
+  - Bổ sung test nhận diện URL, ánh xạ bình luận/avatar, Super Chat và thống kê đa nền tảng.
+- **Lưu ý kỹ thuật & chưa kiểm thử**:
+  - Đã đạt 49/49 unit test, TypeScript typecheck và production build cho server, shared package và web; đã kiểm tra trực tiếp bố cục tại `/admin/connection`.
+  - Chưa thể kiểm thử kết nối LIVE thật khi máy hiện chưa có YouTube API key và Facebook Page access token hợp lệ.
+  - API YouTube không cung cấp từng người chỉ vào xem, lượt like hoặc share theo tài khoản; Facebook chỉ trả các bình luận mà quyền của Page token cho phép. Hệ thống không sinh sự kiện giả để bù dữ liệu mà nền tảng không cung cấp.
+  - Vite vẫn cảnh báo chunk `TempleToolbar` khoảng 844 kB; cảnh báo hiệu năng này không làm lỗi build.
+
 ## [v0.27.2] - 2026-11-03
 - **Yêu cầu**: Sửa dứt điểm lỗi hiệu ứng hoa sen bị viền khối vuông đen và xóa bỏ hoàn toàn các biểu tượng nút loa lơ lửng trên nhân vật.
 - **Chi tiết kỹ thuật**:

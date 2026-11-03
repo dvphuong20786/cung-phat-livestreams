@@ -88,35 +88,23 @@ function PetalsOrbit({ count = 3 }: { count?: number }) {
 }
 
 /**
- * Bông sen nở rực rỡ tại chỗ từ sprite sheet hoa2.png (4x3 = 12 frame)
- * Dùng mix-blend-mode: screen để tự động loại bỏ nền đen, hòa quyện ánh sáng lộng lẫy
+ * Bông sen nở rực rỡ từ sprite sheet hoa2.png (4x3 = 12 frame liên hoàn)
+ * Nền hoàn toàn trong suốt, không đệm background, hoa chuyển động tuần tự từ nụ đến nở hoa
  */
-function LotusBloom({ size = 160, durationSec = 3.2 }: { size?: number; durationSec?: number }) {
-  // Chọn frame nở rộ đẹp nhất (Frame 6 hoặc Frame 7 là đóa sen vàng hồng xòe cánh tỏa hào quang)
-  const frameClass = 'lotus-frame-6';
-
+function LotusBloom({ size = 180, durationSec = 3.6 }: { size?: number; durationSec?: number }) {
   return (
     <div
-      className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+      className="pointer-events-none relative flex items-center justify-center select-none"
+      style={{ width: `${size}px`, height: `${size}px` }}
       aria-hidden="true"
     >
-      {/* Vòng hào quang vàng tỏa sáng từ tâm sen */}
+      {/* Đóa hoa sen chuyển động tuần tự 12 khung hình nở hoa trên nền trong suốt */}
       <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{
-          width: `${size * 1.3}px`,
-          height: `${size * 1.3}px`,
-          background: 'radial-gradient(circle, rgba(255,215,100,0.55) 0%, rgba(255,160,50,0.25) 50%, transparent 75%)',
-          animation: `golden-aura-pulse ${durationSec}s ease-in-out forwards`,
-        }}
-      />
-      {/* Đóa hoa sen phát sáng rực rỡ */}
-      <div
-        className={`lotus-glow-sprite ${frameClass}`}
+        className="lotus-glow-sprite"
         style={{
           width: `${size}px`,
           height: `${size}px`,
-          animation: `lotus-bloom-fade ${durationSec}s ease-out forwards`,
+          animation: `lotus-spritesheet-play ${durationSec}s steps(1) forwards, lotus-bloom-fade ${durationSec}s ease-out forwards`,
         }}
       />
     </div>
@@ -124,31 +112,23 @@ function LotusBloom({ size = 160, durationSec = 3.2 }: { size?: number; duration
 }
 
 /**
- * Đại cảnh Hoa Sen Kim Quang khổng lồ dành cho Gift từ 500 Coin & Chuyển cấp nhân vật
+ * Đại cảnh Hoa Sen Kim Quang dành cho Gift từ 500 Coin & Chuyển cấp nhân vật
+ * Xuất hiện trang nghiêm ngay phía trước điện Phật trên thảm đỏ chánh điện (top: 58%)
  */
 function GrandLotusCeremony({ rankName, gender = 'female' }: { rankName?: string; gender?: string }) {
   return (
-    <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center overflow-hidden" aria-hidden="true">
+    <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden" aria-hidden="true">
       {/* 1. Mưa cánh hoa sen vàng rực rơi toàn màn hình */}
       <PetalRain count={35} durationSec={5.0} />
 
-      {/* 2. Luồng ánh sáng hào quang vàng từ trên chiếu xuống */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: 'radial-gradient(circle at 50% 45%, rgba(255,220,120,0.35) 0%, rgba(255,180,60,0.18) 45%, transparent 70%)',
-          animation: 'golden-aura-pulse 5.0s ease-out forwards',
-        }}
-      />
+      {/* 2. Đóa hoa sen phát sáng nở đúng vị trí trang nghiêm trước điện Phật */}
+      <div className="absolute left-1/2 top-[58%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+        <LotusBloom size={300} durationSec={5.0} />
 
-      {/* 3. Đóa hoa sen phát sáng cực đại giữa màn hình */}
-      <div className="relative flex flex-col items-center">
-        <LotusBloom size={280} durationSec={5.0} />
-
-        {/* Nếu là Chuyển Cấp: Hiển thị Sprite nhân vật mới đang đắc vị */}
+        {/* Nếu là Chuyển Cấp: Hiển thị danh hiệu đắc vị */}
         {rankName && (
-          <div className="animate-in zoom-in fade-in relative mt-16 flex flex-col items-center duration-700">
-            <div className="rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-500/20 via-yellow-400/30 to-amber-500/20 px-6 py-1.5 shadow-2xl backdrop-blur-md">
+          <div className="animate-in zoom-in fade-in relative mt-4 flex flex-col items-center duration-700">
+            <div className="rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-500/30 via-yellow-400/40 to-amber-500/30 px-6 py-1.5 shadow-2xl backdrop-blur-md">
               <span className="font-serif text-base font-black tracking-wider text-amber-200 drop-shadow">
                 ✨ {rankName} ✨
               </span>
@@ -236,8 +216,8 @@ export function InteractionEffectsOverlay() {
 
       {/* 3. Hoa sen nở tại chỗ từ comment "Nam mô A Di Đà Phật" hoặc Follow */}
       {hasLotusFootBloom && (
-        <div className="absolute left-1/2 top-[64%] -translate-x-1/2 -translate-y-1/2">
-          <LotusBloom size={140} durationSec={3.0} />
+        <div className="absolute left-1/2 top-[61.5%] -translate-x-1/2 -translate-y-1/2">
+          <LotusBloom size={180} durationSec={3.2} />
         </div>
       )}
 

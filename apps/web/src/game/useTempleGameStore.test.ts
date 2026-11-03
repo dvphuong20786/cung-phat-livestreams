@@ -19,6 +19,8 @@ describe('temple game queue', () => {
       userInteractions: {},
       userLikeCountsInSession: {},
       characterList: [],
+      sessionMeritEntries: [],
+      recentDonors: [],
       fifoQueue: false,
       mobilePriorityAdmission: false,
     });
@@ -43,21 +45,34 @@ describe('temple game queue', () => {
     useTempleGameStore.getState().enqueue({ ...action(2, 'OFFER_FLOWERS'), userId: 'u-1' });
     expect(useTempleGameStore.getState().seatedVisitors).toHaveLength(1);
   });
-  it('keeps only real TikTok donors in the latest donation list', () => {
-    useTempleGameStore.getState().enqueue({
-      ...action(1, 'OFFER_FLOWERS'),
-      eventType: 'GIFT',
-      isSimulated: true,
-    });
-    useTempleGameStore.getState().enqueue({
-      ...action(2, 'OFFER_INCENSE'),
-      eventType: 'GIFT',
-      isSimulated: false,
-      nickname: 'Phật tử thật',
+  it('keeps both live-session lists in memory and clears them on session reset', () => {
+    useTempleGameStore.getState().syncSessionLists({
+      merit: [
+        {
+          userId: 'youtube:user-1',
+          nickname: 'Phật tử thật',
+          meritPoints: 20,
+          source: 'YOUTUBE',
+        },
+      ],
+      donors: [
+        {
+          userId: 'youtube:user-1',
+          nickname: 'Phật tử thật',
+          giftName: 'YouTube Super Chat',
+          quantity: 1,
+          timestamp: 1,
+          source: 'YOUTUBE',
+        },
+      ],
     });
 
+    expect(useTempleGameStore.getState().sessionMeritEntries).toHaveLength(1);
     expect(useTempleGameStore.getState().recentDonors).toHaveLength(1);
-    expect(useTempleGameStore.getState().recentDonors[0]?.nickname).toBe('Phật tử thật');
+
+    useTempleGameStore.getState().resetSession();
+    expect(useTempleGameStore.getState().sessionMeritEntries).toEqual([]);
+    expect(useTempleGameStore.getState().recentDonors).toEqual([]);
   });
   it('keeps accumulating offline merit points for repeated likes', () => {
     useTempleGameStore.getState().enqueue({ ...action(1), eventType: 'LIKE', quantity: 6 });

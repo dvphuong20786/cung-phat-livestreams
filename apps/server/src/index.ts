@@ -11,6 +11,8 @@ import { EventStore, getDefaultEventDatabasePath } from './services/EventStore.j
 import { CharacterStore } from './services/CharacterStore.js';
 import { TikTokConnector } from './connectors/TikTokConnector.js';
 import { EulerCloudConnector, getEulerApiKey } from './connectors/EulerCloudConnector.js';
+import { YouTubeConnector } from './connectors/YouTubeConnector.js';
+import { FacebookConnector } from './connectors/FacebookConnector.js';
 import { setupSockets } from './socket/socketServer.js';
 
 // Luôn đọc file .env ở thư mục gốc monorepo, không phụ thuộc lệnh được chạy từ đâu.
@@ -36,10 +38,12 @@ app.use(express.json({ limit: '32kb' }));
 app.get('/health', (_q, r) =>
   r.json({
     ok: true,
-    service: 'TikTok LIVE Monitor',
+    service: 'Multi-platform LIVE Monitor',
     tiktokConnectionMode: connectionMode,
     eulerApiKeyConfigured: Boolean(getEulerApiKey()),
     tiktokSignConfigured: Boolean(process.env.TIKTOK_SIGN_API_KEY?.trim()),
+    youtubeApiKeyConfigured: Boolean(process.env.YOUTUBE_API_KEY?.trim()),
+    facebookPageAccessTokenConfigured: Boolean(process.env.FACEBOOK_PAGE_ACCESS_TOKEN?.trim()),
     persistence: {
       enabled: true,
       eventCount: eventStore.count(),
@@ -96,8 +100,10 @@ const io = new Server(http, { cors: { origin, methods: ['GET', 'POST'] } });
 
 const events = new EventService(500, eventStore);
 const tiktok = connectionMode === 'direct' ? new TikTokConnector() : new EulerCloudConnector();
+const youtube = new YouTubeConnector();
+const facebook = new FacebookConnector();
 
-setupSockets(io, events, tiktok, characterStore);
+setupSockets(io, events, tiktok, youtube, facebook, characterStore);
 
 http.listen(port, '127.0.0.1', () =>
   console.log(`API + Socket.IO: http://localhost:${port} (${connectionMode}, SQLite)`),
@@ -105,6 +111,8 @@ http.listen(port, '127.0.0.1', () =>
 
 async function shutdown() {
   await tiktok.disconnect();
+  await youtube.disconnect();
+  await facebook.disconnect();
   eventStore.close();
   characterStore.close();
   io.close();

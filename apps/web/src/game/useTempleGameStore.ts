@@ -1,5 +1,11 @@
 import { create } from 'zustand';
-import { templeGameActionPriority, type TempleGameAction } from '@live/shared';
+import {
+  templeGameActionPriority,
+  type LiveSessionLists,
+  type SessionDonorEntry,
+  type SessionMeritEntry,
+  type TempleGameAction,
+} from '@live/shared';
 import { calculateActionMeritPoints } from './cultivationLevel';
 import { calculateSeatingDuration } from './seatingDuration';
 import { useInteractionEffectsStore } from './useInteractionEffectsStore';
@@ -25,23 +31,12 @@ export interface StoredCharacter {
   avatarUrl?: string;
   isSimulated?: boolean;
   meritPoints: number;
-  meritPointsInSession?: number;
-  sessionMeritPoints?: number;
   level: number;
   rankName?: string;
   watchTimeAwardedToday?: number;
   gender?: 'male' | 'female';
 }
 type Quality = 'LOW' | 'MEDIUM' | 'HIGH';
-export interface RecentDonor {
-  userId: string;
-  nickname: string;
-  avatarUrl?: string;
-  giftName?: string;
-  quantity?: number;
-  timestamp: number;
-  isSimulated?: boolean;
-}
 interface GameStore {
   active: ActiveCharacter[];
   queue: TempleGameAction[];
@@ -54,14 +49,15 @@ interface GameStore {
   fifoQueue: boolean;
   mobilePriorityAdmission: boolean;
   userInteractions: Record<string, number>;
-  sessionMeritPoints: Record<string, number>;
+  sessionMeritEntries: SessionMeritEntry[];
   userLikeCountsInSession: Record<string, number>;
   characterList: StoredCharacter[];
-  recentDonors: RecentDonor[];
+  recentDonors: SessionDonorEntry[];
   enqueue: (action: TempleGameAction) => void;
   syncCharacters: (
     characters: Array<Partial<StoredCharacter> & { userId: string; meritPoints: number }>,
   ) => void;
+  syncSessionLists: (sessionLists: LiveSessionLists) => void;
   setState: (id: string, state: CharacterState) => void;
   complete: (id: string) => void;
   addFlower: () => void;
@@ -191,7 +187,7 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
   fifoQueue: false,
   mobilePriorityAdmission: false,
   userInteractions: {},
-  sessionMeritPoints: {},
+  sessionMeritEntries: [],
   userLikeCountsInSession: {},
   characterList: [],
   recentDonors: [],
@@ -251,28 +247,6 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
           return secondVisitor.createdAt - firstVisitor.createdAt;
         })
         .slice(0, 80);
-      // Cập nhật danh sách 5 người donate mới nhất
-      const isDonation =
-        action.eventType === 'GIFT' ||
-        action.actionType === 'OFFER_FLOWERS' ||
-        action.actionType === 'OFFER_INCENSE';
-
-      let updatedRecentDonors = state.recentDonors;
-      if (isDonation && action.isSimulated !== true) {
-        const newDonor: RecentDonor = {
-          userId: action.userId,
-          nickname: action.nickname,
-          avatarUrl: action.avatarUrl,
-          giftName:
-            action.giftName || (action.actionType === 'OFFER_FLOWERS' ? 'Hoa cúng Phật' : 'Lễ vật'),
-          quantity: action.quantity || 1,
-          timestamp: Date.now(),
-          isSimulated: false,
-        };
-        const filtered = state.recentDonors.filter((d) => d.userId !== action.userId);
-        updatedRecentDonors = [newDonor, ...filtered].slice(0, 5);
-      }
-
       const existing =
         state.active.some((c) => c.action.userId === action.userId) ||
         state.queue.some((a) => a.userId === action.userId && a.actionType === action.actionType);
@@ -281,7 +255,6 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
           seatedVisitors,
           userInteractions,
           userLikeCountsInSession,
-          recentDonors: updatedRecentDonors,
           latest: `${action.nickname} đã gửi thêm lượt thích`,
         };
       }
@@ -289,16 +262,10 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       const queue = sortActionsByPriority([...state.queue, actionWithSeat]);
 
       return {
-        ...promote(
-          [...state.active],
-          queue,
-          state.fifoQueue,
-          state.mobilePriorityAdmission,
-        ),
+        ...promote([...state.active], queue, state.fifoQueue, state.mobilePriorityAdmission),
         seatedVisitors,
         userInteractions,
         userLikeCountsInSession,
-        recentDonors: updatedRecentDonors,
         latest:
           action.actionType === 'OFFER_FLOWERS'
             ? `${action.nickname} đang chuẩn bị dâng hoa`
@@ -340,6 +307,11 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
         characterList,
       };
     }),
+  syncSessionLists: (sessionLists) =>
+    set({
+      sessionMeritEntries: sessionLists.merit,
+      recentDonors: sessionLists.donors,
+    }),
   setState: (id, characterState) =>
     set((state) => ({
       active: state.active.map((c) =>
@@ -380,19 +352,14 @@ export const useTempleGameStore = create<GameStore>((set, get) => ({
       queue: [],
       seatedVisitors: [],
       recentDonors: [],
-      sessionMeritPoints: {},
+      sessionMeritEntries: [],
       flowers: 0,
       latest: undefined,
     }),
   resetSession: () =>
-    set((state) => ({
-      sessionMeritPoints: {},
+    set(() => ({
+      sessionMeritEntries: [],
       recentDonors: [],
-      characterList: state.characterList.map((c) => ({
-        ...c,
-        meritPointsInSession: 0,
-        sessionMeritPoints: 0,
-      })),
     })),
   setPaused: (paused) => set({ paused }),
   setQuality: (quality) => set({ quality }),

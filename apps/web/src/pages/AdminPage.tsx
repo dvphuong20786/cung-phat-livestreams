@@ -34,7 +34,7 @@ type AdminPageKey =
 const menuItems = [
   { key: 'overview', label: 'Tổng quan', href: '/admin', icon: LayoutDashboard },
   { key: 'events', label: 'Sự kiện trực tiếp', href: '/admin/events', icon: Activity },
-  { key: 'connection', label: 'Kết nối TikTok', href: '/admin/connection', icon: Radio },
+  { key: 'connection', label: 'Kết nối đa nền tảng', href: '/admin/connection', icon: Radio },
   { key: 'simulator', label: 'Giả lập tương tác', href: '/admin/simulator', icon: FlaskConical },
   { key: 'temple', label: 'Không gian chùa', href: '/admin/temple', icon: Landmark },
   { key: 'audio', label: 'Cài đặt Nhạc & Âm thanh', href: '/admin/audio', icon: Music },
@@ -70,8 +70,8 @@ const pageInfo: Record<AdminPageKey, { title: string; description: string }> = {
     description: 'Tra cứu lượt thích, bình luận, quà tặng và người tham gia',
   },
   connection: {
-    title: 'Kết nối TikTok LIVE',
-    description: 'Quản lý tài khoản LIVE và trạng thái Cloud WebSocket',
+    title: 'Kết nối LIVE đa nền tảng',
+    description: 'Kết nối đồng thời TikTok, YouTube và Facebook LIVE',
   },
   simulator: {
     title: 'Giả lập tương tác',
@@ -194,7 +194,7 @@ function AdminContent({ page }: { page: AdminPageKey }) {
   if (page === 'events') return <EventTable />;
   if (page === 'connection')
     return (
-      <div className="max-w-5xl">
+      <div className="max-w-6xl">
         <ConnectionPanel />
       </div>
     );
@@ -248,8 +248,14 @@ function AdminContent({ page }: { page: AdminPageKey }) {
 export function AdminPage() {
   const page = getAdminPage(window.location.pathname),
     info = pageInfo[page];
-  const { connection, socketConnected, stats } = useMonitorStore();
-  const connected = connection.state === 'CONNECTED';
+  const { connections, socketConnected, stats } = useMonitorStore();
+  const connectedPlatforms = Object.entries(connections).filter(
+    ([, platformConnection]) => platformConnection.state === 'CONNECTED',
+  );
+  const isConnecting = Object.values(connections).some(
+    (platformConnection) =>
+      platformConnection.state === 'CONNECTING' || platformConnection.state === 'RECONNECTING',
+  );
   return (
     <div className="min-h-screen">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-white/[.06] bg-[#090c17]/95 p-5 backdrop-blur-xl lg:block">
@@ -258,7 +264,7 @@ export function AdminPage() {
             <Radio size={22} />
           </div>
           <div>
-            <div className="font-black">TikTok LIVE</div>
+            <div className="font-black">Multi LIVE</div>
             <div className="text-xs text-slate-500">Realtime Monitor</div>
           </div>
         </a>
@@ -300,19 +306,23 @@ export function AdminPage() {
             <div className="flex items-center gap-3">
               <div
                 className={`h-2 w-2 rounded-full ${
-                  connected
+                  connectedPlatforms.length > 0
                     ? 'bg-emerald-400 shadow-[0_0_12px_#34d399]'
-                    : connection.state === 'CONNECTING' || connection.state === 'RECONNECTING'
+                    : isConnecting
                       ? 'animate-pulse bg-amber-400'
                       : 'bg-slate-600'
                 }`}
               />
               <div className="text-right">
                 <div className="text-sm font-semibold">
-                  {connected ? 'Đã kết nối' : 'Chưa kết nối'}
+                  {connectedPlatforms.length > 0
+                    ? `Đã kết nối ${connectedPlatforms.length} nền tảng`
+                    : 'Chưa kết nối'}
                 </div>
                 <div className="text-xs text-slate-500">
-                  {connection.username ? `@${connection.username}` : 'Chưa chọn streamer'}
+                  {connectedPlatforms.length > 0
+                    ? connectedPlatforms.map(([platform]) => platform).join(' · ')
+                    : 'Chưa chọn LIVE'}
                 </div>
               </div>
             </div>
@@ -335,7 +345,7 @@ export function AdminPage() {
         <div className="p-4 md:p-8">
           <AdminContent page={page} />
           <footer className="py-8 text-center text-xs text-slate-600">
-            Công cụ kiểm thử nội bộ · Không liên kết chính thức với TikTok
+            Công cụ kiểm thử nội bộ · Không liên kết chính thức với các nền tảng LIVE
           </footer>
         </div>
       </main>

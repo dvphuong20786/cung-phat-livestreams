@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import type { ConnectionStatus, LiveEvent, Snapshot, Statistics } from '@live/shared';
+import type {
+  ConnectionStatus,
+  EventSource,
+  LiveEvent,
+  RealEventSource,
+  Snapshot,
+  Statistics,
+} from '@live/shared';
 
 const emptyStats = {
   likes: 0,
@@ -23,7 +30,7 @@ type MonitorPreferences = {
   maxEvents: number;
   joinEvents: boolean;
   debug: boolean;
-  display: 'ALL' | 'TIKTOK' | 'SIMULATOR';
+  display: 'ALL' | 'REAL' | EventSource;
   commentDurationSeconds: number;
   mobile2dQueueEnabled: boolean;
   mobile2dBusySeatSeconds: number;
@@ -60,6 +67,7 @@ interface MonitorStore {
   events: LiveEvent[];
   stats: Statistics;
   connection: ConnectionStatus;
+  connections: Record<RealEventSource, ConnectionStatus>;
   socketConnected: boolean;
   autoSimulationEnabled: boolean;
   error?: string;
@@ -68,6 +76,7 @@ interface MonitorStore {
   addEvent: (event: LiveEvent) => void;
   setStats: (stats: Statistics) => void;
   setConnection: (connection: ConnectionStatus) => void;
+  setPlatformConnection: (platform: RealEventSource, connection: ConnectionStatus) => void;
   setSocketConnected: (connected: boolean) => void;
   setAutoSimulationEnabled: (enabled: boolean) => void;
   setError: (error?: string) => void;
@@ -78,6 +87,11 @@ export const useMonitorStore = create<MonitorStore>((set, get) => ({
   events: [],
   stats: initialStats,
   connection: { state: 'DISCONNECTED', reconnectAttempt: 0 },
+  connections: {
+    TIKTOK: { state: 'DISCONNECTED', reconnectAttempt: 0 },
+    YOUTUBE: { state: 'DISCONNECTED', reconnectAttempt: 0 },
+    FACEBOOK: { state: 'DISCONNECTED', reconnectAttempt: 0 },
+  },
   socketConnected: false,
   autoSimulationEnabled: false,
   prefs: { ...defaultPreferences, ...loadStoredPreferences() },
@@ -86,11 +100,22 @@ export const useMonitorStore = create<MonitorStore>((set, get) => ({
       events: snapshot.events,
       stats: snapshot.stats,
       connection: snapshot.connection,
+      connections: snapshot.connections ?? {
+        TIKTOK: snapshot.connection,
+        YOUTUBE: { state: 'DISCONNECTED', reconnectAttempt: 0 },
+        FACEBOOK: { state: 'DISCONNECTED', reconnectAttempt: 0 },
+      },
       autoSimulationEnabled: snapshot.simulation?.autoEnabled ?? false,
     }),
   addEvent: (event) => set({ events: [event, ...get().events].slice(0, get().prefs.maxEvents) }),
   setStats: (stats) => set({ stats }),
-  setConnection: (connection) => set({ connection }),
+  setConnection: (connection) =>
+    set((state) => ({
+      connection,
+      connections: { ...state.connections, TIKTOK: connection },
+    })),
+  setPlatformConnection: (platform, connection) =>
+    set((state) => ({ connections: { ...state.connections, [platform]: connection } })),
   setSocketConnected: (socketConnected) => set({ socketConnected }),
   setAutoSimulationEnabled: (autoSimulationEnabled) => set({ autoSimulationEnabled }),
   setError: (error) => set({ error }),

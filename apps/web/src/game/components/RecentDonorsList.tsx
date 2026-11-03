@@ -3,7 +3,8 @@ import { useTempleGameStore } from '../useTempleGameStore';
 
 export function RecentDonorsList({ mobile = false }: { mobile?: boolean }) {
   const storedDonors = useTempleGameStore((state) => state.recentDonors) || [];
-  const recentDonors = storedDonors.filter((donor) => donor.isSimulated !== true);
+  // Server chỉ gửi người thật của phiên hiện tại; danh sách này không đọc từ SQLite.
+  const recentDonors = storedDonors;
 
   if (recentDonors.length === 0) return null;
 
@@ -93,13 +94,9 @@ export function RecentDonorsList({ mobile = false }: { mobile?: boolean }) {
               </div>
               <div className="flex items-center gap-1 text-[10px] text-amber-300/90 font-medium">
                 <Gift size={10} className="text-amber-400 shrink-0" />
-                <span className="truncate">
-                  {donor.giftName || 'Hoa cúng Phật'}
-                </span>
+                <span className="truncate">{donor.giftName || 'Hoa cúng Phật'}</span>
                 {donor.totalQuantity > 1 && (
-                  <span className="font-bold text-amber-400 font-mono">
-                    x{donor.totalQuantity}
-                  </span>
+                  <span className="font-bold text-amber-400 font-mono">x{donor.totalQuantity}</span>
                 )}
               </div>
             </div>

@@ -43,7 +43,10 @@ export function SettingsPanel() {
             onChange={(e) => setPrefs({ display: e.target.value as any })}
           >
             <option value="ALL">Tất cả</option>
-            <option value="TIKTOK">Chỉ sự kiện thật</option>
+            <option value="REAL">Tất cả nền tảng thật</option>
+            <option value="TIKTOK">Chỉ TikTok</option>
+            <option value="YOUTUBE">Chỉ YouTube</option>
+            <option value="FACEBOOK">Chỉ Facebook</option>
             <option value="SIMULATOR">Chỉ mô phỏng</option>
           </select>
         </label>
@@ -114,14 +117,13 @@ export function SettingsPanel() {
             />
           </label>
           <p className="text-xs leading-5 text-slate-400">
-            Áp dụng cho cả overlay 2D ngang và Mobile 2D. Khi quá 24 khách, người mới đứng chờ ở mép dưới và vào theo mức ưu tiên khi có ghế trống.
+            Áp dụng cho cả overlay 2D ngang và Mobile 2D. Khi quá 24 khách, người mới đứng chờ ở mép
+            dưới và vào theo mức ưu tiên khi có ghế trống.
           </p>
           <label className="block">
             <span className="mb-1 flex items-center justify-between text-slate-400">
               <span>Thời gian ngồi tối đa khi đông</span>
-              <strong className="text-cyan-300">
-                {prefs.mobile2dBusySeatSeconds ?? 20} giây
-              </strong>
+              <strong className="text-cyan-300">{prefs.mobile2dBusySeatSeconds ?? 20} giây</strong>
             </span>
             <input
               className="w-full accent-cyan-500"
@@ -156,9 +158,7 @@ export function SettingsPanel() {
                       max="30"
                       step="0.1"
                       value={Number(prefs[key as keyof typeof prefs] ?? fallback)}
-                      onChange={(event) =>
-                        setPrefs({ [key]: Math.max(0.5, +event.target.value) })
-                      }
+                      onChange={(event) => setPrefs({ [key]: Math.max(0.5, +event.target.value) })}
                     />
                     <span>giây</span>
                   </span>

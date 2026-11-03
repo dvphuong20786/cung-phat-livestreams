@@ -3,10 +3,12 @@ import { socket } from '../services/socket';
 import { useMonitorStore } from '../stores/useMonitorStore';
 import type {
   ConnectionStatus,
+  LiveSessionLists,
   LiveEvent,
   Snapshot,
   Statistics,
   TempleGameAction,
+  RealEventSource,
 } from '@live/shared';
 import { useTempleGameStore, type StoredCharacter } from '../game/useTempleGameStore';
 import { useInteractionEffectsStore } from '../game/useInteractionEffectsStore';
@@ -31,6 +33,7 @@ export function useSocket() {
       if (v.characters && Array.isArray(v.characters)) {
         g().syncCharacters(v.characters);
       }
+      if (v.sessionLists) g().syncSessionLists(v.sessionLists);
     };
 
     const event = (v: LiveEvent) => {
@@ -39,6 +42,8 @@ export function useSocket() {
     };
     const stats = (v: Statistics) => s().setStats(v);
     const status = (v: ConnectionStatus) => s().setConnection(v);
+    const platformStatus = (value: { platform: RealEventSource; status: ConnectionStatus }) =>
+      s().setPlatformConnection(value.platform, value.status);
     const error = (v: { message: string }) => s().setError(v.message);
     const reset = (v: { source?: string }) => {
       s().resetEvents(v.source);
@@ -51,8 +56,13 @@ export function useSocket() {
       s().setAutoSimulationEnabled(value.enabled);
       g().setAllowSimulated(value.enabled);
     };
+    const sessionLists = (value: LiveSessionLists) => g().syncSessionLists(value);
     const characterUpdated = (
-      c: Partial<StoredCharacter> & { userId: string; meritPoints: number; watchTimeAwardedToday?: number },
+      c: Partial<StoredCharacter> & {
+        userId: string;
+        meritPoints: number;
+        watchTimeAwardedToday?: number;
+      },
     ) => {
       if (c && c.userId) {
         const oldChar = g().characterList.find((x: StoredCharacter) => x.userId === c.userId);
@@ -73,6 +83,7 @@ export function useSocket() {
     socket.on('tiktok:event', event);
     socket.on('stats:update', stats);
     socket.on('connection:status', status);
+    socket.on('platform:status', platformStatus);
     socket.on('system:error', error);
     socket.on('events:reset', reset);
     socket.on('characters:reset', () => g().resetSession());
@@ -80,6 +91,7 @@ export function useSocket() {
     socket.on('game:clear', gameClear);
     socket.on('game:paused', gamePaused);
     socket.on('simulation:auto-status', autoSimulationStatus);
+    socket.on('session:lists', sessionLists);
     socket.on('character:updated', characterUpdated);
 
     if (socket.connected) connected();
@@ -91,6 +103,7 @@ export function useSocket() {
       socket.off('tiktok:event', event);
       socket.off('stats:update', stats);
       socket.off('connection:status', status);
+      socket.off('platform:status', platformStatus);
       socket.off('system:error', error);
       socket.off('events:reset', reset);
       socket.off('characters:reset', () => g().resetSession());
@@ -98,6 +111,7 @@ export function useSocket() {
       socket.off('game:clear', gameClear);
       socket.off('game:paused', gamePaused);
       socket.off('simulation:auto-status', autoSimulationStatus);
+      socket.off('session:lists', sessionLists);
       socket.off('character:updated', characterUpdated);
     };
   }, []);

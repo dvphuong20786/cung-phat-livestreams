@@ -1,46 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useTempleGameStore } from '../useTempleGameStore';
 
-export function MeritLeaderboard({
-  mobile = false,
-}: {
-  mobile?: boolean;
-}) {
+export function MeritLeaderboard({ mobile = false }: { mobile?: boolean }) {
   const [collapsed, setCollapsed] = useState(false);
-  const characterList = useTempleGameStore((s) => s.characterList);
-  const syncCharacters = useTempleGameStore((s) => s.syncCharacters);
+  const sessionMeritEntries = useTempleGameStore((state) => state.sessionMeritEntries);
 
-  // Nạp danh sách nhân vật thực tế từ SQLite database khi component mount
-  useEffect(() => {
-    fetch('/api/characters')
-      .then((res) => res.json())
-      .then((res) => {
-        if (res && res.ok && Array.isArray(res.data)) {
-          syncCharacters(res.data);
-        }
-      })
-      .catch(() => {
-        // Có thể server chạy khác port hoặc môi trường dev
-      });
-  }, [syncCharacters]);
-
-  // Lọc và lấy Top 5 người có điểm công đức cao nhất từ Database SQLite thật
-  const topDonors = characterList
-    .filter((char) => {
-      if (char.meritPoints <= 0) return false;
-      if (char.isSimulated) return false;
-      if (char.userId.startsWith('sim-') || char.username?.startsWith('sim_')) return false;
-      return true;
-    })
-    .slice(0, 5)
-    .map((char) => ({
-      userId: char.userId,
-      nickname: char.nickname || char.username || 'Thí chủ',
-      score: char.meritPoints,
-      avatarUrl: char.avatarUrl,
-      title: char.rankName ?? 'Khách hành hương',
-    }));
+  // Danh sách phiên nằm trong RAM server, không đọc lịch sử nhân vật từ SQLite.
+  const topDonors = sessionMeritEntries.slice(0, 5).map((entry) => ({
+    userId: entry.userId,
+    nickname: entry.nickname || 'Thí chủ',
+    score: entry.meritPoints,
+    avatarUrl: entry.avatarUrl,
+    title: entry.rankName ?? 'Khách hành hương',
+  }));
 
   return (
     <aside
@@ -68,7 +41,7 @@ export function MeritLeaderboard({
         </button>
       </div>
 
-      {/* Danh sách top công đức thật từ Database */}
+      {/* Danh sách người thật của phiên hiện tại, chỉ lưu trong RAM */}
       {!collapsed && (
         <div className="p-3">
           {topDonors.length === 0 ? (

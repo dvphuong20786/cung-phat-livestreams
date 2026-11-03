@@ -26,7 +26,10 @@ export function TemplePage({
     [worshipDistance, setWorshipDistance] = useState<WorshipDistance>('NEAR'),
     [isOverlayToolbarVisible, setIsOverlayToolbarVisible] = useState(true);
   const { active, queue, latest, allowSimulated } = useTempleGameStore();
-  const connection = useMonitorStore((s) => s.connection);
+  const connections = useMonitorStore((s) => s.connections);
+  const connectedPlatformCount = Object.values(connections).filter(
+    (platformConnection) => platformConnection.state === 'CONNECTED',
+  ).length;
 
   const hideSimulated = !allowSimulated;
 
@@ -148,9 +151,11 @@ export function TemplePage({
           <div className="absolute right-4 top-4 rounded-2xl border border-white/15 bg-slate-950/70 p-3 text-xs backdrop-blur">
             <div className="flex items-center gap-2">
               <span
-                className={`h-2 w-2 rounded-full ${connection.state === 'CONNECTED' ? 'bg-emerald-400' : 'bg-slate-500'}`}
+                className={`h-2 w-2 rounded-full ${connectedPlatformCount > 0 ? 'bg-emerald-400' : 'bg-slate-500'}`}
               />
-              {connection.state === 'CONNECTED' ? 'TikTok LIVE đã kết nối' : 'Chế độ mô phỏng'}
+              {connectedPlatformCount > 0
+                ? `${connectedPlatformCount} nền tảng LIVE đã kết nối`
+                : 'Chế độ mô phỏng'}
             </div>
             <div className="mt-2 text-slate-300">
               Đang hoạt động: <b>{active.length}</b> · Chờ: <b>{queue.length}</b>

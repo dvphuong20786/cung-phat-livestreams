@@ -201,9 +201,10 @@ export function get2DSeatCoordinates(
   const isRightSide = colInRow >= 6;
   const sideIndex = isRightSide ? colInRow - 6 : colInRow;
 
-  const rowTops = [62, 76];
-  // Tăng 50% kích thước nhân vật (từ 0.72 - 0.88 lên 1.08 - 1.32)
-  const rowScales = [1.08, 1.32];
+  // 2 hàng ghế trên sàn gỗ hai bên thảm đỏ (Row 0 ở 67%, Row 1 ở 79% khớp phối cảnh chánh điện)
+  const rowTops = [67, 79];
+  // Tỉ lệ scale nhân vật theo luật phối cảnh xa nhỏ gần to
+  const rowScales = [1.08, 1.3];
   const leftCols = [8, 14, 20, 26, 32, 38];
   const rightCols = [62, 68, 74, 80, 86, 92];
   const colX = isRightSide ? rightCols[sideIndex] : leftCols[sideIndex];
@@ -357,7 +358,6 @@ function DevoteeSprite2D({
         }}
       />
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      
     </div>
   );
 }
@@ -382,13 +382,7 @@ function checkHasActiveComment(
   return Boolean(message && message.trim().length > 0);
 }
 
-function DevoteeHeadBadge({
-  action,
-  isFemale,
-}: {
-  action: TempleGameAction;
-  isFemale: boolean;
-}) {
+function DevoteeHeadBadge({ action, isFemale }: { action: TempleGameAction; isFemale: boolean }) {
   const interactions = useTempleGameStore((s) => s.userInteractions[action.userId] || 0);
   const cultivation = getCultivationInfo(interactions, isFemale);
   const commentDurationSeconds = useMonitorStore((s) => s.prefs.commentDurationSeconds ?? 20);
@@ -471,7 +465,6 @@ function DevoteeHeadBadge({
         </div>
       )}
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      
     </div>
   );
 }
@@ -518,7 +511,6 @@ function WoodenFish2D({ isAbbot = false }: { isAbbot?: boolean }) {
       {/* Chiếc dùi gõ mõ */}
       <div className="mobile-2d-mallet absolute -right-2 top-0.5 h-3.5 w-0.5 rounded-full bg-[#c29663]" />
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      
     </div>
   );
 }
@@ -539,7 +531,7 @@ function ChantingMonks2D({ mobile }: { mobile: boolean }) {
         isAbbot: false,
         assetUrl: '/assets/nam5.png',
         left: mobile ? 36 : 44,
-        top: mobile ? 62.3 : 51.5,
+        top: mobile ? 62.3 : 58.8,
       },
       {
         title: 'Sư Trụ Trì',
@@ -547,7 +539,7 @@ function ChantingMonks2D({ mobile }: { mobile: boolean }) {
         isAbbot: true,
         assetUrl: '/assets/nam6.png',
         left: 50,
-        top: mobile ? 61.8 : 51,
+        top: mobile ? 61.8 : 58.2,
       },
       {
         title: 'Thầy Tâm Từ',
@@ -555,7 +547,7 @@ function ChantingMonks2D({ mobile }: { mobile: boolean }) {
         isAbbot: false,
         assetUrl: '/assets/nam5.png',
         left: mobile ? 64 : 56,
-        top: mobile ? 62.3 : 51.5,
+        top: mobile ? 62.3 : 58.8,
       },
     ],
     [mobile],
@@ -600,22 +592,28 @@ function ChantingMonks2D({ mobile }: { mobile: boolean }) {
           {/* Hào quang Phật quang rực rỡ riêng cho Sư Trụ Trì */}
           {monk.isAbbot && <AbbotAura2D />}
 
-          {/* Thân Thầy chùa ngồi quỳ tụng kinh (Row 2 của sprite sheet) */}
-          <DevoteeSprite2D assetUrl={monk.assetUrl} pose="SEATED" />
+          {/* Khối thân Thầy chùa toạ thiền trên toà sen kèm Mõ gỗ */}
+          <div className="relative flex flex-col items-center">
+            {/* Đệm sen toà thêu vàng lót nền ở dưới */}
+            <img
+              src="/assets/lotus-cushion.svg"
+              alt=""
+              className="pointer-events-none absolute bottom-[-4px] left-1/2 -translate-x-1/2 z-0 h-7 w-18 object-contain drop-shadow select-none"
+            />
 
-          {/* Chiếc Mõ gỗ sơn son */}
-          <WoodenFish2D isAbbot={monk.isAbbot} />
+            {/* Thân Thầy chùa ngồi quỳ tụng kinh (Row 2 của sprite sheet) */}
+            <div className="relative z-1">
+              <DevoteeSprite2D assetUrl={monk.assetUrl} pose="SEATED" />
+            </div>
 
-          {/* Đệm ngồi toà sen thêu vàng */}
-          <img
-            src="/assets/lotus-cushion.svg"
-            alt=""
-            className="pointer-events-none -mt-4.5 h-7 w-18 object-contain drop-shadow"
-          />
+            {/* Chiếc Mõ gỗ sơn son đặt phía trước */}
+            <div className="relative z-2 -mt-3.5">
+              <WoodenFish2D isAbbot={monk.isAbbot} />
+            </div>
+          </div>
         </div>
       ))}
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      
     </div>
   );
 }
@@ -623,13 +621,7 @@ function ChantingMonks2D({ mobile }: { mobile: boolean }) {
 /**
  * Huy hiệu lễ vật / hoa cúng mang theo khi Phật tử đang vào hành lễ
  */
-function OfferingBadge2D({
-  action,
-  state,
-}: {
-  action: TempleGameAction;
-  state: CharacterState;
-}) {
+function OfferingBadge2D({ action, state }: { action: TempleGameAction; state: CharacterState }) {
   const isFlower = action.actionType === 'OFFER_FLOWERS';
   const isGift = action.eventType === 'GIFT' || action.actionType === 'OFFER_INCENSE';
   const isLeaving = state === 'EXITING' || state === 'COMPLETED';
@@ -652,7 +644,6 @@ function OfferingBadge2D({
         <div className="text-xs font-black text-amber-300">×{action.quantity}</div>
       )}
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      
     </div>
   );
 }
@@ -688,7 +679,6 @@ function TempleEffects2D({ quality }: { quality: 'LOW' | 'MEDIUM' | 'HIGH' }) {
         );
       })}
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      
     </div>
   );
 }
@@ -740,7 +730,15 @@ function Mobile2DSeatedVisitors({
           return now - (visitor.seatedAt ?? visitor.createdAt) <= duration;
         })
         .slice(0, 24),
-    [activeUsers, busySeatDurationMs, excludedUserIds, hideSimulated, now, seatedVisitors, userInteractions],
+    [
+      activeUsers,
+      busySeatDurationMs,
+      excludedUserIds,
+      hideSimulated,
+      now,
+      seatedVisitors,
+      userInteractions,
+    ],
   );
 
   return (
@@ -770,20 +768,24 @@ function Mobile2DSeatedVisitors({
             {/* Vòng hào quang Phật quang nếu đạt cấp bậc cao */}
             {cultivation.hasHalo && <DevoteeHalo2D color={cultivation.haloColor} />}
 
-            {/* Thân Phật tử quỳ niệm Phật (cắt chính xác Row 2) */}
-            <DevoteeSprite2D assetUrl={cultivation.assetUrl} pose="SEATED" />
+            {/* Khối thân Phật tử toạ thiền trên toà sen */}
+            <div className="relative flex flex-col items-center">
+              {/* Đệm sen toà thêu vàng lót nền ở dưới */}
+              <img
+                src="/assets/lotus-cushion.svg"
+                alt=""
+                className="pointer-events-none absolute bottom-[-4px] left-1/2 -translate-x-1/2 z-0 h-7 w-18 object-contain drop-shadow select-none"
+              />
 
-            {/* Đệm sen toà thêu vàng lót dưới chỗ ngồi */}
-            <img
-              src="/assets/lotus-cushion.svg"
-              alt=""
-              className="pointer-events-none -mt-4.5 h-7 w-18 object-contain drop-shadow"
-            />
+              {/* Thân Phật tử quỳ niệm Phật (cắt chính xác Row 2) */}
+              <div className="relative z-1">
+                <DevoteeSprite2D assetUrl={cultivation.assetUrl} pose="SEATED" />
+              </div>
+            </div>
           </div>
         );
       })}
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      
     </div>
   );
 }
@@ -805,9 +807,7 @@ function Mobile2DWaitingLine({
         const isFemale = hashText(action.userId) % 12 !== 0;
         const cultivation = getCultivationInfo(0, isFemale);
         const horizontalPosition =
-          visibleActions.length === 1
-            ? 50
-            : 5 + index * (90 / (visibleActions.length - 1));
+          visibleActions.length === 1 ? 50 : 5 + index * (90 / (visibleActions.length - 1));
         return (
           <div
             key={action.actionId}
@@ -830,7 +830,6 @@ function Mobile2DWaitingLine({
         </div>
       )}
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      
     </div>
   );
 }
@@ -893,9 +892,11 @@ function Mobile2DCharacter({
     [resolvedSeatIndex, mobile],
   );
 
-  // Khách tới lễ đứng trên thảm đỏ chầu Phật: nâng lên thêm 5~10px (top: 63.2% trên mobile, 54% trên desktop, đứng ngay sau 3 Thầy 61.8% và cao hơn người ngồi hàng đầu 69%)
+  // Khách tới lễ đứng trên thảm đỏ chầu Phật:
+  // - Mobile: top 63.2% (gần) / 65% (xa)
+  // - Desktop: top 61.5% (gần) / 63.5% (xa), đứng trang nghiêm trên thảm đỏ trước điện Phật
   const isNearStatue = worshipDistance === 'NEAR';
-  const worshipTop = mobile ? (isNearStatue ? 63.2 : 65) : isNearStatue ? 54 : 56;
+  const worshipTop = mobile ? (isNearStatue ? 63.2 : 65) : isNearStatue ? 61.5 : 63.5;
   const worshipScale = mobile ? (isNearStatue ? 1.05 : 1.12) : isNearStatue ? 1.02 : 1.1;
   const laneOffset = [-4, -1.5, 1.5, 4][lane % 4];
 
@@ -962,10 +963,13 @@ function Mobile2DCharacter({
       );
     } else if (state === 'OFFERING_FLOWERS') {
       if (!offeredRef.current) {
-        offeringTimer = window.setTimeout(() => {
-          offeredRef.current = true;
-          addFlower();
-        }, Math.min(1500, timings.flowerOfferingMs / 2));
+        offeringTimer = window.setTimeout(
+          () => {
+            offeredRef.current = true;
+            addFlower();
+          },
+          Math.min(1500, timings.flowerOfferingMs / 2),
+        );
       }
       // Dâng hoa xong thì chuyển sang quỳ lạy 3 lạy
       timer = window.setTimeout(() => {
@@ -1048,7 +1052,11 @@ function Mobile2DCharacter({
       position.duration !== '0s'
         ? `top ${position.duration} linear, left ${position.duration} ease-out, transform ${position.duration} linear`
         : 'none',
-    zIndex: checkHasActiveComment(action, timings.prayerMs ? 20 : 20) ? 450 : (state === 'EXITING' ? seatCoords.zIndex : 35),
+    zIndex: checkHasActiveComment(action, timings.prayerMs ? 20 : 20)
+      ? 450
+      : state === 'EXITING'
+        ? seatCoords.zIndex
+        : 35,
   };
 
   // Khi bước chân chạm đích: lập tức chuyển tư thế quỳ lạy / chắp tay niệm Phật / dâng hoa không trễ 1 mili-giây
@@ -1072,11 +1080,7 @@ function Mobile2DCharacter({
   };
 
   return (
-    <div
-      className="mobile-2d-figure"
-      style={figureStyle}
-      onTransitionEnd={handleTransitionEnd}
-    >
+    <div className="mobile-2d-figure" style={figureStyle} onTransitionEnd={handleTransitionEnd}>
       {/* Huy hiệu Avatar + Level + Tên hoặc Bong bóng bình luận */}
       <DevoteeHeadBadge action={action} isFemale={isFemale} />
 
@@ -1087,13 +1091,8 @@ function Mobile2DCharacter({
       {cultivation.hasHalo && <DevoteeHalo2D color={cultivation.haloColor} />}
 
       {/* Thân Phật tử chuyển động linh hoạt theo tư thế với clipper chuẩn xác */}
-      <DevoteeSprite2D
-        assetUrl={cultivation.assetUrl}
-        pose={activePose}
-        animTick={animTick}
-      />
+      <DevoteeSprite2D assetUrl={cultivation.assetUrl} pose={activePose} animTick={animTick} />
       {/* Lớp phủ hiệu ứng tương tác (mưa hoa, hoa sen nở, hào quang, combo, thông báo) */}
-      
     </div>
   );
 }
@@ -1110,10 +1109,8 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
   const setMobilePriorityAdmission = useTempleGameStore(
     (state) => state.setMobilePriorityAdmission,
   );
-  const connection = useMonitorStore((state) => state.connection);
-  const mobile2dQueueEnabled = useMonitorStore(
-    (state) => state.prefs.mobile2dQueueEnabled ?? true,
-  );
+  const connections = useMonitorStore((state) => state.connections);
+  const mobile2dQueueEnabled = useMonitorStore((state) => state.prefs.mobile2dQueueEnabled ?? true);
   const mobile2dBusySeatSeconds = useMonitorStore(
     (state) => state.prefs.mobile2dBusySeatSeconds ?? 20,
   );
@@ -1178,8 +1175,7 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
     return presentUserIds;
   }, [active, queue, queueClock, seatedVisitors, userInteractions]);
 
-  const isMobileInteriorBusy =
-    is2DInteriorQueueEnabled && normallyPresentUserIds.size > 24;
+  const isMobileInteriorBusy = is2DInteriorQueueEnabled && normallyPresentUserIds.size > 24;
   const busySeatDurationMs = isMobileInteriorBusy
     ? Math.max(10, mobile2dBusySeatSeconds) * 1000
     : undefined;
@@ -1214,9 +1210,7 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
       .sort((first, second) => first.startedAt - second.startedAt);
     const waitingCharacters = active
       .filter((character) => !retainedIdSet.has(character.action.actionId))
-      .sort((first, second) =>
-        sortMobileAdmissionActions(first.action, second.action),
-      );
+      .sort((first, second) => sortMobileAdmissionActions(first.action, second.action));
     const admissionCandidates = [...retainedCharacters, ...waitingCharacters];
     const reservedActionIds: string[] = [];
     const keptSeatedVisitors = [...validSeatedVisitors];
@@ -1312,7 +1306,10 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
 
   // Giả lập ngẫu nhiên 1, 2 người đi vào 1 lần, 5 giây sau lại vào; không tràn vào (chuẩn 3D)
   useEffect(() => {
-    if (!allowSimulated || connection.state === 'CONNECTED') return;
+    const hasRealPlatformConnected = Object.values(connections).some(
+      (platformConnection) => platformConnection.state === 'CONNECTED',
+    );
+    if (!allowSimulated || hasRealPlatformConnected) return;
 
     let timer: number | null = null;
     let cancelled = false;
@@ -1331,7 +1328,7 @@ export function Mobile2DOverlayPage({ mobile = true }: { mobile?: boolean }) {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
     };
-  }, [allowSimulated, connection.state]);
+  }, [allowSimulated, connections]);
 
   // Ảnh nền không gian chùa (Nội điện hoặc Ngoại cảnh)
   const backdropUrl =

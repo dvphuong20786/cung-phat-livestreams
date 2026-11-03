@@ -1,6 +1,7 @@
 import type { Server } from 'socket.io';
 import {
   connectSchema,
+  liveUrlSchema,
   simulatorSchema,
   templeGameActionFor,
   type LiveEvent,
@@ -10,6 +11,7 @@ import type { EventService } from '../services/EventService.js';
 import type { LiveConnector as TikTokConnector } from '../connectors/LiveConnector.js';
 import type { CharacterStore } from '../services/CharacterStore.js';
 import { WatchTimeTracker } from '../services/WatchTimeTracker.js';
+import { LiveSessionListsStore } from '../services/LiveSessionListsStore.js';
 
 const autoSimulationNames = [
   'Thiện Tâm',
@@ -57,6 +59,8 @@ export function setupSockets(
   io: Server,
   events: EventService,
   tiktok: TikTokConnector,
+  youtube: TikTokConnector,
+  facebook: TikTokConnector,
   characterStore?: CharacterStore,
 ) {
   let gamePaused = false;
@@ -64,11 +68,16 @@ export function setupSockets(
   let autoSimulationTimer: ReturnType<typeof setTimeout> | null = null;
   let autoSimulationRunId = 0;
   const watchTimeTracker = new WatchTimeTracker();
+  const liveSessionLists = new LiveSessionListsStore();
+
+  const emitSessionLists = () => {
+    io.emit('session:lists', liveSessionLists.snapshot());
+  };
 
   const publish = (event: LiveEvent, alreadyProcessed = false) => {
     let charData: { meritPoints?: number; level?: number; rankName?: string } = {};
     if (characterStore) {
-      const { character } = characterStore.awardPointsForEvent(event);
+      const { character, pointsAwarded } = characterStore.awardPointsForEvent(event);
       // Các event tiếp theo dùng chung ID bền vững đã lưu trong SQLite.
       event.user.id = character.userId;
       event.user.username = character.username;
@@ -80,6 +89,10 @@ export function setupSockets(
         rankName: character.rankName,
       };
       if (!character.isSimulated) io.emit('character:updated', character);
+      liveSessionLists.recordEvent(event, character, pointsAwarded);
+      if (!character.isSimulated && (pointsAwarded > 0 || event.type === 'GIFT')) {
+        emitSessionLists();
+      }
       if (event.type === 'JOIN') watchTimeTracker.startWatching(character.userId, event.timestamp);
     }
 
@@ -128,19 +141,42 @@ export function setupSockets(
   tiktok.on('event', (event: LiveEvent) => publish(event));
   tiktok.on('status', (status) => {
     if (status.state !== 'CONNECTED') watchTimeTracker.clear();
+    if (status.state === 'CONNECTED' && autoSimulationEnabled) setAutoSimulationEnabled(false);
     io.emit('connection:status', status);
   });
   tiktok.on('error-safe', (message) => io.emit('system:error', { message }));
+  youtube.on('event', (event: LiveEvent) => publish(event));
+  youtube.on('status', (status) => {
+    if (status.state === 'CONNECTED' && autoSimulationEnabled) setAutoSimulationEnabled(false);
+    io.emit('platform:status', { platform: 'YOUTUBE', status });
+  });
+  youtube.on('error-safe', (message) =>
+    io.emit('system:error', { message: `YouTube: ${message}` }),
+  );
+  facebook.on('event', (event: LiveEvent) => publish(event));
+  facebook.on('status', (status) => {
+    if (status.state === 'CONNECTED' && autoSimulationEnabled) setAutoSimulationEnabled(false);
+    io.emit('platform:status', { platform: 'FACEBOOK', status });
+  });
+  facebook.on('error-safe', (message) =>
+    io.emit('system:error', { message: `Facebook: ${message}` }),
+  );
 
   io.on('connection', (socket) => {
     const characters = characterStore ? characterStore.getRealCharacters() : [];
 
     socket.emit('snapshot', {
       connection: tiktok.status,
+      connections: {
+        TIKTOK: tiktok.status,
+        YOUTUBE: youtube.status,
+        FACEBOOK: facebook.status,
+      },
       events: events.recent(),
       stats: events.stats.snapshot(),
       game: { paused: gamePaused },
       simulation: { autoEnabled: autoSimulationEnabled },
+      sessionLists: liveSessionLists.snapshot(),
       characters,
     });
 
@@ -151,10 +187,16 @@ export function setupSockets(
         success: true,
         data: {
           connection: tiktok.status,
+          connections: {
+            TIKTOK: tiktok.status,
+            YOUTUBE: youtube.status,
+            FACEBOOK: facebook.status,
+          },
           events: events.recent(),
           stats: events.stats.snapshot(),
           game: { paused: gamePaused },
           simulation: { autoEnabled: autoSimulationEnabled },
+          sessionLists: liveSessionLists.snapshot(),
           characters: currentCharacters,
         },
       });
@@ -172,6 +214,8 @@ export function setupSockets(
         await tiktok.connect(p.data.username, p.data.autoReconnect);
         characterStore?.resetLiveSessionLimits();
         watchTimeTracker.clear();
+        liveSessionLists.reset();
+        emitSessionLists();
         ack?.({ success: true });
       } catch (e) {
         ack?.({ success: false, error: e instanceof Error ? e.message : String(e) });
@@ -180,6 +224,42 @@ export function setupSockets(
 
     socket.on('tiktok:disconnect', async (_v, ack) => {
       await tiktok.disconnect();
+      ack?.({ success: true });
+    });
+
+    socket.on('youtube:connect', async (input, ack) => {
+      const parsedInput = liveUrlSchema.safeParse(input);
+      if (!parsedInput.success) {
+        return ack?.({ success: false, error: parsedInput.error.issues[0]?.message });
+      }
+      try {
+        await youtube.connect(parsedInput.data.url);
+        ack?.({ success: true });
+      } catch (error) {
+        ack?.({ success: false, error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    socket.on('youtube:disconnect', async (_input, ack) => {
+      await youtube.disconnect();
+      ack?.({ success: true });
+    });
+
+    socket.on('facebook:connect', async (input, ack) => {
+      const parsedInput = liveUrlSchema.safeParse(input);
+      if (!parsedInput.success) {
+        return ack?.({ success: false, error: parsedInput.error.issues[0]?.message });
+      }
+      try {
+        await facebook.connect(parsedInput.data.url);
+        ack?.({ success: true });
+      } catch (error) {
+        ack?.({ success: false, error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    socket.on('facebook:disconnect', async (_input, ack) => {
+      await facebook.disconnect();
       ack?.({ success: true });
     });
 
@@ -213,14 +293,17 @@ export function setupSockets(
 
     socket.on('stats:reset', (input, ack) => {
       events.clear(
-        input?.source === 'SIMULATOR'
-          ? 'SIMULATOR'
-          : input?.source === 'TIKTOK'
-            ? 'TIKTOK'
-            : undefined,
+        input?.source === 'SIMULATOR' ||
+          input?.source === 'TIKTOK' ||
+          input?.source === 'YOUTUBE' ||
+          input?.source === 'FACEBOOK'
+          ? input.source
+          : undefined,
       );
       io.emit('stats:update', events.stats.snapshot());
       io.emit('events:reset', { source: input?.source });
+      liveSessionLists.reset();
+      emitSessionLists();
       ack?.({ success: true });
     });
   });
@@ -233,6 +316,8 @@ export function setupSockets(
       const result = characterStore.awardWatchTime(userId);
       if (result && !result.character.isSimulated) {
         io.emit('character:updated', result.character);
+        liveSessionLists.recordMerit(result.character, result.pointsAwarded, 'TIKTOK');
+        emitSessionLists();
       }
     }
   }, 10_000);
